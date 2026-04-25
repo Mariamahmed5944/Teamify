@@ -1,16 +1,6 @@
-# Teamify STT — Python dependencies
-# Install with:  pip install -r requirements.txt
-
-# Core STT engine
-openai-whisper>=20231117
-
-# Web framework & server
+openai-whisper==20231117
 fastapi>=0.111.0
 uvicorn[standard]>=0.29.0
-python-multipart>=0.0.9     # Required for FastAPI file uploads
-
-# HTTP client (for test_api.py)
+python-multipart>=0.0.9
 requests>=2.31.0
-
-# Optional: faster audio decoding (recommended for production)
-# ffmpeg must also be installed on the OS — see README
+torch==2.1.0+cpu --extra-index-url https://download.pytorch.org/whl/cpu
