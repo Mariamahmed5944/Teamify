@@ -1,5 +1,6 @@
 setuptools>=65.5.0
 wheel
+numpy<2
 openai-whisper>=20240930
 fastapi>=0.111.0
 uvicorn[standard]>=0.29.0
