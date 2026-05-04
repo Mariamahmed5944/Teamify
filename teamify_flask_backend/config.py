@@ -64,3 +64,7 @@ class Config:
     # Each access_token cookie expires when the browser session ends
     # (i.e. it is a session cookie, not a persistent cookie).
     JWT_SESSION_COOKIE = False            # Use expiring cookies, not session cookies
+
+    # GitHub OAuth
+    GITHUB_CLIENT_ID     = os.getenv('GITHUB_CLIENT_ID', '')
+    GITHUB_CLIENT_SECRET = os.getenv('GITHUB_CLIENT_SECRET', '')

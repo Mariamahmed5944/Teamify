@@ -17,6 +17,13 @@ class User(db.Model):
     role = db.Column(db.String(20), nullable=False, default="member")
     # user_type: how the user describes themselves — freelancer | student | employee | business
     user_type = db.Column(db.String(30), nullable=True)
+    # account_status: approval gate — pending | approved | rejected
+    # Freelancers and students start as 'pending' until an admin approves them.
+    # Other user types default to 'approved' immediately.
+    account_status = db.Column(db.String(20), nullable=False, default="approved")
+    account_status_note = db.Column(db.Text, nullable=True)   # admin rejection reason
+    # GitHub OAuth: stores GitHub user id for social login
+    github_id = db.Column(db.String(64), nullable=True, unique=True)
     # Extended profile fields (from registration forms)
     professional_field = db.Column(db.String(50), nullable=True)   # freelancer: Designer, Developer, etc.
     experience_level = db.Column(db.String(20), nullable=True)     # Beginner, Intermediate, Expert
@@ -138,6 +145,9 @@ class User(db.Model):
             "email": self.email,
             "role": self.role,
             "user_type": self.user_type,
+            "account_status": self.account_status,
+            "account_status_note": self.account_status_note,
+            "github_id": getattr(self, 'github_id', None),
             "professional_field": self.professional_field,
             "experience_level": self.experience_level,
             "availability": self.availability,

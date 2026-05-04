@@ -2,6 +2,7 @@ import pytest
 from models.user import User
 from models import db
 from flask_jwt_extended import decode_token
+from unittest.mock import patch, MagicMock
 
 pytestmark = pytest.mark.integration
 
@@ -43,11 +44,21 @@ class TestAuthAPIIntegration:
         assert user is not None
         assert user.display_name == "int_user"
         
-        # 2. Login with the new user
+        # 2. Login with the new user (should fail because freelancer is pending)
         login_payload = {
             "email": "int@example.com",
             "password": "Password123"
         }
+        resp = client.post("/api/auth/login", json=login_payload)
+        assert resp.status_code == 403
+        
+        # 3. Approve the user manually in the DB
+        with client.application.app_context():
+            user = User.query.filter_by(email="int@example.com").first()
+            user.account_status = "approved"
+            db.session.commit()
+
+        # 4. Login again (should succeed now)
         resp = client.post("/api/auth/login", json=login_payload)
         assert resp.status_code == 200
         data = resp.get_json()
@@ -116,3 +127,44 @@ class TestAuthAPIIntegration:
         """Test that protected endpoints reject requests without a token."""
         resp = client.get("/api/auth/me")
         assert resp.status_code == 401
+
+    @patch("requests.get")
+    @patch("requests.post")
+    def test_github_login(self, mock_post, mock_get, client):
+        """Test GitHub OAuth login flow."""
+        # Mock the token response
+        mock_token_resp = MagicMock()
+        mock_token_resp.status_code = 200
+        mock_token_resp.json.return_value = {"access_token": "gho_fake_token"}
+
+        # Mock the profile response
+        mock_profile_resp = MagicMock()
+        mock_profile_resp.status_code = 200
+        mock_profile_resp.json.return_value = {
+            "id": 123456,
+            "login": "testghuser",
+            "name": "Test GitHub User",
+            "email": "github@example.com"
+        }
+
+        mock_post.return_value = mock_token_resp
+        mock_get.return_value = mock_profile_resp
+
+        # Perform the request
+        payload = {"code": "fake_oauth_code"}
+        resp = client.post("/api/auth/github", json=payload)
+        
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["message"] == "GitHub login successful"
+        assert "access_token" in data
+        assert data["user"]["github_id"] == "123456"
+        assert data["user"]["email"] == "github@example.com"
+        assert data["user"]["account_status"] == "approved"
+        
+        # Verify user was created in DB
+        with client.application.app_context():
+            user = User.query.filter_by(github_id="123456").first()
+            assert user is not None
+            assert user.email == "github@example.com"
+            assert user.role == "member"

@@ -128,6 +128,7 @@ def create_app(test_config=None):
     from routes.feedback import feedback_bp
     from routes.ratings import ratings_bp
     from routes.cv import cv_bp
+    from routes.disputes import disputes_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(users_bp)
@@ -146,6 +147,7 @@ def create_app(test_config=None):
     app.register_blueprint(feedback_bp)
     app.register_blueprint(ratings_bp)
     app.register_blueprint(cv_bp)
+    app.register_blueprint(disputes_bp)
 
     # ─── Health Check ─────────────────────────────────────────────────────────
     @app.route("/api/health", methods=["GET"])
@@ -197,6 +199,7 @@ def create_app(test_config=None):
         from models.cv import CV
         from models.cv_download_token import CVDownloadToken
         from models.audit_log import AuditLog
+        from models.dispute import Dispute
 
         db.create_all()  # ← مهم: بينشئ الجداول في PostgreSQL لو مش موجودة
 
