@@ -1,0 +1,40 @@
+# === Python ===
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# === Virtual Environments ===
+venv/
+.venv/
+env/
+.env.local
+.env.production
+
+# === Environment Variables (NEVER commit!) ===
+.env
+
+# === Database ===
+*.db
+*.sqlite
+*.sqlite3
+instance/
+
+# === Flask-Migrate (keep the migrations/ folder, not the compiled cache) ===
+migrations/__pycache__/
+
+# === IDE / OS ===
+.vscode/
+.idea/
+*.DS_Store
+Thumbs.db
+
+# === Logs ===
+*.log
+logs/
+
+# === Distribution / Build ===
+dist/
+build/
+*.egg-info/

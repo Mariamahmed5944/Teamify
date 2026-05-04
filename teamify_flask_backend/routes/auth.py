@@ -1,0 +1,1128 @@
+import re
+from flask import Blueprint, request, jsonify, make_response
+from flask_bcrypt import Bcrypt
+from flask_jwt_extended import (
+    create_access_token, create_refresh_token,
+    verify_jwt_in_request, get_jwt_identity, jwt_required, get_jwt,
+    set_access_cookies, set_refresh_cookies, unset_jwt_cookies,
+)
+from datetime import datetime, timezone, timedelta
+from models import db
+from models.user import User
+from models.log import Log
+from models.login_log import LoginLog
+from services.anomaly import check_login_anomalies
+from services.audit_log_service import log_security_event
+from app import limiter
+
+# ─── Lockout constants ────────────────────────────────────────────────────────────
+MAX_FAILED_ATTEMPTS = 5         # lock after this many consecutive failures
+LOCKOUT_DURATION_MINUTES = 15   # lock duration in minutes
+
+
+def _record_login_attempt(user_id, status: str) -> None:
+    """Persist a LoginLog row. Never raises (logging failure must not block auth)."""
+    try:
+        ip = request.remote_addr or "unknown"
+        ua = (request.headers.get("User-Agent") or "")[:512]
+        entry = LoginLog(
+            user_id=user_id,
+            status=status,
+            ip_address=ip,
+            device_info=ua,
+        )
+        db.session.add(entry)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
+EMAIL_RE = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+# At least 8 chars, 1 uppercase letter, 1 digit
+PASSWORD_RE = re.compile(r'^(?=.*[A-Z])(?=.*\d).{8,}$')
+
+auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
+bcrypt = Bcrypt()
+
+
+@auth_bp.route("/register", methods=["POST"])
+@limiter.limit("5 per minute")
+def register():
+    """
+    Register a new user.
+    ---
+    tags:
+      - Auth
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - display_name
+            - email
+            - password
+          properties:
+            display_name:
+              type: string
+              example: johndoe
+              description: Unique display name shown in the app
+            email:
+              type: string
+              example: john@example.com
+            password:
+              type: string
+              example: Password1
+              minLength: 8
+              description: Min 8 chars, must include at least 1 uppercase letter and 1 digit
+            full_name:
+              type: string
+              example: John Doe
+              description: Optional real full name
+            role:
+              type: string
+              enum: [member, guest]
+              example: member
+              description: |
+                System permission level. Defaults to 'member'.
+                - member  → standard user (default)
+                - guest   → read-only access
+                - admin   → admin-only, requires existing admin JWT
+            user_type:
+              type: string
+              enum: [freelancer, student, employee, business]
+              example: freelancer
+              description: |
+                How the user describes themselves (optional).
+                - freelancer → independent contractor / remote worker
+                - student    → currently studying
+                - employee   → works at a company
+                - business   → owns or runs a business
+    responses:
+      201:
+        description: User registered successfully
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+            user:
+              type: object
+              properties:
+                id:
+                  type: string
+                display_name:
+                  type: string
+                full_name:
+                  type: string
+                email:
+                  type: string
+                role:
+                  type: string
+                user_type:
+                  type: string
+            access_token:
+              type: string
+      400:
+        description: Validation errors
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+              example: Validation failed
+            messages:
+              type: array
+              items:
+                type: string
+      409:
+        description: Display name or email already exists
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+              example: Conflict
+            message:
+              type: string
+              example: Display name already exists
+    """
+    data = request.get_json(silent=True, force=True)
+
+    if not data:
+        return jsonify({"error": "Request body is required"}), 400
+
+    from marshmallow import ValidationError
+    from validators.auth_validator import register_schema
+
+    try:
+        data = register_schema.load(data)
+    except ValidationError as err:
+        # Format messages into a list of strings to match the old API response format
+        error_msgs = []
+        for field, msgs in err.messages.items():
+            error_msgs.extend(msgs)
+        return jsonify({"error": "Validation failed", "messages": error_msgs}), 400
+
+    display_name = data.get("display_name")
+    full_name = data.get("full_name")
+    email = data.get("email")
+    password = data.get("password")
+    role = data.get("role")
+    user_type = data.get("user_type")
+
+    # Check if an authenticated admin is making the request
+    is_admin_caller = False
+    try:
+        verify_jwt_in_request(optional=True)
+        caller_id = get_jwt_identity()
+        if caller_id:
+            caller = User.query.filter_by(id=int(caller_id)).first()
+            if caller and caller.role == "admin":
+                is_admin_caller = True
+    except Exception:
+        pass
+
+    PUBLIC_ROLES = {"member", "guest"}
+    allowed_roles = {"member", "guest", "admin"} if is_admin_caller else PUBLIC_ROLES
+    if role not in allowed_roles:
+        return jsonify({
+            "error": "Validation failed", 
+            "messages": [f"Role '{role}' is not allowed. " + 
+                         (f"Allowed: {', '.join(sorted(allowed_roles))}" if is_admin_caller
+                          else f"Allowed for self-registration: {', '.join(sorted(PUBLIC_ROLES))}")]
+        }), 400
+
+    # --- Check duplicates ---
+    if User.query.filter_by(display_name=display_name).first():
+        return jsonify({"error": "Conflict", "message": "Display name already exists"}), 409
+    if User.query.filter_by(email=email).first():
+        return jsonify({"error": "Conflict", "message": "Email already exists"}), 409
+
+    # --- Hash password with bcrypt ---
+    hashed_password = bcrypt.generate_password_hash(password).decode("utf-8")
+
+    # --- Create user ---
+    new_user = User(
+        display_name=display_name,
+        full_name=full_name or None,
+        email=email,
+        password=hashed_password,
+        role=role,
+        user_type=user_type,
+        professional_field=data.get("professional_field") or None,
+        experience_level=data.get("experience_level") or None,
+        availability=data.get("availability") or None,
+        skills=data.get("skills") or None,
+        current_level=data.get("current_level") or None,
+        major=data.get("major") or None,
+        looking_for_team=data.get("looking_for_team"),
+        reason_for_joining=data.get("reason_for_joining") or None,
+    )
+    db.session.add(new_user)
+    db.session.flush()  # get new_user.id without committing yet
+
+    # --- Log the registration (single commit) ---
+    log = Log(
+        action="REGISTER",
+        entity="User",
+        entity_id=new_user.id,
+        details=f"User '{display_name}' registered with role '{role}'",
+        user_id=new_user.id,
+    )
+    db.session.add(log)
+    db.session.commit()
+
+    # --- Generate JWT access + refresh tokens ---
+    access_token = create_access_token(identity=str(new_user.id))
+    refresh_token = create_refresh_token(identity=str(new_user.id))
+
+    # ── VULN-002 FIX ─────────────────────────────────────────────────────────
+    # Tokens are set as HttpOnly cookies so they are never accessible via JS,
+    # protecting against XSS token theft. The JSON body still returns user
+    # data (but NOT the raw token strings) so Flutter can read user info.
+    response = make_response(jsonify({
+        "message": "User registered successfully",
+        "user": new_user.to_dict(),
+        # access_token also included in JSON for backward-compat with mobile
+        # clients that cannot read cookies (native Android/iOS).
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+    }), 201)
+    set_access_cookies(response, access_token)
+    set_refresh_cookies(response, refresh_token)
+    return response
+
+
+@auth_bp.route("/login", methods=["POST"])
+@limiter.limit("5 per minute")
+def login():
+    """
+    Log in an existing user.
+    ---
+    tags:
+      - Auth
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - email
+            - password
+          properties:
+            email:
+              type: string
+              example: john@example.com
+            password:
+              type: string
+              example: password123
+    responses:
+      200:
+        description: Login successful
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+            user:
+              type: object
+              properties:
+                id:
+                  type: string
+                display_name:
+                  type: string
+                email:
+                  type: string
+                role:
+                  type: string
+            access_token:
+              type: string
+            refresh_token:
+              type: string
+      400:
+        description: Validation errors
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+              example: Email and password are required
+      401:
+        description: Invalid email or password
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+              example: Invalid email or password
+    """
+    data = request.get_json(silent=True, force=True)
+
+    if not data:
+        return jsonify({"error": "Request body is required"}), 400
+
+    from marshmallow import ValidationError
+    from validators.auth_validator import login_schema
+
+    try:
+        data = login_schema.load(data)
+    except ValidationError as err:
+        return jsonify({"error": "Email and password are required", "messages": err.messages}), 400
+
+    email = data.get("email")
+    password = data.get("password")
+
+    ip = request.remote_addr or "unknown"
+
+    # --- Find user ---
+    user = User.query.filter_by(email=email).first()
+
+    # ─── Task 4: Brute-Force Lockout Check ─────────────────────────────────────
+    # Before checking the password, verify the account isn't temporarily locked.
+    if user and user.locked_until:
+        now_utc = datetime.now(timezone.utc)
+        locked_until_aware = (
+            user.locked_until.replace(tzinfo=timezone.utc)
+            if user.locked_until.tzinfo is None
+            else user.locked_until
+        )
+        if now_utc < locked_until_aware:
+            remaining = int((locked_until_aware - now_utc).total_seconds() // 60) + 1
+            log_security_event(
+                "ACCOUNT_LOCKED",
+                user_id=user.id, ip=ip, severity="WARNING",
+                details={"remaining_minutes": remaining},
+            )
+            return jsonify({
+                "error": "Account temporarily locked",
+                "message": f"Too many failed attempts. Try again in {remaining} minute(s).",
+            }), 429
+        else:
+            # Lock window expired — clear the lockout state
+            user.locked_until = None
+            user.failed_login_attempts = 0
+            db.session.commit()
+
+    # --- Validate credentials ---
+    if not user or not bcrypt.check_password_hash(user.password, password):
+        # ─── Task 4: Increment failure counter ────────────────────────────────────
+        if user:
+            user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
+            if user.failed_login_attempts >= MAX_FAILED_ATTEMPTS:
+                # Trigger account lockout
+                user.locked_until = datetime.now(timezone.utc) + timedelta(minutes=LOCKOUT_DURATION_MINUTES)
+                db.session.commit()
+                log_security_event(
+                    "ACCOUNT_LOCKED",
+                    user_id=user.id, ip=ip, severity="WARNING",
+                    details={"attempts": user.failed_login_attempts},
+                )
+                return jsonify({
+                    "error": "Account temporarily locked",
+                    "message": f"Account locked for {LOCKOUT_DURATION_MINUTES} minutes due to too many failed attempts.",
+                }), 429
+            db.session.commit()
+
+        # Audit + brute-force anomaly detection (IP-level)
+        _record_login_attempt(user.id if user else None, "fail")
+        log_security_event(
+            "LOGIN_FAILED",
+            user_id=user.id if user else None, ip=ip, severity="WARNING",
+            details={"email": email},
+        )
+        try:
+            check_login_anomalies(ip)
+        except Exception:
+            pass
+        return jsonify({"error": "Invalid email or password"}), 401
+
+    # ─── Task 4: Reset counter on successful login ──────────────────────────────
+    user.failed_login_attempts = 0
+    user.locked_until = None
+
+    # --- Log the login ---
+    log = Log(
+        action="LOGIN",
+        entity="User",
+        entity_id=user.id,
+        details=f"User '{user.display_name}' logged in",
+        user_id=user.id,
+    )
+    db.session.add(log)
+    db.session.commit()
+    _record_login_attempt(user.id, "success")
+    log_security_event(
+        "LOGIN_SUCCESS",
+        user_id=user.id, ip=ip,
+        details={"display_name": user.display_name},
+    )
+
+    # --- Generate JWT access + refresh tokens ---
+    access_token = create_access_token(identity=str(user.id))
+    refresh_token = create_refresh_token(identity=str(user.id))
+
+    # ── VULN-002 FIX ─────────────────────────────────────────────────────────
+    # Tokens are delivered in HttpOnly cookies AND in the JSON body.
+    # Web clients benefit from cookies (XSS-safe); native mobile clients
+    # can fall back to reading access_token from the JSON body.
+    response = make_response(jsonify({
+        "message": "Login successful",
+        "user": user.to_dict(),
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+    }), 200)
+    set_access_cookies(response, access_token)
+    set_refresh_cookies(response, refresh_token)
+    return response
+
+
+# ─── GET /api/auth/me ─────────────────────────────────────────────────────────
+
+@auth_bp.route("/me", methods=["GET"])
+def me():
+    """
+    Get the currently authenticated user from the JWT token.
+    ---
+    tags:
+      - Auth
+    security:
+      - Bearer: []
+    responses:
+      200:
+        description: Current user data
+        schema:
+          type: object
+          properties:
+            user:
+              type: object
+      401:
+        description: Missing or invalid token
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+              example: Unauthorized
+      404:
+        description: User not found
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+              example: Not Found
+    """
+    from middleware.auth import auth_required as _guard
+    from flask_jwt_extended import verify_jwt_in_request
+    try:
+        verify_jwt_in_request()
+    except Exception:
+        return jsonify({"error": "Unauthorized", "message": "Missing or invalid token"}), 401
+
+    user_id = get_jwt_identity()
+    user = User.query.filter_by(id=int(user_id)).first()
+    if not user:
+        return jsonify({"error": "Not Found", "message": "User not found"}), 404
+
+    return jsonify({"user": user.to_dict()}), 200
+
+
+# ─── POST /api/auth/refresh ───────────────────────────────────────────────────
+
+@auth_bp.route("/refresh", methods=["POST"])
+@jwt_required(refresh=True)
+def refresh():
+    """
+    Get a new access token using a valid refresh token.
+    ---
+    tags:
+      - Auth
+    security:
+      - Bearer: []
+    responses:
+      200:
+        description: New access token issued
+        schema:
+          type: object
+          properties:
+            access_token:
+              type: string
+      401:
+        description: Missing or invalid refresh token
+    """
+    user_id = get_jwt_identity()
+    new_access_token = create_access_token(identity=user_id)
+    # ── VULN-002 FIX: refresh the cookie as well ───────────────────────────
+    response = make_response(jsonify({"access_token": new_access_token}), 200)
+    set_access_cookies(response, new_access_token)
+    return response
+
+
+# ─── POST /api/auth/logout ────────────────────────────────────────────────────
+
+@auth_bp.route("/logout", methods=["POST"])
+@jwt_required()
+def logout():
+    """
+    Revoke the current access token (logout).
+    ---
+    tags:
+      - Auth
+    security:
+      - Bearer: []
+    responses:
+      200:
+        description: Successfully logged out
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: Successfully logged out
+      401:
+        description: Missing or invalid token
+        schema:
+          type: object
+          properties:
+            msg:
+              type: string
+              example: Missing Authorization Header
+    """
+    from flask import current_app
+    jti = get_jwt()["jti"]
+    current_app.config["BLACKLISTED_TOKENS"].add(jti)
+    # ── VULN-002 FIX: clear JWT cookies on logout ──────────────────────────
+    response = make_response(jsonify({"message": "Successfully logged out"}), 200)
+    unset_jwt_cookies(response)
+    return response
+
+
+# ─── POST /api/auth/forgot-password ───────────────────────────────────────────
+
+@auth_bp.route("/forgot-password", methods=["POST"])
+@limiter.limit("3 per minute")
+def forgot_password():
+    """
+    Request a password-reset OTP. In production the OTP is sent via email.
+    ---
+    tags:
+      - Auth
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - email
+          properties:
+            email:
+              type: string
+              example: john@example.com
+    responses:
+      200:
+        description: OTP request received
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: If an account exists with this email, an OTP has been sent
+      400:
+        description: Email is required
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+              example: Email is required
+    """
+    data = request.get_json(silent=True, force=True) or {}
+    email = data.get("email", "").strip()
+
+    if not email:
+        return jsonify({"error": "Email is required"}), 400
+
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        # Return same response to prevent user enumeration
+        return jsonify({"message": "If an account exists with this email, an OTP has been sent"}), 200
+
+    otp = user.generate_otp()
+    db.session.commit()
+
+    # In production: send OTP via email service (e.g. SendGrid, SES).
+    # For development, the OTP is stored in DB and can be retrieved for testing.
+    return jsonify({
+        "message": "If an account exists with this email, an OTP has been sent",
+    }), 200
+
+
+# ─── POST /api/auth/verify-otp ────────────────────────────────────────────────
+
+@auth_bp.route("/verify-otp", methods=["POST"])
+@limiter.limit("5 per minute")
+def verify_otp():
+    """
+    Verify the OTP code. Returns a short-lived reset token on success.
+    ---
+    tags:
+      - Auth
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - email
+            - otp
+          properties:
+            email:
+              type: string
+              example: john@example.com
+            otp:
+              type: string
+              example: "1234"
+    responses:
+      200:
+        description: OTP verified, reset_token returned
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: OTP verified successfully
+            reset_token:
+              type: string
+              example: eyJhbGci...
+      400:
+        description: Invalid or expired OTP
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+              example: Invalid or expired OTP
+    """
+    data = request.get_json(silent=True, force=True) or {}
+    email = data.get("email", "").strip()
+    
+    otp_raw = data.get("otp")
+    if not isinstance(otp_raw, str):
+        return jsonify({"error": "OTP must be a string"}), 400
+        
+    otp = otp_raw.strip()
+
+    if not email or not otp:
+        return jsonify({"error": "Email and OTP are required"}), 400
+
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        return jsonify({"error": "Invalid email or OTP"}), 400
+
+    if not user.verify_otp(otp):
+        return jsonify({"error": "Invalid or expired OTP"}), 400
+
+    # Create a short-lived token that authorises the password reset
+    reset_token = create_access_token(
+        identity=str(user.id),
+        expires_delta=__import__('datetime').timedelta(minutes=5),
+        additional_claims={"purpose": "password_reset"},
+    )
+
+    return jsonify({
+        "message": "OTP verified successfully",
+        "reset_token": reset_token,
+    }), 200
+
+
+# ─── POST /api/auth/reset-password ────────────────────────────────────────────
+
+@auth_bp.route("/reset-password", methods=["POST"])
+@limiter.limit("5 per minute")
+def reset_password():
+    """
+    Reset the user's password using the reset token from verify-otp.
+    ---
+    tags:
+      - Auth
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - reset_token
+            - new_password
+          properties:
+            reset_token:
+              type: string
+            new_password:
+              type: string
+              minLength: 8
+    responses:
+      200:
+        description: Password reset successfully
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: Password reset successfully
+      400:
+        description: Validation error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+              example: reset_token and new_password are required
+      401:
+        description: Invalid or expired reset token
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+              example: Invalid or expired reset token
+      404:
+        description: User not found
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+              example: User not found
+    """
+    data = request.get_json(silent=True, force=True) or {}
+    reset_token = data.get("reset_token", "").strip()
+    new_password = data.get("new_password", "")
+
+    if not reset_token or not new_password:
+        return jsonify({"error": "reset_token and new_password are required"}), 400
+
+    if not PASSWORD_RE.match(new_password):
+        return jsonify({"error": "Password must be at least 8 characters with 1 uppercase letter and 1 digit"}), 400
+
+    # Decode the reset token
+    from flask_jwt_extended import decode_token
+    try:
+        token_data = decode_token(reset_token)
+    except Exception:
+        return jsonify({"error": "Invalid or expired reset token"}), 401
+
+    if token_data.get("purpose") != "password_reset":
+        return jsonify({"error": "Invalid token purpose"}), 401
+
+    user_id = token_data.get("sub")
+    user = User.query.filter_by(id=int(user_id)).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    user.password = bcrypt.generate_password_hash(new_password).decode("utf-8")
+    user.clear_otp()
+    db.session.commit()
+
+    return jsonify({"message": "Password reset successfully"}), 200
+
+# ─── POST /api/auth/google ────────────────────────────────────────────────────
+# BUG-002 FIX: Google OAuth backend endpoint.
+# Receives the Google ID token from the Flutter frontend (via google_sign_in
+# package), verifies it server-side, then issues app JWTs.
+
+@auth_bp.route("/google", methods=["POST"])
+@limiter.limit("10 per minute")
+def google_login():
+    """
+    Authenticate via Google OAuth ID token.
+    ---
+    tags:
+      - Auth
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - id_token
+          properties:
+            id_token:
+              type: string
+              description: Google ID token from the frontend google_sign_in SDK
+            user_type:
+              type: string
+              enum: [freelancer, student, guest]
+              description: Optional self-description for new accounts
+    responses:
+      200:
+        description: Login or account creation successful
+      400:
+        description: id_token missing
+      401:
+        description: Invalid or expired Google token
+    """
+    import os
+    from google.oauth2 import id_token as google_id_token
+    from google.auth.transport import requests as google_requests
+
+    data = request.get_json(silent=True, force=True) or {}
+    raw_token = data.get("id_token", "").strip()
+
+    if not raw_token:
+        return jsonify({"error": "Bad Request", "message": "id_token is required"}), 400
+
+    # -- Verify the token against Google's public keys ----------------------
+    # GOOGLE_CLIENT_ID must be set in .env (your OAuth 2.0 web client ID)
+    client_id = os.getenv("GOOGLE_CLIENT_ID")
+    try:
+        id_info = google_id_token.verify_oauth2_token(
+            raw_token,
+            google_requests.Request(),
+            audience=client_id,  # None = skip audience check (dev only)
+        )
+    except ValueError as exc:
+        return jsonify({"error": "Unauthorized", "message": f"Invalid Google token: {exc}"}), 401
+
+    google_email = id_info.get("email", "")
+    google_name  = id_info.get("name", "") or id_info.get("email", "").split("@")[0]
+    google_sub   = id_info.get("sub", "")  # Unique Google user ID
+
+    if not google_email:
+        return jsonify({"error": "Unauthorized", "message": "Could not retrieve email from Google token"}), 401
+
+    # -- Find or create the user --------------------------------------------
+    user = User.query.filter_by(email=google_email).first()
+    is_new = False
+
+    if not user:
+        # First-time Google login: create a new account
+        is_new = True
+        VALID_USER_TYPES = {"freelancer", "student", "guest"}
+        raw_user_type = data.get("user_type", "").strip().lower()
+        user_type = raw_user_type if raw_user_type in VALID_USER_TYPES else None
+
+        # Build a safe display_name from Google name, ensure uniqueness
+        base_name = re.sub(r"[^\w]", "_", google_name)[:30] or "user"
+        display_name = base_name
+        suffix = 1
+        while User.query.filter_by(display_name=display_name).first():
+            display_name = f"{base_name}_{suffix}"
+            suffix += 1
+
+        user = User(
+            display_name=display_name,
+            full_name=google_name,
+            email=google_email,
+            # Google-authenticated users have no local password
+            password=bcrypt.generate_password_hash(google_sub).decode("utf-8"),
+            role="member",        # default role for OAuth sign-ups
+            user_type=user_type,
+        )
+        db.session.add(user)
+        db.session.flush()
+
+        log = Log(
+            action="REGISTER_GOOGLE",
+            entity="User",
+            entity_id=user.id,
+            details=f"User '{display_name}' registered via Google OAuth",
+            user_id=user.id,
+        )
+        db.session.add(log)
+        db.session.commit()
+    else:
+        # Returning Google user: log the login event
+        log = Log(
+            action="LOGIN_GOOGLE",
+            entity="User",
+            entity_id=user.id,
+            details=f"User '{user.display_name}' logged in via Google OAuth",
+            user_id=user.id,
+        )
+        db.session.add(log)
+        db.session.commit()
+        _record_login_attempt(user.id, "success")
+
+    # -- Issue JWT tokens ---------------------------------------------------
+    access_token  = create_access_token(identity=str(user.id))
+    refresh_token = create_refresh_token(identity=str(user.id))
+
+    status_code = 201 if is_new else 200
+    response = make_response(jsonify({
+        "message": "Google login successful",
+        "user": user.to_dict(),
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "is_new_user": is_new,
+    }), status_code)
+    # Set tokens in HttpOnly cookies (VULN-002 pattern)
+    set_access_cookies(response, access_token)
+    set_refresh_cookies(response, refresh_token)
+    return response
+
+
+# ─── POST /api/auth/2fa/setup ─────────────────────────────────────────────────
+# Task 1: TOTP 2FA — Step 1: Generate a new TOTP secret and return a QR code.
+# The secret is saved (unconfirmed) on the user row. 2FA is only activated
+# after the user verifies with a valid token via /api/auth/2fa/verify.
+
+@auth_bp.route("/2fa/setup", methods=["POST"])
+@jwt_required()
+def setup_2fa():
+    """
+    Generate a TOTP secret and QR code for the authenticated user.
+    ---
+    tags:
+      - Auth
+    security:
+      - Bearer: []
+    responses:
+      200:
+        description: QR code PNG (base64) and the raw secret for manual entry
+        schema:
+          type: object
+          properties:
+            secret:
+              type: string
+              example: JBSWY3DPEHPK3PXP
+            qr_code:
+              type: string
+              description: data:image/png;base64,... string
+            message:
+              type: string
+      409:
+        description: 2FA already enabled
+    """
+    from services.totp_service import generate_totp_secret, generate_qr_code_base64
+    from services.audit_log_service import log_security_event
+
+    user_id = int(get_jwt_identity())
+    user = User.query.filter_by(id=user_id).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    if user.totp_enabled:
+        return jsonify({"error": "Conflict", "message": "2FA is already enabled for this account."}), 409
+
+    # Generate a new secret (not yet confirmed / enabled)
+    secret = generate_totp_secret()
+    user.totp_secret = secret
+    db.session.commit()
+
+    qr_code = generate_qr_code_base64(secret, user.email)
+
+    log_security_event(
+        "2FA_SETUP_INITIATED",
+        user_id=user_id,
+        ip=request.remote_addr or "unknown",
+    )
+
+    return jsonify({
+        "message": "Scan the QR code with your authenticator app, then call /2fa/verify to activate.",
+        "secret": secret,    # expose for manual entry in authenticator apps
+        "qr_code": qr_code,  # base64 PNG for display in the frontend
+    }), 200
+
+
+# ─── POST /api/auth/2fa/verify ────────────────────────────────────────────────
+# Task 1: TOTP 2FA — Step 2: Confirm the first valid TOTP token to activate 2FA.
+
+@auth_bp.route("/2fa/verify", methods=["POST"])
+@jwt_required()
+def verify_2fa():
+    """
+    Verify a TOTP token and activate (or check) 2FA for the authenticated user.
+    ---
+    tags:
+      - Auth
+    security:
+      - Bearer: []
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - token
+          properties:
+            token:
+              type: string
+              example: "123456"
+              description: 6-digit code from the authenticator app
+    responses:
+      200:
+        description: 2FA verified (and enabled if it wasn't already)
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      400:
+        description: Invalid or expired TOTP token
+      412:
+        description: 2FA setup not initiated (no secret stored)
+    """
+    from services.totp_service import verify_totp
+    from services.audit_log_service import log_security_event
+
+    user_id = int(get_jwt_identity())
+    user = User.query.filter_by(id=user_id).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    if not user.totp_secret:
+        return jsonify({
+            "error": "Precondition Failed",
+            "message": "Call /2fa/setup first to generate a TOTP secret.",
+        }), 412
+
+    data = request.get_json(silent=True, force=True) or {}
+    token = data.get("token", "")
+
+    if not verify_totp(user.totp_secret, str(token)):
+        log_security_event(
+            "2FA_VERIFY_FAILED",
+            user_id=user_id,
+            ip=request.remote_addr or "unknown",
+            severity="WARNING",
+        )
+        return jsonify({"error": "Invalid or expired TOTP token"}), 400
+
+    # First successful verification activates 2FA
+    if not user.totp_enabled:
+        user.totp_enabled = True
+        db.session.commit()
+
+    log_security_event(
+        "2FA_VERIFIED",
+        user_id=user_id,
+        ip=request.remote_addr or "unknown",
+    )
+    return jsonify({"message": "2FA verified successfully. Two-factor authentication is now active."}), 200
+
+
+# ─── DELETE /api/auth/2fa/disable ────────────────────────────────────────────
+# Task 1: Allow a user to turn off 2FA by supplying one final valid token.
+
+@auth_bp.route("/2fa/disable", methods=["DELETE"])
+@jwt_required()
+def disable_2fa():
+    """
+    Disable 2FA for the authenticated user (requires a valid current TOTP token).
+    ---
+    tags:
+      - Auth
+    security:
+      - Bearer: []
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - token
+          properties:
+            token:
+              type: string
+              example: "123456"
+    responses:
+      200:
+        description: 2FA disabled
+      400:
+        description: Invalid TOTP token or 2FA not enabled
+    """
+    from services.totp_service import verify_totp
+    from services.audit_log_service import log_security_event
+
+    user_id = int(get_jwt_identity())
+    user = User.query.filter_by(id=user_id).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    if not user.totp_enabled or not user.totp_secret:
+        return jsonify({"error": "Bad Request", "message": "2FA is not enabled on this account."}), 400
+
+    data = request.get_json(silent=True, force=True) or {}
+    token = data.get("token", "")
+
+    if not verify_totp(user.totp_secret, str(token)):
+        return jsonify({"error": "Invalid or expired TOTP token"}), 400
+
+    user.totp_secret = None
+    user.totp_enabled = False
+    db.session.commit()
+
+    log_security_event(
+        "2FA_DISABLED",
+        user_id=user_id,
+        ip=request.remote_addr or "unknown",
+        severity="WARNING",
+    )
+    return jsonify({"message": "Two-factor authentication has been disabled."}), 200

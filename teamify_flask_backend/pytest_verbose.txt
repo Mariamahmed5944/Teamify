@@ -1,0 +1,67 @@
+﻿============================= test session starts =============================
+collected 425 items
+
+tests\integration\test_2fa.py ....                                       [  0%]
+tests\integration\test_auth_api.py .....                                 [  2%]
+tests\integration\test_cv_system.py ................................     [  9%]
+tests\integration\test_database.py ....                                  [ 10%]
+tests\integration\test_rbac.py ..                                        [ 11%]
+tests\integration\test_security.py ...                                   [ 11%]
+tests\test_admin.py ............                                         [ 14%]
+tests\test_ai.py ...................                                     [ 19%]
+tests\test_auth.py ..................................................... [ 31%]
+.                                                                        [ 31%]
+tests\test_comments.py ...................                               [ 36%]
+tests\test_dashboard.py ...                                              [ 36%]
+tests\test_feedback.py .......                                           [ 38%]
+tests\test_files.py ...................                                  [ 43%]
+tests\test_health.py ...                                                 [ 43%]
+tests\test_logs.py .......                                               [ 45%]
+tests\test_network.py ssssssssssssssssssssssssssssssssssssssssssssssssss [ 57%]
+ssss                                                                     [ 58%]
+tests\test_notifications.py ..........                                   [ 60%]
+tests\test_projects.py ................................................. [ 72%]
+........                                                                 [ 73%]
+tests\test_ratings.py .......                                            [ 75%]
+tests\test_reminders.py ....                                             [ 76%]
+tests\test_search.py ............                                        [ 79%]
+tests\test_stats.py ...........                                          [ 81%]
+tests\test_tasks.py .........................................            [ 91%]
+tests\test_users.py .........................                            [ 97%]
+tests\unit\test_auth_schemas.py ...........                              [100%]
+
+============================== warnings summary ===============================
+tests/integration/test_auth_api.py: 2 warnings
+tests/integration/test_security.py: 8 warnings
+  C:\Users\20111\Desktop\Teamify\teamify_flask_backend\services\anomaly.py:34: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    now = datetime.utcnow()
+
+tests/integration/test_cv_system.py::TestMentorEndpoints::test_owner_gets_recommendations
+tests/integration/test_cv_system.py::TestMentorEndpoints::test_non_owner_blocked_from_recommendations
+  C:\Users\20111\Desktop\Teamify\teamify_flask_backend\routes\ai.py:527: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    current_user = User.query.get(current_user_id)
+
+tests/integration/test_cv_system.py::TestMentorEndpoints::test_owner_gets_recommendations
+  C:\Users\20111\Desktop\Teamify\teamify_flask_backend\routes\ai.py:535: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    target_user = User.query.get(target_user_id)
+
+tests/integration/test_cv_system.py::TestMentorEndpoints::test_owner_gets_performance
+  C:\Users\20111\Desktop\Teamify\teamify_flask_backend\routes\ai.py:619: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    current_user = User.query.get(current_user_id)
+
+tests/integration/test_cv_system.py::TestMentorEndpoints::test_owner_gets_performance
+  C:\Users\20111\Desktop\Teamify\teamify_flask_backend\routes\ai.py:626: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    target_user = User.query.get(target_user_id)
+
+tests/integration/test_cv_system.py::TestMentorEndpoints::test_owner_gets_courses
+tests/integration/test_cv_system.py::TestMentorEndpoints::test_admin_can_view_any_mentor_data
+  C:\Users\20111\Desktop\Teamify\teamify_flask_backend\routes\ai.py:712: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    current_user = User.query.get(current_user_id)
+
+tests/integration/test_cv_system.py::TestMentorEndpoints::test_owner_gets_courses
+tests/integration/test_cv_system.py::TestMentorEndpoints::test_admin_can_view_any_mentor_data
+  C:\Users\20111\Desktop\Teamify\teamify_flask_backend\routes\ai.py:719: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    target_user = User.query.get(target_user_id)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+========== 371 passed, 54 skipped, 19 warnings in 130.15s (0:02:10) ===========

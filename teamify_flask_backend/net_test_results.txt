@@ -1,0 +1,52 @@
+﻿============================= test session starts =============================
+collected 52 items
+
+tests\test_network.py .................................................. [ 96%]
+..                                                                       [100%]
+
+============================== warnings summary ===============================
+tests/test_network.py::TestProjects::test_get_project
+tests/test_network.py::TestProjects::test_get_nonexistent_project
+  C:\Users\20111\Desktop\Teamify\teamify_flask_backend\routes\projects.py:289: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    project = Project.query.get(project_id)
+
+tests/test_network.py::TestProjects::test_update_project
+tests/test_network.py::TestInputValidation::test_reject_invalid_project_status
+  C:\Users\20111\Desktop\Teamify\teamify_flask_backend\routes\projects.py:365: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    project = Project.query.get(project_id)
+
+tests/test_network.py::TestProjects::test_get_project_members
+  C:\Users\20111\Desktop\Teamify\teamify_flask_backend\routes\projects.py:658: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    project = Project.query.get(project_id)
+
+tests/test_network.py::TestTasks::test_list_tasks
+tests/test_network.py::TestTasks::test_list_tasks_requires_project_id
+tests/test_network.py::TestTasks::test_get_task
+tests/test_network.py::TestTasks::test_update_task
+tests/test_network.py::TestTasks::test_create_task_empty_body
+tests/test_network.py::TestTasks::test_get_nonexistent_task
+tests/test_network.py::TestInputValidation::test_reject_invalid_task_priority
+  C:\Users\20111\Desktop\Teamify\teamify_flask_backend\routes\tasks.py:273: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    project = Project.query.get(project_id)
+
+tests/test_network.py::TestTasks::test_list_tasks
+  C:\Users\20111\Desktop\Teamify\teamify_flask_backend\routes\tasks.py:140: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    project = Project.query.get(project_id)
+
+tests/test_network.py::TestTasks::test_get_task
+tests/test_network.py::TestTasks::test_update_task
+tests/test_network.py::TestTasks::test_get_nonexistent_task
+  C:\Users\20111\Desktop\Teamify\teamify_flask_backend\routes\tasks.py:21: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    task = Task.query.get(task_id)
+
+tests/test_network.py::TestOtherEndpoints::test_dashboard
+tests/test_network.py::TestOtherEndpoints::test_dashboard_keys
+  C:\Users\20111\Desktop\Teamify\teamify_flask_backend\routes\dashboard.py:81: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    user = User.query.get(user_id)
+
+tests/test_network.py::TestOtherEndpoints::test_search_projects
+  C:\Users\20111\Desktop\Teamify\teamify_flask_backend\routes\search.py:186: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    user = User.query.get(user_id)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+====================== 52 passed, 19 warnings in 24.03s =======================

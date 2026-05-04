@@ -1,0 +1,66 @@
+import os
+import secrets
+from datetime import timedelta
+from dotenv import load_dotenv
+
+load_dotenv()
+
+
+def _require_secret(env_var: str) -> str:
+    """Return env var value or generate a random key (warns in dev)."""
+    val = os.getenv(env_var)
+    if val:
+        return val
+    import warnings
+    warnings.warn(
+        f"{env_var} is not set – using a random key. "
+        "Set it in .env for production.",
+        stacklevel=2,
+    )
+    return secrets.token_hex(32)
+
+
+class Config:
+    """Application configuration class."""
+
+    # Flask
+    SECRET_KEY = _require_secret("JWT_SECRET_KEY")
+
+    # Database — fix "postgres://" → "postgresql://" (required by SQLAlchemy 1.4+)
+    _db_url = os.getenv("DATABASE_URL", "sqlite:///app.db")
+    if _db_url.startswith("postgres://"):
+        _db_url = _db_url.replace("postgres://", "postgresql://", 1)
+    SQLALCHEMY_DATABASE_URI = _db_url
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+    # Request size limit (5 MB)
+    MAX_CONTENT_LENGTH = 5 * 1024 * 1024
+
+    # JWT
+    JWT_SECRET_KEY = _require_secret("JWT_SECRET_KEY")
+    JWT_ALGORITHM = "HS256"
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(
+        seconds=int(os.getenv("JWT_ACCESS_TOKEN_EXPIRES", 3600))
+    )
+    JWT_REFRESH_TOKEN_EXPIRES = timedelta(
+        days=int(os.getenv("JWT_REFRESH_TOKEN_EXPIRES_DAYS", 7))
+    )
+
+    # ── VULN-002 FIX: JWT Cookie Security ─────────────────────────────────────
+    # Allow JWTs from BOTH Authorization header (mobile) AND HttpOnly cookies
+    # (web). This dual-mode setup is safe: the header path keeps native apps
+    # working; the cookie path protects web clients from XSS.
+    JWT_TOKEN_LOCATION = ["headers", "cookies"]
+
+    # Cookies are HttpOnly by default in flask-jwt-extended.
+    # Set JWT_COOKIE_SECURE = True in production (requires HTTPS).
+    _is_prod = os.getenv("FLASK_ENV") == "production"
+    JWT_COOKIE_SECURE = _is_prod          # True in prod, False in dev (no HTTPS locally)
+
+    # CSRF double-submit cookie protection (guards cookie path against CSRF).
+    # When enabled, POSTs must include the X-CSRF-TOKEN header.
+    JWT_COOKIE_CSRF_PROTECT = _is_prod    # True in prod; relaxed in dev for ease of testing
+
+    # Each access_token cookie expires when the browser session ends
+    # (i.e. it is a session cookie, not a persistent cookie).
+    JWT_SESSION_COOKIE = False            # Use expiring cookies, not session cookies

@@ -1,0 +1,1266 @@
+﻿============================= test session starts =============================
+collected 429 items
+
+tests\integration\test_2fa.py ....                                       [  0%]
+tests\integration\test_auth_api.py .....                                 [  2%]
+tests\integration\test_cv_system.py ................................     [  9%]
+tests\integration\test_database.py ....                                  [ 10%]
+tests\integration\test_rbac.py ..                                        [ 10%]
+tests\integration\test_security.py ...                                   [ 11%]
+tests\performance\test_benchmarks.py .                                   [ 11%]
+tests\performance\test_cv_benchmarks.py .....                            [ 13%]
+tests\test_admin.py ............                                         [ 15%]
+tests\test_ai.py ....F..............                                     [ 20%]
+tests\test_auth.py ..................................................... [ 32%]
+.                                                                        [ 32%]
+tests\test_comments.py ...................                               [ 37%]
+tests\test_dashboard.py FF.                                              [ 37%]
+tests\test_feedback.py ....FFF                                           [ 39%]
+tests\test_files.py ...................                                  [ 44%]
+tests\test_health.py ...                                                 [ 44%]
+tests\test_logs.py .......                                               [ 46%]
+tests\test_network.py .................................................. [ 58%]
+..                                                                       [ 58%]
+tests\test_notifications.py ..........                                   [ 60%]
+tests\test_projects.py ...........FFF.F.FF..F.....F..................... [ 72%]
+......FF                                                                 [ 74%]
+tests\test_ratings.py .....FF                                            [ 75%]
+tests\test_reminders.py ....                                             [ 76%]
+tests\test_search.py ............                                        [ 79%]
+tests\test_stats.py ...........                                          [ 82%]
+tests\test_tasks.py ...F..........FF.F.F....F......F.........            [ 91%]
+tests\test_users.py .....................FFFF                            [ 97%]
+tests\unit\test_auth_schemas.py ...........                              [100%]
+
+================================== FAILURES ===================================
+___________________ TestAIAssign.test_project_not_found_404 ___________________
+..\..\backend_task1\tests\test_ai.py:47: in test_project_not_found_404
+    assert client.post(self.URL, headers=member_headers, json={"project_id": str(NONEXISTENT_ID)}).status_code == 404
+E   AssertionError: assert 403 == 404
+E    +  where 403 = <WrapperTestResponse streamed [403 FORBIDDEN]>.status_code
+E    +    where <WrapperTestResponse streamed [403 FORBIDDEN]> = post('/api/ai/assign', headers={'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc3NzkwNTk5MywianRpIjoiOTA...E3Nzc5MDU5OTMsImV4cCI6MTc3NzkwOTU5M30.DT4hsJW3KYR1VN0wYf6oSOqGbEtZq8gRjkn8HyAYLoU', 'Content-Type': 'application/json'}, json={'project_id': '99999'})
+E    +      where post = <FlaskClient <Flask 'app'>>.post
+E    +      and   '/api/ai/assign' = <tests.test_ai.TestAIAssign object at 0x00000185A8901130>.URL
+______________________ TestGetDashboard.test_member_200 _______________________
+..\..\backend_task1\tests\test_dashboard.py:59: in test_member_200
+    r = client.get(self.URL, headers=member_headers)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1162: in get
+    return self.open(*args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\testing.py:232: in open
+    response = super().open(
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1478: in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1458: in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask_cors\extension.py:176: in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1455: in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:869: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask_cors\extension.py:176: in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:867: in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:852: in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+middleware\auth.py:68: in wrapper
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+routes\dashboard.py:181: in get_dashboard
+    return jsonify({
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\__init__.py:170: in jsonify
+    return current_app.json.response(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\provider.py:215: in response
+    f"{self.dumps(obj, **dump_args)}\n", mimetype=self.mimetype
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\provider.py:180: in dumps
+    return json.dumps(obj, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\json\__init__.py:238: in dumps
+    **kw).encode(obj)
+          ^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\json\encoder.py:200: in encode
+    chunks = self.iterencode(o, _one_shot=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\json\encoder.py:261: in iterencode
+    return _iterencode(o, 0)
+           ^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\provider.py:120: in _default
+    raise TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
+E   TypeError: Object of type MagicMock is not JSON serializable
+__________________ TestGetDashboard.test_admin_sees_all_200 ___________________
+..\..\backend_task1\tests\test_dashboard.py:86: in test_admin_sees_all_200
+    assert client.get(self.URL, headers=admin_headers).status_code == 200
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1162: in get
+    return self.open(*args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\testing.py:232: in open
+    response = super().open(
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1478: in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1458: in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask_cors\extension.py:176: in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1455: in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:869: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask_cors\extension.py:176: in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:867: in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:852: in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+middleware\auth.py:68: in wrapper
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+routes\dashboard.py:181: in get_dashboard
+    return jsonify({
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\__init__.py:170: in jsonify
+    return current_app.json.response(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\provider.py:215: in response
+    f"{self.dumps(obj, **dump_args)}\n", mimetype=self.mimetype
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\provider.py:180: in dumps
+    return json.dumps(obj, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\json\__init__.py:238: in dumps
+    **kw).encode(obj)
+          ^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\json\encoder.py:200: in encode
+    chunks = self.iterencode(o, _one_shot=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\json\encoder.py:261: in iterencode
+    return _iterencode(o, 0)
+           ^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\provider.py:120: in _default
+    raise TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
+E   TypeError: Object of type MagicMock is not JSON serializable
+_____________________ TestFeedback.test_get_feedback_200 ______________________
+..\..\backend_task1\tests\test_feedback.py:70: in test_get_feedback_200
+    r = client.get(f"{self.URL}/1", headers=member_headers)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1162: in get
+    return self.open(*args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\testing.py:232: in open
+    response = super().open(
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1478: in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1458: in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask_cors\extension.py:176: in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1455: in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:869: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask_cors\extension.py:176: in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:867: in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:852: in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+middleware\auth.py:68: in wrapper
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+routes\feedback.py:366: in get_feedback
+    return jsonify({"feedback": fb.to_dict()}), 200
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\__init__.py:170: in jsonify
+    return current_app.json.response(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\provider.py:215: in response
+    f"{self.dumps(obj, **dump_args)}\n", mimetype=self.mimetype
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\provider.py:180: in dumps
+    return json.dumps(obj, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\json\__init__.py:238: in dumps
+    **kw).encode(obj)
+          ^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\json\encoder.py:200: in encode
+    chunks = self.iterencode(o, _one_shot=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\json\encoder.py:261: in iterencode
+    return _iterencode(o, 0)
+           ^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\provider.py:120: in _default
+    raise TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
+E   TypeError: Object of type MagicMock is not JSON serializable
+____________________ TestFeedback.test_update_feedback_200 ____________________
+..\..\backend_task1\tests\test_feedback.py:81: in test_update_feedback_200
+    assert r.status_code == 200
+E   assert 403 == 200
+E    +  where 403 = <WrapperTestResponse streamed [403 FORBIDDEN]>.status_code
+____________________ TestFeedback.test_delete_feedback_200 ____________________
+..\..\backend_task1\tests\test_feedback.py:91: in test_delete_feedback_200
+    assert r.status_code == 200
+E   assert 403 == 200
+E    +  where 403 = <WrapperTestResponse streamed [403 FORBIDDEN]>.status_code
+________________________ TestGetProject.test_owner_200 ________________________
+..\..\backend_task1\tests\test_projects.py:86: in test_owner_200
+    assert client.get(self.URL, headers=member_headers).status_code == 200
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1162: in get
+    return self.open(*args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\testing.py:232: in open
+    response = super().open(
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1478: in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1458: in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask_cors\extension.py:176: in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1455: in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:869: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask_cors\extension.py:176: in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:867: in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:852: in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+middleware\auth.py:68: in wrapper
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+routes\projects.py:298: in get_project
+    return jsonify({"project": project.to_dict()}), 200
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\__init__.py:170: in jsonify
+    return current_app.json.response(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\provider.py:215: in response
+    f"{self.dumps(obj, **dump_args)}\n", mimetype=self.mimetype
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\provider.py:180: in dumps
+    return json.dumps(obj, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\json\__init__.py:238: in dumps
+    **kw).encode(obj)
+          ^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\json\encoder.py:200: in encode
+    chunks = self.iterencode(o, _one_shot=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\json\encoder.py:261: in iterencode
+    return _iterencode(o, 0)
+           ^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\provider.py:120: in _default
+    raise TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
+E   TypeError: Object of type MagicMock is not JSON serializable
+________________________ TestGetProject.test_admin_200 ________________________
+..\..\backend_task1\tests\test_projects.py:93: in test_admin_200
+    assert client.get(self.URL, headers=admin_headers).status_code == 200
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1162: in get
+    return self.open(*args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\testing.py:232: in open
+    response = super().open(
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1478: in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1458: in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask_cors\extension.py:176: in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1455: in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:869: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask_cors\extension.py:176: in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:867: in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:852: in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+middleware\auth.py:68: in wrapper
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+routes\projects.py:298: in get_project
+    return jsonify({"project": project.to_dict()}), 200
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\__init__.py:170: in jsonify
+    return current_app.json.response(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\provider.py:215: in response
+    f"{self.dumps(obj, **dump_args)}\n", mimetype=self.mimetype
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\provider.py:180: in dumps
+    return json.dumps(obj, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\json\__init__.py:238: in dumps
+    **kw).encode(obj)
+          ^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\json\encoder.py:200: in encode
+    chunks = self.iterencode(o, _one_shot=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\json\encoder.py:261: in iterencode
+    return _iterencode(o, 0)
+           ^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\provider.py:120: in _default
+    raise TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
+E   TypeError: Object of type MagicMock is not JSON serializable
+_____________________ TestGetProject.test_guest_read_200 ______________________
+..\..\backend_task1\tests\test_projects.py:100: in test_guest_read_200
+    assert client.get(self.URL, headers=guest_headers).status_code == 200
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1162: in get
+    return self.open(*args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\testing.py:232: in open
+    response = super().open(
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1478: in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1458: in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask_cors\extension.py:176: in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1455: in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:869: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask_cors\extension.py:176: in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:867: in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:852: in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+middleware\auth.py:68: in wrapper
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+routes\projects.py:298: in get_project
+    return jsonify({"project": project.to_dict()}), 200
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\__init__.py:170: in jsonify
+    return current_app.json.response(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\provider.py:215: in response
+    f"{self.dumps(obj, **dump_args)}\n", mimetype=self.mimetype
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\provider.py:180: in dumps
+    return json.dumps(obj, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\json\__init__.py:238: in dumps
+    **kw).encode(obj)
+          ^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\json\encoder.py:200: in encode
+    chunks = self.iterencode(o, _one_shot=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\json\encoder.py:261: in iterencode
+    return _iterencode(o, 0)
+           ^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\provider.py:120: in _default
+    raise TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
+E   TypeError: Object of type MagicMock is not JSON serializable
+______________________ TestGetProject.test_not_found_404 ______________________
+..\..\backend_task1\tests\test_projects.py:112: in test_not_found_404
+    assert client.get(f"/api/projects/{NONEXISTENT_ID}", headers=member_headers).status_code == 404
+E   AssertionError: assert 403 == 404
+E    +  where 403 = <WrapperTestResponse streamed [403 FORBIDDEN]>.status_code
+E    +    where <WrapperTestResponse streamed [403 FORBIDDEN]> = get('/api/projects/99999', headers={'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc3NzkwNjAxNiwianRpIjoiZjJ...E3Nzc5MDYwMTYsImV4cCI6MTc3NzkwOTYxNn0.V3gt1d_ofEesxzhjjtDRlJ2U1m1UGUSNY4eCaJ2TOuA', 'Content-Type': 'application/json'})
+E    +      where get = <FlaskClient <Flask 'app'>>.get
+______________________ TestUpdateProject.test_owner_200 _______________________
+..\..\backend_task1\tests\test_projects.py:127: in test_owner_200
+    r = client.put(self.URL, headers=member_headers, json={"name": "Updated"})
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1172: in put
+    return self.open(*args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\testing.py:232: in open
+    response = super().open(
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1478: in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1458: in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask_cors\extension.py:176: in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1455: in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:869: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask_cors\extension.py:176: in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:867: in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:852: in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+middleware\auth.py:68: in wrapper
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+routes\projects.py:403: in update_project
+    if eff_start and eff_end and eff_end < eff_start:
+                                 ^^^^^^^^^^^^^^^^^^^
+E   TypeError: '<' not supported between instances of 'MagicMock' and 'MagicMock'
+______________________ TestUpdateProject.test_admin_200 _______________________
+..\..\backend_task1\tests\test_projects.py:136: in test_admin_200
+    assert client.put(self.URL, headers=admin_headers, json={"name": "Updated"}).status_code == 200
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1172: in put
+    return self.open(*args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\testing.py:232: in open
+    response = super().open(
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1478: in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1458: in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask_cors\extension.py:176: in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1455: in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:869: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask_cors\extension.py:176: in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:867: in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:852: in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+middleware\auth.py:68: in wrapper
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+routes\projects.py:403: in update_project
+    if eff_start and eff_end and eff_end < eff_start:
+                                 ^^^^^^^^^^^^^^^^^^^
+E   TypeError: '<' not supported between instances of 'MagicMock' and 'MagicMock'
+____________________ TestUpdateProject.test_not_found_404 _____________________
+..\..\backend_task1\tests\test_projects.py:155: in test_not_found_404
+    assert client.put(f"/api/projects/{NONEXISTENT_ID}", headers=member_headers, json={"name": "X"}).status_code == 404
+E   AssertionError: assert 403 == 404
+E    +  where 403 = <WrapperTestResponse streamed [403 FORBIDDEN]>.status_code
+E    +    where <WrapperTestResponse streamed [403 FORBIDDEN]> = put('/api/projects/99999', headers={'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc3NzkwNjAxNywianRpIjoiMzI...E3Nzc5MDYwMTcsImV4cCI6MTc3NzkwOTYxN30.DLcJ3a5GXsHwE-LAWrZOUrIan97DS3P7TTD7xp-OM0E', 'Content-Type': 'application/json'}, json={'name': 'X'})
+E    +      where put = <FlaskClient <Flask 'app'>>.put
+____________________ TestDeleteProject.test_not_found_404 _____________________
+..\..\backend_task1\tests\test_projects.py:197: in test_not_found_404
+    assert client.delete(f"/api/projects/{NONEXISTENT_ID}", headers=member_headers).status_code == 404
+E   AssertionError: assert 403 == 404
+E    +  where 403 = <WrapperTestResponse streamed [403 FORBIDDEN]>.status_code
+E    +    where <WrapperTestResponse streamed [403 FORBIDDEN]> = delete('/api/projects/99999', headers={'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc3NzkwNjAxNywianRpIjoiY2J...E3Nzc5MDYwMTcsImV4cCI6MTc3NzkwOTYxN30.svPfJBL-hkdPlfd87cyA3VISiGFZR2VaQ_EN0tmrR7U', 'Content-Type': 'application/json'})
+E    +      where delete = <FlaskClient <Flask 'app'>>.delete
+_______________ TestCompletedProjects.test_complete_project_200 _______________
+..\..\backend_task1\tests\test_projects.py:480: in test_complete_project_200
+    r = client.post(self.URL_COMPLETE, headers=member_headers)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1167: in post
+    return self.open(*args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\testing.py:232: in open
+    response = super().open(
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1478: in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1458: in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask_cors\extension.py:176: in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1455: in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:869: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask_cors\extension.py:176: in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:867: in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:852: in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+middleware\auth.py:68: in wrapper
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+routes\projects.py:934: in mark_project_completed
+    return jsonify({"message": "Project marked as completed", "project": project.to_dict()}), 200
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\__init__.py:170: in jsonify
+    return current_app.json.response(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\provider.py:215: in response
+    f"{self.dumps(obj, **dump_args)}\n", mimetype=self.mimetype
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\provider.py:180: in dumps
+    return json.dumps(obj, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\json\__init__.py:238: in dumps
+    **kw).encode(obj)
+          ^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\json\encoder.py:200: in encode
+    chunks = self.iterencode(o, _one_shot=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\json\encoder.py:261: in iterencode
+    return _iterencode(o, 0)
+           ^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\provider.py:120: in _default
+    raise TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
+E   TypeError: Object of type MagicMock is not JSON serializable
+________________ TestCompletedProjects.test_reopen_project_200 ________________
+..\..\backend_task1\tests\test_projects.py:493: in test_reopen_project_200
+    assert r.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <WrapperTestResponse streamed [409 CONFLICT]>.status_code
+_____________________ TestRatings.test_update_rating_200 ______________________
+..\..\backend_task1\tests\test_ratings.py:68: in test_update_rating_200
+    assert r.status_code == 200
+E   assert 403 == 200
+E    +  where 403 = <WrapperTestResponse streamed [403 FORBIDDEN]>.status_code
+_____________________ TestRatings.test_delete_rating_200 ______________________
+..\..\backend_task1\tests\test_ratings.py:78: in test_delete_rating_200
+    assert r.status_code == 200
+E   assert 403 == 200
+E    +  where 403 = <WrapperTestResponse streamed [403 FORBIDDEN]>.status_code
+___________________ TestGetTasks.test_project_not_found_404 ___________________
+..\..\backend_task1\tests\test_tasks.py:37: in test_project_not_found_404
+    assert client.get(f"{self.URL}?project_id={NONEXISTENT_ID}", headers=member_headers).status_code == 404
+E   AssertionError: assert 403 == 404
+E    +  where 403 = <WrapperTestResponse streamed [403 FORBIDDEN]>.status_code
+E    +    where <WrapperTestResponse streamed [403 FORBIDDEN]> = get('/api/tasks?project_id=99999', headers={'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc3NzkwNjAxOCwianRpIjoiYjZ...E3Nzc5MDYwMTgsImV4cCI6MTc3NzkwOTYxOH0.DMli91vgMY5YXp8ac2bttbjbLSR5jZuDk0r8PcfX21o', 'Content-Type': 'application/json'})
+E    +      where get = <FlaskClient <Flask 'app'>>.get
+_________________________ TestGetTask.test_member_200 _________________________
+..\..\backend_task1\tests\test_tasks.py:120: in test_member_200
+    assert client.get(self.URL, headers=member_headers).status_code == 200
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1162: in get
+    return self.open(*args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\testing.py:232: in open
+    response = super().open(
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1478: in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1458: in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask_cors\extension.py:176: in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1455: in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:869: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask_cors\extension.py:176: in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:867: in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:852: in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+middleware\auth.py:68: in wrapper
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+routes\tasks.py:412: in get_task
+    return jsonify({"task": task.to_dict()}), 200
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\__init__.py:170: in jsonify
+    return current_app.json.response(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\provider.py:215: in response
+    f"{self.dumps(obj, **dump_args)}\n", mimetype=self.mimetype
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\provider.py:180: in dumps
+    return json.dumps(obj, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\json\__init__.py:238: in dumps
+    **kw).encode(obj)
+          ^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\json\encoder.py:200: in encode
+    chunks = self.iterencode(o, _one_shot=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\json\encoder.py:261: in iterencode
+    return _iterencode(o, 0)
+           ^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\provider.py:120: in _default
+    raise TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
+E   TypeError: Object of type MagicMock is not JSON serializable
+_______________________ TestGetTask.test_guest_read_200 _______________________
+..\..\backend_task1\tests\test_tasks.py:127: in test_guest_read_200
+    assert client.get(self.URL, headers=guest_headers).status_code == 200
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1162: in get
+    return self.open(*args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\testing.py:232: in open
+    response = super().open(
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1478: in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1458: in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask_cors\extension.py:176: in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1455: in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:869: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask_cors\extension.py:176: in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:867: in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:852: in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+middleware\auth.py:68: in wrapper
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+routes\tasks.py:412: in get_task
+    return jsonify({"task": task.to_dict()}), 200
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\__init__.py:170: in jsonify
+    return current_app.json.response(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\provider.py:215: in response
+    f"{self.dumps(obj, **dump_args)}\n", mimetype=self.mimetype
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\provider.py:180: in dumps
+    return json.dumps(obj, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\json\__init__.py:238: in dumps
+    **kw).encode(obj)
+          ^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\json\encoder.py:200: in encode
+    chunks = self.iterencode(o, _one_shot=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\json\encoder.py:261: in iterencode
+    return _iterencode(o, 0)
+           ^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\provider.py:120: in _default
+    raise TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
+E   TypeError: Object of type MagicMock is not JSON serializable
+_______________________ TestGetTask.test_not_found_404 ________________________
+..\..\backend_task1\tests\test_tasks.py:139: in test_not_found_404
+    assert client.get(f"/api/tasks/{NONEXISTENT_ID}", headers=member_headers).status_code == 404
+E   AssertionError: assert 403 == 404
+E    +  where 403 = <WrapperTestResponse streamed [403 FORBIDDEN]>.status_code
+E    +    where <WrapperTestResponse streamed [403 FORBIDDEN]> = get('/api/tasks/99999', headers={'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc3NzkwNjAxOSwianRpIjoiOGR...E3Nzc5MDYwMTksImV4cCI6MTc3NzkwOTYxOX0.29nToqiWWpfhH0VjQXd9qMyc4AuxJgdVZE-xGaAW23U', 'Content-Type': 'application/json'})
+E    +      where get = <FlaskClient <Flask 'app'>>.get
+____________________ TestUpdateTaskStatus.test_member_200 _____________________
+..\..\backend_task1\tests\test_tasks.py:154: in test_member_200
+    r = client.patch(self.URL, headers=member_headers, json={"status": "in_progress"})
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1182: in patch
+    return self.open(*args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\testing.py:232: in open
+    response = super().open(
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1478: in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1458: in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask_cors\extension.py:176: in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1455: in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:869: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask_cors\extension.py:176: in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:867: in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:852: in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+middleware\auth.py:68: in wrapper
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+routes\tasks.py:523: in update_task_status
+    return jsonify({"message": "Task status updated successfully", "task": task.to_dict()}), 200
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\__init__.py:170: in jsonify
+    return current_app.json.response(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\provider.py:215: in response
+    f"{self.dumps(obj, **dump_args)}\n", mimetype=self.mimetype
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\provider.py:180: in dumps
+    return json.dumps(obj, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\json\__init__.py:238: in dumps
+    **kw).encode(obj)
+          ^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\json\encoder.py:200: in encode
+    chunks = self.iterencode(o, _one_shot=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\json\encoder.py:261: in iterencode
+    return _iterencode(o, 0)
+           ^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\provider.py:120: in _default
+    raise TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
+E   TypeError: Object of type MagicMock is not JSON serializable
+________________________ TestUpdateTask.test_owner_200 ________________________
+..\..\backend_task1\tests\test_tasks.py:191: in test_owner_200
+    assert client.put(self.URL, headers=member_headers, json={"title": "Updated"}).status_code == 200
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1172: in put
+    return self.open(*args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\testing.py:232: in open
+    response = super().open(
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1478: in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1458: in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask_cors\extension.py:176: in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1455: in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:869: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask_cors\extension.py:176: in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:867: in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:852: in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+middleware\auth.py:68: in wrapper
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+routes\tasks.py:642: in update_task
+    return jsonify({"message": "Task updated successfully", "task": task.to_dict()}), 200
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\__init__.py:170: in jsonify
+    return current_app.json.response(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\provider.py:215: in response
+    f"{self.dumps(obj, **dump_args)}\n", mimetype=self.mimetype
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\provider.py:180: in dumps
+    return json.dumps(obj, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\json\__init__.py:238: in dumps
+    **kw).encode(obj)
+          ^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\json\encoder.py:200: in encode
+    chunks = self.iterencode(o, _one_shot=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\json\encoder.py:261: in iterencode
+    return _iterencode(o, 0)
+           ^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\provider.py:120: in _default
+    raise TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
+E   TypeError: Object of type MagicMock is not JSON serializable
+______________________ TestDeleteTask.test_not_found_404 ______________________
+..\..\backend_task1\tests\test_tasks.py:239: in test_not_found_404
+    assert client.delete(f"/api/tasks/{NONEXISTENT_ID}", headers=member_headers).status_code == 404
+E   AssertionError: assert 403 == 404
+E    +  where 403 = <WrapperTestResponse streamed [403 FORBIDDEN]>.status_code
+E    +    where <WrapperTestResponse streamed [403 FORBIDDEN]> = delete('/api/tasks/99999', headers={'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc3NzkwNjAxOSwianRpIjoiY2Q...E3Nzc5MDYwMTksImV4cCI6MTc3NzkwOTYxOX0.sR4tfbOu9aFFjlL62g2dMKG8pRWrxrjIBbVSIrwncuc', 'Content-Type': 'application/json'})
+E    +      where delete = <FlaskClient <Flask 'app'>>.delete
+________________ TestPublicProfile.test_get_public_profile_200 ________________
+..\..\backend_task1\tests\test_users.py:175: in test_get_public_profile_200
+    r = client.get(self.URL, headers=member_headers)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1162: in get
+    return self.open(*args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\testing.py:232: in open
+    response = super().open(
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1478: in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1458: in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask_cors\extension.py:176: in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1455: in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:869: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask_cors\extension.py:176: in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:867: in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:852: in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+middleware\auth.py:68: in wrapper
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+routes\users.py:295: in get_public_profile
+    return jsonify({"profile": profile}), 200
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\__init__.py:170: in jsonify
+    return current_app.json.response(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\provider.py:215: in response
+    f"{self.dumps(obj, **dump_args)}\n", mimetype=self.mimetype
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\provider.py:180: in dumps
+    return json.dumps(obj, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\json\__init__.py:238: in dumps
+    **kw).encode(obj)
+          ^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\json\encoder.py:200: in encode
+    chunks = self.iterencode(o, _one_shot=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\json\encoder.py:261: in iterencode
+    return _iterencode(o, 0)
+           ^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\provider.py:120: in _default
+    raise TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
+E   TypeError: Object of type MagicMock is not JSON serializable
+________________ TestPublicProfile.test_get_public_profile_404 ________________
+..\..\backend_task1\tests\test_users.py:182: in test_get_public_profile_404
+    r = client.get(self.URL, headers=member_headers)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1162: in get
+    return self.open(*args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\testing.py:232: in open
+    response = super().open(
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1478: in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1458: in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask_cors\extension.py:176: in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1455: in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:869: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask_cors\extension.py:176: in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:867: in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:852: in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+middleware\auth.py:68: in wrapper
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+routes\users.py:295: in get_public_profile
+    return jsonify({"profile": profile}), 200
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\__init__.py:170: in jsonify
+    return current_app.json.response(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\provider.py:215: in response
+    f"{self.dumps(obj, **dump_args)}\n", mimetype=self.mimetype
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\provider.py:180: in dumps
+    return json.dumps(obj, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\json\__init__.py:238: in dumps
+    **kw).encode(obj)
+          ^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\json\encoder.py:200: in encode
+    chunks = self.iterencode(o, _one_shot=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\json\encoder.py:261: in iterencode
+    return _iterencode(o, 0)
+           ^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\provider.py:120: in _default
+    raise TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
+E   TypeError: Object of type MagicMock is not JSON serializable
+____________________ TestUserStats.test_get_user_stats_200 ____________________
+..\..\backend_task1\tests\test_users.py:206: in test_get_user_stats_200
+    r = client.get(self.URL, headers=member_headers)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1162: in get
+    return self.open(*args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\testing.py:232: in open
+    response = super().open(
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1478: in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1458: in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask_cors\extension.py:176: in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1455: in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:869: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask_cors\extension.py:176: in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:867: in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:852: in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+middleware\auth.py:68: in wrapper
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+routes\users.py:359: in get_user_stats
+    return jsonify({
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\__init__.py:170: in jsonify
+    return current_app.json.response(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\provider.py:215: in response
+    f"{self.dumps(obj, **dump_args)}\n", mimetype=self.mimetype
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\provider.py:180: in dumps
+    return json.dumps(obj, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\json\__init__.py:238: in dumps
+    **kw).encode(obj)
+          ^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\json\encoder.py:200: in encode
+    chunks = self.iterencode(o, _one_shot=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\json\encoder.py:261: in iterencode
+    return _iterencode(o, 0)
+           ^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\json\provider.py:120: in _default
+    raise TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
+E   TypeError: Object of type MagicMock is not JSON serializable
+____________________ TestUserStats.test_get_user_stats_404 ____________________
+..\..\backend_task1\tests\test_users.py:213: in test_get_user_stats_404
+    r = client.get(self.URL, headers=member_headers)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1162: in get
+    return self.open(*args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\testing.py:232: in open
+    response = super().open(
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\werkzeug\test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1478: in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1458: in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask_cors\extension.py:176: in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:1455: in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:869: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask_cors\extension.py:176: in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:867: in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py:852: in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+middleware\auth.py:68: in wrapper
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+routes\users.py:350: in get_user_stats
+    avg_rating = round(sum(r.score for r in ratings) / len(ratings), 2) if ratings else None
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   ZeroDivisionError: division by zero
+
+----------------------------------------------------------------------------------------------- benchmark: 6 tests -----------------------------------------------------------------------------------------------
+Name (time in ms)                                Min                 Max                Mean             StdDev              Median                IQR            Outliers       OPS            Rounds  Iterations
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+test_mentor_recommendations_performance       2.0348 (1.0)        5.2677 (1.24)       3.5826 (1.0)       0.9302 (1.67)       3.6733 (1.00)      1.1774 (2.30)          2;0  279.1308 (1.0)          10           1
+test_mentor_courses_performance               2.6697 (1.31)       5.9519 (1.40)       3.9995 (1.12)      0.8462 (1.52)       3.9403 (1.07)      0.5127 (1.0)           2;2  250.0319 (0.90)         10           1
+test_cv_read_performance                      2.9067 (1.43)       4.2502 (1.0)        3.6191 (1.01)      0.5564 (1.0)        3.6723 (1.0)       1.0948 (2.14)          5;0  276.3148 (0.99)         10           1
+test_cv_creation_performance                  5.8543 (2.88)       8.1847 (1.93)       6.9603 (1.94)      0.9208 (1.65)       7.1811 (1.96)      1.3783 (2.69)          2;0  143.6716 (0.51)          5           1
+test_pdf_export_performance                  15.5606 (7.65)      17.6119 (4.14)      16.5739 (4.63)      0.7636 (1.37)      16.5979 (4.52)      1.0174 (1.98)          2;0   60.3358 (0.22)          5           1
+test_login_performance                      404.2492 (198.67)   538.0416 (126.59)   461.6911 (128.87)   55.7109 (100.13)   454.1359 (123.67)   93.1127 (181.61)        2;0    2.1660 (0.01)          5           1
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Legend:
+  Outliers: 1 Standard Deviation from Mean; 1.5 IQR (InterQuartile Range) from 1st Quartile and 3rd Quartile.
+  OPS: Operations Per Second, computed as 1 / Mean
+=========================== short test summary info ===========================
+FAILED tests/test_ai.py::TestAIAssign::test_project_not_found_404 - Assertion...
+FAILED tests/test_dashboard.py::TestGetDashboard::test_member_200 - TypeError...
+FAILED tests/test_dashboard.py::TestGetDashboard::test_admin_sees_all_200 - T...
+FAILED tests/test_feedback.py::TestFeedback::test_get_feedback_200 - TypeErro...
+FAILED tests/test_feedback.py::TestFeedback::test_update_feedback_200 - asser...
+FAILED tests/test_feedback.py::TestFeedback::test_delete_feedback_200 - asser...
+FAILED tests/test_projects.py::TestGetProject::test_owner_200 - TypeError: Ob...
+FAILED tests/test_projects.py::TestGetProject::test_admin_200 - TypeError: Ob...
+FAILED tests/test_projects.py::TestGetProject::test_guest_read_200 - TypeErro...
+FAILED tests/test_projects.py::TestGetProject::test_not_found_404 - Assertion...
+FAILED tests/test_projects.py::TestUpdateProject::test_owner_200 - TypeError:...
+FAILED tests/test_projects.py::TestUpdateProject::test_admin_200 - TypeError:...
+FAILED tests/test_projects.py::TestUpdateProject::test_not_found_404 - Assert...
+FAILED tests/test_projects.py::TestDeleteProject::test_not_found_404 - Assert...
+FAILED tests/test_projects.py::TestCompletedProjects::test_complete_project_200
+FAILED tests/test_projects.py::TestCompletedProjects::test_reopen_project_200
+FAILED tests/test_ratings.py::TestRatings::test_update_rating_200 - assert 40...
+FAILED tests/test_ratings.py::TestRatings::test_delete_rating_200 - assert 40...
+FAILED tests/test_tasks.py::TestGetTasks::test_project_not_found_404 - Assert...
+FAILED tests/test_tasks.py::TestGetTask::test_member_200 - TypeError: Object ...
+FAILED tests/test_tasks.py::TestGetTask::test_guest_read_200 - TypeError: Obj...
+FAILED tests/test_tasks.py::TestGetTask::test_not_found_404 - AssertionError:...
+FAILED tests/test_tasks.py::TestUpdateTaskStatus::test_member_200 - TypeError...
+FAILED tests/test_tasks.py::TestUpdateTask::test_owner_200 - TypeError: Objec...
+FAILED tests/test_tasks.py::TestDeleteTask::test_not_found_404 - AssertionErr...
+FAILED tests/test_users.py::TestPublicProfile::test_get_public_profile_200 - ...
+FAILED tests/test_users.py::TestPublicProfile::test_get_public_profile_404 - ...
+FAILED tests/test_users.py::TestUserStats::test_get_user_stats_200 - TypeErro...
+FAILED tests/test_users.py::TestUserStats::test_get_user_stats_404 - ZeroDivi...
+================= 29 failed, 400 passed in 158.41s (0:02:38) ==================
