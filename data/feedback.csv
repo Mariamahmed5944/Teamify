@@ -1,0 +1,1545 @@
+feedback_id,project_id,user_id,reviewer_name,feedback_text,sentiment,rating,feedback_date
+fb_00001,p_00001,u_0001,Hassan Gamal,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-11-27
+fb_00002,p_00001,u_0001,Kareem Hassan,The developer very reliable and consistently meets project deadlines.,positive,4,2025-11-07
+fb_00003,p_00002,u_0001,Ahmed Ramadan,The developer needs to improve communication during blockers.,negative,3,2026-02-27
+fb_00004,p_00002,u_0001,Mariam Ali,The developer writes clean and well-documented code.,positive,5,2026-04-28
+fb_00005,p_00003,u_0001,Tarek Farouk,The developer code quality needs improvement — tests are often missing.,negative,3,2026-01-17
+fb_00006,p_00004,u_0001,Ali Ali,The developer architecture decisions could be better thought through.,negative,3,2026-01-09
+fb_00007,p_00005,u_0001,Layla Gamal,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-06-08
+fb_00008,p_00005,u_0001,Tarek Gamal,The developer very reliable and consistently meets project deadlines.,positive,5,2025-02-09
+fb_00009,p_00007,u_0003,Tarek Nasser,The developer needs to improve communication during blockers.,negative,3,2025-11-12
+fb_00010,p_00007,u_0003,Mohamed Mahmoud,The developer needs to improve communication during blockers.,negative,3,2025-06-17
+fb_00011,p_00007,u_0003,Dina Saleh,The developer needs to improve communication during blockers.,negative,2,2026-04-25
+fb_00012,p_00008,u_0003,Mohamed Nasser,The developer code quality needs improvement — tests are often missing.,negative,3,2026-03-30
+fb_00013,p_00009,u_0003,Salma Samir,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-07-11
+fb_00014,p_00009,u_0003,Mohamed Ahmed,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-12-19
+fb_00015,p_00009,u_0003,Khaled Hassan,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-09-18
+fb_00016,p_00010,u_0003,Nour Gamal,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-10-30
+fb_00017,p_00010,u_0003,Tarek Ibrahim,The developer shows strong initiative and always goes the extra mile.,positive,5,2026-02-15
+fb_00018,p_00011,u_0003,Mariam Mahmoud,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-08-30
+fb_00019,p_00012,u_0003,Rania Zaki,The developer very reliable and consistently meets project deadlines.,positive,4,2025-08-02
+fb_00020,p_00015,u_0005,Ahmed Mahmoud,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2026-04-27
+fb_00021,p_00015,u_0005,Layla Gamal,The developer architecture decisions could be better thought through.,negative,3,2025-07-20
+fb_00022,p_00015,u_0005,Hana Hassan,The developer very reliable and consistently meets project deadlines.,positive,5,2025-11-06
+fb_00023,p_00016,u_0005,Eman Mahmoud,The developer responsive to feedback and implements improvements quickly.,positive,5,2026-02-04
+fb_00024,p_00016,u_0005,Dina Ali,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-06-01
+fb_00025,p_00016,u_0005,Walid Hassan,The developer shows strong initiative and always goes the extra mile.,positive,5,2026-03-05
+fb_00026,p_00017,u_0005,Kareem Hassan,The developer architecture decisions could be better thought through.,negative,2,2026-04-03
+fb_00027,p_00017,u_0005,Salma Ali,The developer great communicator who keeps stakeholders informed.,positive,4,2026-02-06
+fb_00028,p_00017,u_0005,Eman Ali,The developer very reliable and consistently meets project deadlines.,positive,4,2025-08-15
+fb_00029,p_00018,u_0005,Amr Nasser,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-08-31
+fb_00030,p_00018,u_0005,Aya Mohamed,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-10-02
+fb_00031,p_00019,u_0005,Layla Gamal,The developer could improve time management on complex tasks.,negative,2,2025-01-21
+fb_00032,p_00019,u_0005,Eman Mahmoud,The developer shows strong initiative and always goes the extra mile.,positive,5,2026-04-19
+fb_00033,p_00019,u_0005,Walid Nasser,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-07-28
+fb_00034,p_00020,u_0005,Hassan Ibrahim,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-05-27
+fb_00035,p_00020,u_0005,Tarek Ibrahim,The developer demonstrates great problem-solving skills under pressure.,positive,5,2025-03-03
+fb_00036,p_00020,u_0005,Ahmed Nasser,The developer writes clean and well-documented code.,positive,4,2025-12-19
+fb_00037,p_00021,u_0005,Nada Ahmed,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-12-28
+fb_00038,p_00021,u_0005,Rania Nasser,The developer documentation is sometimes incomplete or outdated.,negative,2,2026-02-20
+fb_00039,p_00023,u_0006,Eman Ahmed,The developer needs to improve communication during blockers.,negative,3,2025-02-03
+fb_00040,p_00024,u_0006,Hana Khalil,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-02-28
+fb_00041,p_00025,u_0007,Dina Hassan,The developer could improve time management on complex tasks.,negative,3,2026-03-15
+fb_00042,p_00025,u_0007,Aya Mahmoud,The developer code quality needs improvement — tests are often missing.,negative,3,2025-04-01
+fb_00043,p_00026,u_0007,Tarek Farouk,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-09-14
+fb_00044,p_00027,u_0007,Sara Samir,The developer architecture decisions could be better thought through.,negative,2,2025-12-04
+fb_00045,p_00027,u_0007,Ahmed Samir,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2024-12-22
+fb_00046,p_00028,u_0007,Kareem Nasser,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2026-03-04
+fb_00047,p_00028,u_0007,Mohamed Yousef,The developer documentation is sometimes incomplete or outdated.,negative,3,2025-03-23
+fb_00048,p_00029,u_0008,Nour Gamal,The developer could improve time management on complex tasks.,negative,2,2025-10-23
+fb_00049,p_00029,u_0008,Amr Ramadan,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-09-05
+fb_00050,p_00029,u_0008,Ahmed Nasser,The developer needs to improve communication during blockers.,negative,2,2026-04-12
+fb_00051,p_00030,u_0008,Mona Zaki,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-02-13
+fb_00052,p_00030,u_0008,Kareem Samir,The developer documentation is sometimes incomplete or outdated.,negative,2,2026-03-25
+fb_00053,p_00030,u_0008,Nada Hassan,The developer documentation is sometimes incomplete or outdated.,negative,3,2026-04-14
+fb_00054,p_00031,u_0008,Amr Ahmed,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-06-11
+fb_00055,p_00031,u_0008,Rania Gamal,The developer documentation is sometimes incomplete or outdated.,negative,3,2025-03-26
+fb_00056,p_00032,u_0008,Layla Saleh,The developer code quality needs improvement — tests are often missing.,negative,2,2026-02-27
+fb_00057,p_00032,u_0008,Mostafa Nasser,The developer writes clean and well-documented code.,positive,5,2026-01-11
+fb_00058,p_00033,u_0008,Tarek Hassan,The developer demonstrates great problem-solving skills under pressure.,positive,5,2026-01-14
+fb_00059,p_00033,u_0008,Hana Khalil,The developer code reviews are sometimes rushed and miss edge cases.,negative,3,2025-07-01
+fb_00060,p_00033,u_0008,Layla Ahmed,The developer code quality needs improvement — tests are often missing.,negative,3,2025-10-03
+fb_00061,p_00034,u_0008,Layla Saleh,The developer demonstrates great problem-solving skills under pressure.,positive,5,2026-01-18
+fb_00062,p_00034,u_0008,Mostafa Gamal,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-03-26
+fb_00063,p_00035,u_0009,Eman Zaki,The developer architecture decisions could be better thought through.,negative,2,2025-11-13
+fb_00064,p_00036,u_0009,Sara Mahmoud,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-03-26
+fb_00065,p_00036,u_0009,Mariam Gamal,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2026-01-02
+fb_00066,p_00037,u_0009,Mostafa Ali,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2026-03-31
+fb_00067,p_00037,u_0009,Aya Zaki,The developer needs to improve communication during blockers.,negative,2,2025-12-19
+fb_00068,p_00037,u_0009,Mohamed Farouk,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2025-10-08
+fb_00069,p_00038,u_0010,Hassan Ibrahim,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2026-04-07
+fb_00070,p_00038,u_0010,Mariam Gamal,The developer documentation is sometimes incomplete or outdated.,negative,3,2025-03-20
+fb_00071,p_00038,u_0010,Dina Zaki,The developer very reliable and consistently meets project deadlines.,positive,5,2025-01-11
+fb_00072,p_00039,u_0010,Nada Yousef,The developer documentation is sometimes incomplete or outdated.,negative,3,2026-03-16
+fb_00073,p_00041,u_0010,Mohamed Zaki,The developer demonstrates great problem-solving skills under pressure.,positive,5,2025-07-17
+fb_00074,p_00041,u_0010,Hana Khalil,The developer responsive to feedback and implements improvements quickly.,positive,5,2026-02-24
+fb_00075,p_00042,u_0010,Khaled Nasser,The developer great communicator who keeps stakeholders informed.,positive,4,2025-11-05
+fb_00076,p_00043,u_0010,Youssef Yousef,The developer great communicator who keeps stakeholders informed.,positive,4,2025-01-25
+fb_00077,p_00043,u_0010,Aya Zaki,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-01-23
+fb_00078,p_00043,u_0010,Aya Ramadan,The developer could improve time management on complex tasks.,negative,3,2026-04-23
+fb_00079,p_00044,u_0010,Mona Samir,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-05-14
+fb_00080,p_00044,u_0010,Nour Saleh,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-07-10
+fb_00081,p_00044,u_0010,Omar Samir,The developer very reliable and consistently meets project deadlines.,positive,5,2025-04-01
+fb_00082,p_00045,u_0010,Layla Farouk,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-02-15
+fb_00083,p_00046,u_0011,Aya Ahmed,The developer needs to improve communication during blockers.,negative,2,2025-04-22
+fb_00084,p_00047,u_0011,Eman Hassan,The developer great communicator who keeps stakeholders informed.,positive,5,2025-10-21
+fb_00085,p_00047,u_0011,Mohamed Ramadan,The developer very reliable and consistently meets project deadlines.,positive,5,2025-01-11
+fb_00086,p_00048,u_0011,Tarek Gamal,The developer documentation is sometimes incomplete or outdated.,negative,3,2026-04-05
+fb_00087,p_00048,u_0011,Mohamed Zaki,The developer needs to improve communication during blockers.,negative,2,2025-07-08
+fb_00088,p_00048,u_0011,Mostafa Ahmed,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-03-24
+fb_00089,p_00049,u_0012,Eman Farouk,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2026-03-11
+fb_00090,p_00049,u_0012,Nada Samir,The developer very reliable and consistently meets project deadlines.,positive,5,2025-10-01
+fb_00091,p_00049,u_0012,Tarek Mohamed,The developer architecture decisions could be better thought through.,negative,2,2025-12-05
+fb_00092,p_00050,u_0012,Nada Ramadan,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-12-25
+fb_00093,p_00052,u_0012,Nour Yousef,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2024-12-23
+fb_00094,p_00052,u_0012,Hassan Saleh,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2026-03-03
+fb_00095,p_00053,u_0012,Kareem Samir,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2024-12-30
+fb_00096,p_00054,u_0013,Kareem Yousef,The developer great communicator who keeps stakeholders informed.,positive,5,2025-05-13
+fb_00097,p_00054,u_0013,Amr Zaki,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-12-04
+fb_00098,p_00054,u_0013,Dina Yousef,The developer demonstrates great problem-solving skills under pressure.,positive,5,2025-08-22
+fb_00099,p_00055,u_0013,Rania Hassan,The developer writes clean and well-documented code.,positive,5,2025-11-11
+fb_00100,p_00056,u_0013,Khaled Zaki,The developer needs to improve communication during blockers.,negative,2,2025-06-26
+fb_00101,p_00056,u_0013,Mona Hassan,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-08-12
+fb_00102,p_00056,u_0013,Hassan Hassan,The developer very reliable and consistently meets project deadlines.,positive,5,2025-04-05
+fb_00103,p_00057,u_0013,Amr Ramadan,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-08-04
+fb_00104,p_00057,u_0013,Dina Ali,The developer great communicator who keeps stakeholders informed.,positive,5,2025-11-25
+fb_00105,p_00058,u_0013,Mohamed Ibrahim,The developer architecture decisions could be better thought through.,negative,2,2025-12-19
+fb_00106,p_00058,u_0013,Eman Yousef,The developer documentation is sometimes incomplete or outdated.,negative,3,2026-03-25
+fb_00107,p_00059,u_0013,Dina Yousef,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-04-08
+fb_00108,p_00059,u_0013,Nour Samir,The developer great communicator who keeps stakeholders informed.,positive,5,2025-05-22
+fb_00109,p_00060,u_0014,Mohamed Ali,The developer very reliable and consistently meets project deadlines.,positive,4,2025-11-22
+fb_00110,p_00060,u_0014,Aya Farouk,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-12-10
+fb_00111,p_00060,u_0014,Mariam Hassan,The developer architecture decisions could be better thought through.,negative,3,2026-01-05
+fb_00112,p_00061,u_0015,Ali Khalil,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-03-07
+fb_00113,p_00061,u_0015,Rania Gamal,The developer great communicator who keeps stakeholders informed.,positive,4,2026-01-14
+fb_00114,p_00061,u_0015,Nada Zaki,The developer writes clean and well-documented code.,positive,4,2025-12-01
+fb_00115,p_00062,u_0015,Ahmed Mohamed,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-06-07
+fb_00116,p_00063,u_0015,Mohamed Ramadan,The developer could improve time management on complex tasks.,negative,2,2026-04-24
+fb_00117,p_00064,u_0015,Dina Nasser,The developer code quality needs improvement — tests are often missing.,negative,3,2025-10-14
+fb_00118,p_00065,u_0016,Mona Mahmoud,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2026-02-03
+fb_00119,p_00065,u_0016,Aya Khalil,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-09-18
+fb_00120,p_00066,u_0016,Walid Mahmoud,The developer great communicator who keeps stakeholders informed.,positive,4,2025-02-16
+fb_00121,p_00066,u_0016,Amr Ahmed,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-02-27
+fb_00122,p_00066,u_0016,Hassan Farouk,The developer great communicator who keeps stakeholders informed.,positive,4,2026-01-16
+fb_00123,p_00067,u_0016,Amr Nasser,The developer writes clean and well-documented code.,positive,4,2025-08-06
+fb_00124,p_00068,u_0017,Tarek Ahmed,The developer writes clean and well-documented code.,positive,5,2025-01-24
+fb_00125,p_00069,u_0017,Mariam Khalil,The developer could improve time management on complex tasks.,negative,2,2025-02-14
+fb_00126,p_00070,u_0017,Tarek Mahmoud,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2025-06-19
+fb_00127,p_00070,u_0017,Ahmed Nasser,The developer great communicator who keeps stakeholders informed.,positive,5,2025-03-16
+fb_00128,p_00070,u_0017,Mohamed Samir,The developer demonstrates great problem-solving skills under pressure.,positive,5,2025-09-12
+fb_00129,p_00071,u_0017,Sara Yousef,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-12-13
+fb_00130,p_00074,u_0018,Tarek Mohamed,The developer needs to improve communication during blockers.,negative,3,2026-01-07
+fb_00131,p_00074,u_0018,Mariam Ahmed,The developer great communicator who keeps stakeholders informed.,positive,5,2025-09-28
+fb_00132,p_00075,u_0018,Ahmed Ramadan,The developer architecture decisions could be better thought through.,negative,2,2025-05-23
+fb_00133,p_00076,u_0018,Hassan Khalil,The developer needs to improve communication during blockers.,negative,2,2025-12-10
+fb_00134,p_00076,u_0018,Tarek Ali,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-07-16
+fb_00135,p_00077,u_0018,Eman Mahmoud,The developer could improve time management on complex tasks.,negative,2,2025-08-27
+fb_00136,p_00077,u_0018,Amr Zaki,The developer code quality needs improvement — tests are often missing.,negative,2,2026-02-05
+fb_00137,p_00077,u_0018,Mostafa Zaki,The developer writes clean and well-documented code.,positive,4,2024-12-31
+fb_00138,p_00078,u_0019,Rania Ahmed,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-06-29
+fb_00139,p_00079,u_0019,Omar Gamal,The developer documentation is sometimes incomplete or outdated.,negative,2,2024-12-24
+fb_00140,p_00080,u_0019,Nada Ahmed,The developer could improve time management on complex tasks.,negative,2,2025-10-14
+fb_00141,p_00080,u_0019,Ali Gamal,The developer great communicator who keeps stakeholders informed.,positive,5,2026-01-26
+fb_00142,p_00080,u_0019,Sara Ramadan,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-04-01
+fb_00143,p_00081,u_0020,Omar Ramadan,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2024-12-21
+fb_00144,p_00081,u_0020,Mohamed Mohamed,The developer very reliable and consistently meets project deadlines.,positive,4,2025-07-06
+fb_00145,p_00081,u_0020,Mohamed Farouk,The developer architecture decisions could be better thought through.,negative,2,2025-12-17
+fb_00146,p_00082,u_0021,Layla Mahmoud,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-08-03
+fb_00147,p_00082,u_0021,Omar Hassan,The developer code quality needs improvement — tests are often missing.,negative,2,2025-05-03
+fb_00148,p_00083,u_0021,Walid Ahmed,The developer very reliable and consistently meets project deadlines.,positive,4,2025-03-26
+fb_00149,p_00084,u_0022,Aya Khalil,The developer very reliable and consistently meets project deadlines.,positive,5,2025-10-23
+fb_00150,p_00085,u_0022,Mohamed Khalil,The developer demonstrates great problem-solving skills under pressure.,positive,5,2026-02-15
+fb_00151,p_00085,u_0022,Mostafa Mohamed,The developer documentation is sometimes incomplete or outdated.,negative,3,2025-05-13
+fb_00152,p_00086,u_0022,Layla Ali,The developer code quality needs improvement — tests are often missing.,negative,2,2025-11-02
+fb_00153,p_00087,u_0022,Amr Mohamed,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2025-06-01
+fb_00154,p_00087,u_0022,Walid Yousef,The developer writes clean and well-documented code.,positive,4,2025-10-07
+fb_00155,p_00090,u_0023,Amr Ali,The developer writes clean and well-documented code.,positive,5,2025-06-27
+fb_00156,p_00090,u_0023,Tarek Samir,The developer great communicator who keeps stakeholders informed.,positive,4,2025-04-15
+fb_00157,p_00092,u_0023,Dina Khalil,The developer code reviews are sometimes rushed and miss edge cases.,negative,3,2026-03-15
+fb_00158,p_00092,u_0023,Amr Gamal,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-08-08
+fb_00159,p_00092,u_0023,Hassan Khalil,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2026-03-12
+fb_00160,p_00094,u_0024,Ali Hassan,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-06-25
+fb_00161,p_00095,u_0024,Youssef Nasser,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-04-10
+fb_00162,p_00096,u_0024,Youssef Mahmoud,The developer needs to improve communication during blockers.,negative,3,2025-03-31
+fb_00163,p_00097,u_0024,Mona Gamal,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-04-15
+fb_00164,p_00098,u_0024,Hana Khalil,The developer great communicator who keeps stakeholders informed.,positive,4,2025-08-26
+fb_00165,p_00100,u_0024,Omar Ali,The developer code quality needs improvement — tests are often missing.,negative,3,2025-10-27
+fb_00166,p_00100,u_0024,Mostafa Farouk,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-07-21
+fb_00167,p_00100,u_0024,Ali Hassan,The developer demonstrates great problem-solving skills under pressure.,positive,5,2025-11-07
+fb_00168,p_00101,u_0024,Nada Ahmed,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-09-17
+fb_00169,p_00101,u_0024,Dina Saleh,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2025-06-27
+fb_00170,p_00102,u_0025,Ahmed Farouk,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-07-21
+fb_00171,p_00102,u_0025,Walid Ibrahim,The developer could improve time management on complex tasks.,negative,3,2025-11-09
+fb_00172,p_00102,u_0025,Khaled Samir,The developer great communicator who keeps stakeholders informed.,positive,5,2025-10-11
+fb_00173,p_00103,u_0025,Tarek Saleh,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-12-17
+fb_00174,p_00103,u_0025,Rania Farouk,The developer very reliable and consistently meets project deadlines.,positive,5,2026-03-20
+fb_00175,p_00104,u_0025,Hassan Saleh,The developer code quality needs improvement — tests are often missing.,negative,2,2025-11-04
+fb_00176,p_00105,u_0025,Amr Nasser,The developer needs to improve communication during blockers.,negative,3,2025-01-23
+fb_00177,p_00105,u_0025,Khaled Ramadan,The developer very reliable and consistently meets project deadlines.,positive,4,2025-06-24
+fb_00178,p_00106,u_0025,Ali Mohamed,The developer very reliable and consistently meets project deadlines.,positive,5,2025-06-20
+fb_00179,p_00108,u_0026,Khaled Ali,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-05-29
+fb_00180,p_00108,u_0026,Ali Ibrahim,The developer very reliable and consistently meets project deadlines.,positive,4,2025-05-20
+fb_00181,p_00108,u_0026,Mostafa Saleh,The developer very reliable and consistently meets project deadlines.,positive,5,2025-04-26
+fb_00182,p_00109,u_0026,Mona Mahmoud,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-03-03
+fb_00183,p_00109,u_0026,Ali Yousef,The developer code quality needs improvement — tests are often missing.,negative,3,2025-01-29
+fb_00184,p_00110,u_0026,Amr Yousef,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-09-30
+fb_00185,p_00110,u_0026,Tarek Ahmed,The developer needs to improve communication during blockers.,negative,3,2025-08-10
+fb_00186,p_00111,u_0026,Amr Mahmoud,The developer architecture decisions could be better thought through.,negative,2,2025-10-16
+fb_00187,p_00111,u_0026,Nour Mohamed,The developer code quality needs improvement — tests are often missing.,negative,3,2025-09-28
+fb_00188,p_00113,u_0026,Eman Khalil,The developer writes clean and well-documented code.,positive,4,2025-11-06
+fb_00189,p_00113,u_0026,Hassan Hassan,The developer writes clean and well-documented code.,positive,5,2025-10-29
+fb_00190,p_00114,u_0027,Kareem Saleh,The developer writes clean and well-documented code.,positive,4,2026-03-17
+fb_00191,p_00115,u_0027,Walid Hassan,The developer code reviews are sometimes rushed and miss edge cases.,negative,3,2025-01-21
+fb_00192,p_00115,u_0027,Youssef Ahmed,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2026-04-15
+fb_00193,p_00115,u_0027,Dina Ali,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-01-30
+fb_00194,p_00117,u_0028,Layla Khalil,The developer code quality needs improvement — tests are often missing.,negative,2,2025-09-14
+fb_00195,p_00117,u_0028,Walid Hassan,The developer responsive to feedback and implements improvements quickly.,positive,4,2026-02-09
+fb_00196,p_00119,u_0028,Khaled Ibrahim,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-01-17
+fb_00197,p_00120,u_0029,Sara Yousef,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-08-22
+fb_00198,p_00120,u_0029,Rania Hassan,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-09-02
+fb_00199,p_00120,u_0029,Ali Yousef,The developer needs to improve communication during blockers.,negative,3,2024-12-29
+fb_00200,p_00121,u_0029,Ahmed Yousef,The developer great communicator who keeps stakeholders informed.,positive,5,2025-09-27
+fb_00201,p_00121,u_0029,Kareem Mohamed,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-04-16
+fb_00202,p_00121,u_0029,Dina Ramadan,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-10-13
+fb_00203,p_00122,u_0029,Hassan Ibrahim,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-09-20
+fb_00204,p_00122,u_0029,Eman Nasser,The developer code reviews are sometimes rushed and miss edge cases.,negative,3,2025-05-05
+fb_00205,p_00124,u_0029,Aya Gamal,The developer responsive to feedback and implements improvements quickly.,positive,4,2026-01-10
+fb_00206,p_00124,u_0029,Mohamed Ali,The developer writes clean and well-documented code.,positive,5,2025-07-09
+fb_00207,p_00124,u_0029,Amr Mohamed,The developer could improve time management on complex tasks.,negative,3,2025-10-24
+fb_00208,p_00125,u_0029,Mohamed Hassan,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-01-10
+fb_00209,p_00125,u_0029,Eman Zaki,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-04-01
+fb_00210,p_00125,u_0029,Walid Yousef,The developer demonstrates great problem-solving skills under pressure.,positive,4,2026-03-18
+fb_00211,p_00126,u_0030,Amr Mohamed,The developer writes clean and well-documented code.,positive,4,2025-10-06
+fb_00212,p_00126,u_0030,Mohamed Samir,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-05-27
+fb_00213,p_00126,u_0030,Tarek Ibrahim,The developer documentation is sometimes incomplete or outdated.,negative,3,2026-04-18
+fb_00214,p_00127,u_0030,Amr Khalil,The developer writes clean and well-documented code.,positive,4,2026-04-05
+fb_00215,p_00127,u_0030,Mariam Gamal,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-01-28
+fb_00216,p_00127,u_0030,Ahmed Nasser,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2026-03-03
+fb_00217,p_00129,u_0030,Mona Farouk,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-12-28
+fb_00218,p_00131,u_0030,Sara Ali,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-11-15
+fb_00219,p_00131,u_0030,Eman Zaki,The developer needs to improve communication during blockers.,negative,3,2025-01-27
+fb_00220,p_00131,u_0030,Ahmed Mahmoud,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2026-03-25
+fb_00221,p_00132,u_0031,Amr Zaki,The developer could improve time management on complex tasks.,negative,2,2025-02-19
+fb_00222,p_00133,u_0032,Layla Hassan,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-02-15
+fb_00223,p_00133,u_0032,Amr Gamal,The developer documentation is sometimes incomplete or outdated.,negative,3,2025-05-07
+fb_00224,p_00133,u_0032,Layla Ahmed,The developer architecture decisions could be better thought through.,negative,2,2025-04-09
+fb_00225,p_00134,u_0032,Ahmed Mohamed,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-07-29
+fb_00226,p_00135,u_0032,Kareem Zaki,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-11-21
+fb_00227,p_00135,u_0032,Walid Mahmoud,The developer could improve time management on complex tasks.,negative,3,2025-04-02
+fb_00228,p_00136,u_0032,Mohamed Ibrahim,The developer could improve time management on complex tasks.,negative,3,2026-02-07
+fb_00229,p_00136,u_0032,Sara Gamal,The developer code reviews are sometimes rushed and miss edge cases.,negative,3,2025-10-02
+fb_00230,p_00138,u_0033,Walid Gamal,The developer very reliable and consistently meets project deadlines.,positive,4,2025-05-15
+fb_00231,p_00138,u_0033,Amr Gamal,The developer writes clean and well-documented code.,positive,5,2025-09-24
+fb_00232,p_00138,u_0033,Dina Ramadan,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2025-06-02
+fb_00233,p_00139,u_0033,Aya Nasser,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-06-28
+fb_00234,p_00139,u_0033,Mona Hassan,The developer writes clean and well-documented code.,positive,5,2025-11-30
+fb_00235,p_00139,u_0033,Hana Ahmed,The developer writes clean and well-documented code.,positive,5,2026-03-18
+fb_00236,p_00140,u_0033,Ali Farouk,The developer could improve time management on complex tasks.,negative,3,2026-01-09
+fb_00237,p_00141,u_0033,Sara Ali,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-10-22
+fb_00238,p_00141,u_0033,Eman Hassan,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2026-02-10
+fb_00239,p_00141,u_0033,Omar Gamal,The developer responsive to feedback and implements improvements quickly.,positive,5,2026-03-15
+fb_00240,p_00142,u_0033,Mostafa Ahmed,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-04-29
+fb_00241,p_00143,u_0033,Eman Ibrahim,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-08-27
+fb_00242,p_00143,u_0033,Dina Samir,The developer code reviews are sometimes rushed and miss edge cases.,negative,3,2025-09-13
+fb_00243,p_00143,u_0033,Rania Nasser,The developer responsive to feedback and implements improvements quickly.,positive,5,2026-01-07
+fb_00244,p_00144,u_0034,Rania Yousef,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-03-09
+fb_00245,p_00144,u_0034,Walid Mohamed,The developer very reliable and consistently meets project deadlines.,positive,4,2025-08-30
+fb_00246,p_00145,u_0034,Rania Saleh,The developer demonstrates great problem-solving skills under pressure.,positive,5,2025-05-24
+fb_00247,p_00146,u_0034,Mohamed Mohamed,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-01-04
+fb_00248,p_00147,u_0034,Mariam Ahmed,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-04-28
+fb_00249,p_00147,u_0034,Hana Ali,The developer shows strong initiative and always goes the extra mile.,positive,5,2024-12-25
+fb_00250,p_00148,u_0034,Hassan Ali,The developer writes clean and well-documented code.,positive,4,2025-05-24
+fb_00251,p_00148,u_0034,Ali Nasser,The developer great communicator who keeps stakeholders informed.,positive,4,2025-12-02
+fb_00252,p_00148,u_0034,Layla Ali,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-01-04
+fb_00253,p_00149,u_0035,Salma Saleh,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-07-24
+fb_00254,p_00149,u_0035,Mariam Farouk,The developer writes clean and well-documented code.,positive,4,2025-07-02
+fb_00255,p_00150,u_0035,Layla Mahmoud,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-01-31
+fb_00256,p_00151,u_0035,Amr Khalil,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-04-22
+fb_00257,p_00152,u_0035,Tarek Mahmoud,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-04-09
+fb_00258,p_00152,u_0035,Ahmed Yousef,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-10-19
+fb_00259,p_00152,u_0035,Mostafa Farouk,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-09-03
+fb_00260,p_00154,u_0035,Salma Yousef,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-04-28
+fb_00261,p_00155,u_0036,Layla Hassan,The developer architecture decisions could be better thought through.,negative,3,2025-05-19
+fb_00262,p_00155,u_0036,Mona Nasser,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-07-26
+fb_00263,p_00155,u_0036,Omar Ibrahim,The developer documentation is sometimes incomplete or outdated.,negative,3,2025-08-25
+fb_00264,p_00156,u_0036,Ali Zaki,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2026-01-19
+fb_00265,p_00157,u_0036,Rania Ali,The developer documentation is sometimes incomplete or outdated.,negative,3,2025-04-16
+fb_00266,p_00157,u_0036,Nour Hassan,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-02-25
+fb_00267,p_00158,u_0036,Amr Farouk,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2026-01-30
+fb_00268,p_00158,u_0036,Walid Samir,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-11-10
+fb_00269,p_00158,u_0036,Layla Mohamed,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-07-31
+fb_00270,p_00159,u_0036,Omar Ahmed,The developer shows strong initiative and always goes the extra mile.,positive,5,2026-03-14
+fb_00271,p_00159,u_0036,Layla Khalil,The developer writes clean and well-documented code.,positive,4,2026-03-29
+fb_00272,p_00159,u_0036,Nour Mohamed,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-02-02
+fb_00273,p_00160,u_0036,Amr Yousef,The developer documentation is sometimes incomplete or outdated.,negative,3,2025-10-01
+fb_00274,p_00160,u_0036,Mariam Hassan,The developer code quality needs improvement — tests are often missing.,negative,3,2025-02-17
+fb_00275,p_00160,u_0036,Mohamed Hassan,The developer very reliable and consistently meets project deadlines.,positive,5,2025-02-26
+fb_00276,p_00161,u_0037,Dina Mohamed,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-02-15
+fb_00277,p_00161,u_0037,Kareem Samir,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-05-24
+fb_00278,p_00161,u_0037,Tarek Zaki,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2026-03-05
+fb_00279,p_00162,u_0037,Mariam Farouk,The developer very reliable and consistently meets project deadlines.,positive,5,2025-08-22
+fb_00280,p_00162,u_0037,Hassan Samir,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-03-04
+fb_00281,p_00163,u_0037,Youssef Gamal,The developer architecture decisions could be better thought through.,negative,2,2025-08-21
+fb_00282,p_00163,u_0037,Kareem Hassan,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-11-05
+fb_00283,p_00163,u_0037,Rania Gamal,The developer writes clean and well-documented code.,positive,5,2025-07-16
+fb_00284,p_00164,u_0037,Tarek Saleh,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-01-03
+fb_00285,p_00166,u_0037,Hassan Farouk,The developer writes clean and well-documented code.,positive,4,2026-01-07
+fb_00286,p_00167,u_0038,Ali Gamal,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-04-22
+fb_00287,p_00168,u_0038,Omar Khalil,The developer great communicator who keeps stakeholders informed.,positive,4,2025-07-21
+fb_00288,p_00168,u_0038,Walid Zaki,The developer code quality needs improvement — tests are often missing.,negative,2,2026-01-19
+fb_00289,p_00168,u_0038,Khaled Khalil,The developer writes clean and well-documented code.,positive,5,2025-08-14
+fb_00290,p_00169,u_0038,Mona Gamal,The developer writes clean and well-documented code.,positive,5,2026-04-04
+fb_00291,p_00169,u_0038,Mostafa Farouk,The developer needs to improve communication during blockers.,negative,3,2026-01-11
+fb_00292,p_00169,u_0038,Layla Ali,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-12-09
+fb_00293,p_00171,u_0039,Khaled Yousef,The developer shows strong initiative and always goes the extra mile.,positive,5,2026-04-12
+fb_00294,p_00171,u_0039,Nada Samir,The developer could improve time management on complex tasks.,negative,2,2025-05-29
+fb_00295,p_00172,u_0039,Dina Mahmoud,The developer very reliable and consistently meets project deadlines.,positive,4,2026-02-15
+fb_00296,p_00172,u_0039,Hana Mahmoud,The developer code reviews are sometimes rushed and miss edge cases.,negative,3,2025-10-22
+fb_00297,p_00173,u_0039,Nada Zaki,The developer very reliable and consistently meets project deadlines.,positive,4,2026-02-03
+fb_00298,p_00173,u_0039,Mohamed Yousef,The developer demonstrates great problem-solving skills under pressure.,positive,5,2025-12-19
+fb_00299,p_00174,u_0039,Amr Nasser,The developer very reliable and consistently meets project deadlines.,positive,4,2025-02-18
+fb_00300,p_00174,u_0039,Ali Ibrahim,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-10-22
+fb_00301,p_00174,u_0039,Aya Zaki,The developer writes clean and well-documented code.,positive,5,2025-06-29
+fb_00302,p_00175,u_0039,Kareem Farouk,The developer demonstrates great problem-solving skills under pressure.,positive,5,2025-03-04
+fb_00303,p_00176,u_0039,Nour Khalil,The developer demonstrates great problem-solving skills under pressure.,positive,5,2024-12-21
+fb_00304,p_00176,u_0039,Layla Farouk,The developer could improve time management on complex tasks.,negative,3,2025-09-07
+fb_00305,p_00177,u_0039,Sara Khalil,The developer demonstrates great problem-solving skills under pressure.,positive,5,2025-10-20
+fb_00306,p_00177,u_0039,Hassan Ali,The developer needs to improve communication during blockers.,negative,2,2025-03-01
+fb_00307,p_00177,u_0039,Sara Mohamed,The developer could improve time management on complex tasks.,negative,2,2025-05-11
+fb_00308,p_00178,u_0039,Youssef Saleh,The developer demonstrates great problem-solving skills under pressure.,positive,4,2026-04-07
+fb_00309,p_00179,u_0040,Sara Zaki,The developer very reliable and consistently meets project deadlines.,positive,4,2024-12-25
+fb_00310,p_00179,u_0040,Eman Mahmoud,The developer architecture decisions could be better thought through.,negative,3,2025-07-28
+fb_00311,p_00179,u_0040,Nada Nasser,The developer documentation is sometimes incomplete or outdated.,negative,3,2026-04-09
+fb_00312,p_00180,u_0041,Youssef Mohamed,The developer very reliable and consistently meets project deadlines.,positive,5,2026-01-14
+fb_00313,p_00180,u_0041,Mohamed Samir,The developer needs to improve communication during blockers.,negative,2,2026-04-22
+fb_00314,p_00180,u_0041,Eman Nasser,The developer architecture decisions could be better thought through.,negative,3,2026-02-07
+fb_00315,p_00181,u_0041,Hana Ibrahim,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-08-12
+fb_00316,p_00181,u_0041,Rania Mahmoud,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2024-12-21
+fb_00317,p_00182,u_0041,Kareem Gamal,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-08-05
+fb_00318,p_00183,u_0041,Hana Ramadan,The developer code quality needs improvement — tests are often missing.,negative,3,2025-08-03
+fb_00319,p_00184,u_0041,Nada Saleh,The developer responsive to feedback and implements improvements quickly.,positive,5,2024-12-31
+fb_00320,p_00185,u_0042,Mariam Farouk,The developer very reliable and consistently meets project deadlines.,positive,5,2026-01-28
+fb_00321,p_00185,u_0042,Tarek Mohamed,The developer writes clean and well-documented code.,positive,5,2025-09-05
+fb_00322,p_00185,u_0042,Nada Ibrahim,The developer great communicator who keeps stakeholders informed.,positive,5,2025-03-03
+fb_00323,p_00186,u_0043,Mariam Khalil,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2026-01-27
+fb_00324,p_00186,u_0043,Tarek Ali,The developer very reliable and consistently meets project deadlines.,positive,5,2025-05-09
+fb_00325,p_00186,u_0043,Rania Khalil,The developer could improve time management on complex tasks.,negative,3,2026-04-25
+fb_00326,p_00187,u_0043,Ali Ramadan,The developer very reliable and consistently meets project deadlines.,positive,4,2025-08-08
+fb_00327,p_00188,u_0043,Kareem Ali,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-07-03
+fb_00328,p_00188,u_0043,Eman Farouk,The developer needs to improve communication during blockers.,negative,3,2025-02-03
+fb_00329,p_00188,u_0043,Rania Mahmoud,The developer writes clean and well-documented code.,positive,5,2026-03-31
+fb_00330,p_00189,u_0044,Rania Gamal,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2026-02-26
+fb_00331,p_00189,u_0044,Dina Mohamed,The developer needs to improve communication during blockers.,negative,2,2025-02-04
+fb_00332,p_00190,u_0044,Nada Ramadan,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-04-27
+fb_00333,p_00190,u_0044,Amr Hassan,The developer could improve time management on complex tasks.,negative,3,2025-03-02
+fb_00334,p_00190,u_0044,Aya Ibrahim,The developer demonstrates great problem-solving skills under pressure.,positive,5,2025-05-28
+fb_00335,p_00191,u_0044,Omar Nasser,The developer very reliable and consistently meets project deadlines.,positive,4,2025-10-09
+fb_00336,p_00192,u_0044,Mona Samir,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2026-04-16
+fb_00337,p_00192,u_0044,Rania Mohamed,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-10-24
+fb_00338,p_00192,u_0044,Nour Mahmoud,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-09-19
+fb_00339,p_00194,u_0045,Eman Hassan,The developer writes clean and well-documented code.,positive,4,2025-09-19
+fb_00340,p_00196,u_0045,Tarek Gamal,The developer code quality needs improvement — tests are often missing.,negative,2,2026-01-16
+fb_00341,p_00197,u_0046,Mostafa Samir,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-07-09
+fb_00342,p_00197,u_0046,Layla Hassan,The developer code quality needs improvement — tests are often missing.,negative,2,2025-04-22
+fb_00343,p_00198,u_0047,Amr Ibrahim,The developer demonstrates great problem-solving skills under pressure.,positive,5,2025-03-19
+fb_00344,p_00198,u_0047,Aya Yousef,The developer very reliable and consistently meets project deadlines.,positive,4,2025-01-23
+fb_00345,p_00198,u_0047,Ahmed Mahmoud,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-09-16
+fb_00346,p_00199,u_0047,Salma Samir,The developer responsive to feedback and implements improvements quickly.,positive,5,2026-03-20
+fb_00347,p_00199,u_0047,Nada Nasser,The developer writes clean and well-documented code.,positive,5,2026-01-08
+fb_00348,p_00200,u_0047,Aya Samir,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-02-22
+fb_00349,p_00200,u_0047,Omar Nasser,The developer very reliable and consistently meets project deadlines.,positive,5,2026-02-24
+fb_00350,p_00201,u_0048,Hassan Khalil,The developer needs to improve communication during blockers.,negative,3,2025-06-29
+fb_00351,p_00201,u_0048,Mohamed Saleh,The developer needs to improve communication during blockers.,negative,2,2025-04-09
+fb_00352,p_00202,u_0048,Amr Gamal,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-11-17
+fb_00353,p_00202,u_0048,Rania Hassan,The developer responsive to feedback and implements improvements quickly.,positive,4,2026-03-26
+fb_00354,p_00203,u_0048,Layla Khalil,The developer demonstrates great problem-solving skills under pressure.,positive,5,2025-12-19
+fb_00355,p_00204,u_0048,Amr Hassan,The developer very reliable and consistently meets project deadlines.,positive,5,2026-04-25
+fb_00356,p_00204,u_0048,Ali Zaki,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-05-20
+fb_00357,p_00207,u_0049,Hassan Zaki,The developer needs to improve communication during blockers.,negative,3,2025-01-28
+fb_00358,p_00207,u_0049,Mostafa Samir,The developer writes clean and well-documented code.,positive,5,2025-01-09
+fb_00359,p_00208,u_0049,Mohamed Mahmoud,The developer could improve time management on complex tasks.,negative,2,2024-12-25
+fb_00360,p_00208,u_0049,Eman Ramadan,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-01-19
+fb_00361,p_00209,u_0050,Ahmed Farouk,The developer writes clean and well-documented code.,positive,5,2025-06-09
+fb_00362,p_00210,u_0050,Mona Ali,The developer writes clean and well-documented code.,positive,4,2026-02-03
+fb_00363,p_00210,u_0050,Amr Saleh,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-07-29
+fb_00364,p_00210,u_0050,Mariam Saleh,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2026-04-29
+fb_00365,p_00211,u_0050,Tarek Yousef,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-12-29
+fb_00366,p_00212,u_0051,Youssef Saleh,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-02-05
+fb_00367,p_00212,u_0051,Hassan Ibrahim,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-01-11
+fb_00368,p_00212,u_0051,Mohamed Khalil,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-07-21
+fb_00369,p_00213,u_0051,Mohamed Mohamed,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-03-13
+fb_00370,p_00214,u_0051,Omar Ibrahim,The developer needs to improve communication during blockers.,negative,3,2026-04-02
+fb_00371,p_00215,u_0051,Nour Ahmed,The developer great communicator who keeps stakeholders informed.,positive,5,2026-02-08
+fb_00372,p_00216,u_0051,Layla Mahmoud,The developer writes clean and well-documented code.,positive,5,2025-11-08
+fb_00373,p_00216,u_0051,Mariam Yousef,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2026-02-05
+fb_00374,p_00217,u_0051,Rania Gamal,The developer very reliable and consistently meets project deadlines.,positive,4,2025-07-30
+fb_00375,p_00217,u_0051,Mostafa Mahmoud,The developer writes clean and well-documented code.,positive,5,2025-12-25
+fb_00376,p_00217,u_0051,Kareem Mahmoud,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-02-12
+fb_00377,p_00219,u_0052,Rania Farouk,The developer very reliable and consistently meets project deadlines.,positive,4,2026-04-08
+fb_00378,p_00220,u_0052,Hana Ramadan,The developer writes clean and well-documented code.,positive,5,2025-07-22
+fb_00379,p_00221,u_0052,Rania Hassan,The developer code quality needs improvement — tests are often missing.,negative,3,2026-04-19
+fb_00380,p_00221,u_0052,Tarek Zaki,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-07-31
+fb_00381,p_00221,u_0052,Youssef Khalil,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-01-04
+fb_00382,p_00222,u_0052,Mona Ibrahim,The developer shows strong initiative and always goes the extra mile.,positive,5,2026-03-15
+fb_00383,p_00222,u_0052,Kareem Ibrahim,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-07-28
+fb_00384,p_00223,u_0052,Aya Ali,The developer architecture decisions could be better thought through.,negative,2,2025-10-22
+fb_00385,p_00224,u_0052,Nour Ahmed,The developer shows strong initiative and always goes the extra mile.,positive,4,2026-01-31
+fb_00386,p_00224,u_0052,Salma Khalil,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2026-03-24
+fb_00387,p_00226,u_0053,Sara Mohamed,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-03-20
+fb_00388,p_00227,u_0053,Mariam Yousef,The developer could improve time management on complex tasks.,negative,3,2025-11-26
+fb_00389,p_00228,u_0053,Mona Ali,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-01-08
+fb_00390,p_00228,u_0053,Sara Nasser,The developer shows strong initiative and always goes the extra mile.,positive,4,2026-02-13
+fb_00391,p_00228,u_0053,Hassan Gamal,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-02-13
+fb_00392,p_00229,u_0054,Nada Mahmoud,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-01-22
+fb_00393,p_00229,u_0054,Aya Yousef,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-08-31
+fb_00394,p_00231,u_0054,Sara Khalil,The developer could improve time management on complex tasks.,negative,3,2025-11-25
+fb_00395,p_00231,u_0054,Amr Ali,The developer needs to improve communication during blockers.,negative,3,2025-05-19
+fb_00396,p_00231,u_0054,Hana Saleh,The developer responsive to feedback and implements improvements quickly.,positive,4,2026-01-30
+fb_00397,p_00232,u_0055,Rania Farouk,The developer very reliable and consistently meets project deadlines.,positive,4,2025-12-15
+fb_00398,p_00232,u_0055,Sara Nasser,The developer code quality needs improvement — tests are often missing.,negative,2,2025-03-05
+fb_00399,p_00233,u_0055,Youssef Ramadan,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-05-13
+fb_00400,p_00234,u_0055,Walid Farouk,The developer very reliable and consistently meets project deadlines.,positive,5,2025-07-17
+fb_00401,p_00234,u_0055,Mariam Yousef,The developer code reviews are sometimes rushed and miss edge cases.,negative,3,2026-04-13
+fb_00402,p_00235,u_0055,Ali Mohamed,The developer needs to improve communication during blockers.,negative,3,2025-03-10
+fb_00403,p_00235,u_0055,Omar Mohamed,The developer writes clean and well-documented code.,positive,4,2026-02-23
+fb_00404,p_00235,u_0055,Hassan Hassan,The developer demonstrates great problem-solving skills under pressure.,positive,5,2025-08-14
+fb_00405,p_00236,u_0055,Amr Hassan,The developer writes clean and well-documented code.,positive,5,2026-01-05
+fb_00406,p_00236,u_0055,Mariam Ali,The developer responsive to feedback and implements improvements quickly.,positive,4,2024-12-23
+fb_00407,p_00236,u_0055,Khaled Khalil,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-08-26
+fb_00408,p_00237,u_0055,Rania Samir,The developer documentation is sometimes incomplete or outdated.,negative,3,2026-04-24
+fb_00409,p_00237,u_0055,Eman Hassan,The developer documentation is sometimes incomplete or outdated.,negative,3,2025-01-08
+fb_00410,p_00238,u_0056,Nada Ali,The developer writes clean and well-documented code.,positive,5,2024-12-21
+fb_00411,p_00239,u_0056,Mohamed Hassan,The developer very reliable and consistently meets project deadlines.,positive,5,2025-12-03
+fb_00412,p_00240,u_0057,Mostafa Khalil,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-07-30
+fb_00413,p_00240,u_0057,Amr Ramadan,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-09-21
+fb_00414,p_00240,u_0057,Sara Mahmoud,The developer great communicator who keeps stakeholders informed.,positive,5,2024-12-29
+fb_00415,p_00241,u_0057,Layla Gamal,The developer shows strong initiative and always goes the extra mile.,positive,5,2026-04-09
+fb_00416,p_00241,u_0057,Tarek Gamal,The developer very reliable and consistently meets project deadlines.,positive,4,2025-08-07
+fb_00417,p_00242,u_0057,Sara Gamal,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2025-11-27
+fb_00418,p_00242,u_0057,Hassan Mahmoud,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-09-17
+fb_00419,p_00243,u_0057,Rania Khalil,The developer needs to improve communication during blockers.,negative,2,2025-07-28
+fb_00420,p_00244,u_0057,Salma Gamal,The developer demonstrates great problem-solving skills under pressure.,positive,5,2024-12-28
+fb_00421,p_00245,u_0057,Nada Yousef,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-08-31
+fb_00422,p_00245,u_0057,Salma Yousef,The developer very reliable and consistently meets project deadlines.,positive,5,2026-01-23
+fb_00423,p_00245,u_0057,Hassan Samir,The developer documentation is sometimes incomplete or outdated.,negative,3,2025-03-20
+fb_00424,p_00246,u_0057,Mariam Khalil,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-06-06
+fb_00425,p_00246,u_0057,Ahmed Ahmed,The developer great communicator who keeps stakeholders informed.,positive,4,2026-04-10
+fb_00426,p_00246,u_0057,Aya Yousef,The developer demonstrates great problem-solving skills under pressure.,positive,5,2025-11-28
+fb_00427,p_00247,u_0057,Mohamed Ramadan,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-06-23
+fb_00428,p_00247,u_0057,Mona Samir,The developer could improve time management on complex tasks.,negative,2,2025-01-28
+fb_00429,p_00249,u_0058,Rania Ahmed,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2026-04-28
+fb_00430,p_00250,u_0058,Tarek Ahmed,The developer needs to improve communication during blockers.,negative,3,2025-09-07
+fb_00431,p_00251,u_0058,Omar Ali,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-06-18
+fb_00432,p_00252,u_0059,Salma Mahmoud,The developer very reliable and consistently meets project deadlines.,positive,4,2026-03-31
+fb_00433,p_00253,u_0059,Omar Hassan,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-06-13
+fb_00434,p_00253,u_0059,Salma Ibrahim,The developer code reviews are sometimes rushed and miss edge cases.,negative,3,2026-04-07
+fb_00435,p_00253,u_0059,Ahmed Ali,The developer writes clean and well-documented code.,positive,5,2026-01-29
+fb_00436,p_00254,u_0059,Hassan Ibrahim,The developer architecture decisions could be better thought through.,negative,2,2025-03-27
+fb_00437,p_00254,u_0059,Kareem Ramadan,The developer great communicator who keeps stakeholders informed.,positive,4,2026-01-05
+fb_00438,p_00255,u_0059,Salma Saleh,The developer great communicator who keeps stakeholders informed.,positive,5,2025-07-06
+fb_00439,p_00257,u_0059,Sara Mohamed,The developer very reliable and consistently meets project deadlines.,positive,5,2025-03-26
+fb_00440,p_00257,u_0059,Ahmed Yousef,The developer could improve time management on complex tasks.,negative,3,2025-11-17
+fb_00441,p_00258,u_0059,Tarek Gamal,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-02-01
+fb_00442,p_00258,u_0059,Nada Samir,The developer code quality needs improvement — tests are often missing.,negative,2,2025-10-19
+fb_00443,p_00259,u_0060,Nour Nasser,The developer writes clean and well-documented code.,positive,4,2026-01-26
+fb_00444,p_00260,u_0060,Salma Gamal,The developer could improve time management on complex tasks.,negative,3,2025-05-19
+fb_00445,p_00260,u_0060,Sara Mahmoud,The developer code quality needs improvement — tests are often missing.,negative,2,2025-12-11
+fb_00446,p_00260,u_0060,Youssef Mahmoud,The developer needs to improve communication during blockers.,negative,3,2026-02-28
+fb_00447,p_00261,u_0060,Omar Farouk,The developer writes clean and well-documented code.,positive,5,2026-01-02
+fb_00448,p_00261,u_0060,Ahmed Mahmoud,The developer code quality needs improvement — tests are often missing.,negative,3,2025-03-24
+fb_00449,p_00262,u_0061,Mostafa Nasser,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-06-23
+fb_00450,p_00262,u_0061,Tarek Ali,The developer could improve time management on complex tasks.,negative,2,2025-03-23
+fb_00451,p_00262,u_0061,Rania Mohamed,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-05-28
+fb_00452,p_00263,u_0061,Walid Samir,The developer shows strong initiative and always goes the extra mile.,positive,5,2026-03-29
+fb_00453,p_00263,u_0061,Nour Zaki,The developer demonstrates great problem-solving skills under pressure.,positive,5,2026-01-09
+fb_00454,p_00263,u_0061,Hana Ahmed,The developer demonstrates great problem-solving skills under pressure.,positive,5,2025-05-06
+fb_00455,p_00265,u_0061,Nour Nasser,The developer code quality needs improvement — tests are often missing.,negative,2,2025-02-12
+fb_00456,p_00265,u_0061,Layla Saleh,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-07-15
+fb_00457,p_00265,u_0061,Aya Nasser,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-01-30
+fb_00458,p_00266,u_0061,Kareem Ramadan,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2025-11-07
+fb_00459,p_00266,u_0061,Mohamed Ramadan,The developer great communicator who keeps stakeholders informed.,positive,4,2025-03-16
+fb_00460,p_00267,u_0062,Hana Mohamed,The developer very reliable and consistently meets project deadlines.,positive,5,2025-10-11
+fb_00461,p_00267,u_0062,Layla Samir,The developer very reliable and consistently meets project deadlines.,positive,4,2025-01-19
+fb_00462,p_00267,u_0062,Mohamed Gamal,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-06-14
+fb_00463,p_00269,u_0062,Kareem Mahmoud,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-04-26
+fb_00464,p_00270,u_0062,Walid Khalil,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-11-16
+fb_00465,p_00270,u_0062,Nour Khalil,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2026-01-06
+fb_00466,p_00270,u_0062,Kareem Hassan,The developer documentation is sometimes incomplete or outdated.,negative,2,2026-04-29
+fb_00467,p_00271,u_0062,Sara Ibrahim,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2026-01-05
+fb_00468,p_00271,u_0062,Mariam Khalil,The developer code quality needs improvement — tests are often missing.,negative,2,2026-04-28
+fb_00469,p_00271,u_0062,Kareem Mohamed,The developer code quality needs improvement — tests are often missing.,negative,2,2025-12-22
+fb_00470,p_00272,u_0062,Hana Ahmed,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-04-04
+fb_00471,p_00273,u_0062,Ali Saleh,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2026-03-09
+fb_00472,p_00273,u_0062,Hassan Yousef,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-08-04
+fb_00473,p_00274,u_0062,Youssef Ibrahim,The developer code reviews are sometimes rushed and miss edge cases.,negative,3,2025-06-18
+fb_00474,p_00274,u_0062,Mariam Ibrahim,The developer code reviews are sometimes rushed and miss edge cases.,negative,3,2025-08-27
+fb_00475,p_00274,u_0062,Sara Mahmoud,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-07-29
+fb_00476,p_00277,u_0064,Eman Farouk,The developer code quality needs improvement — tests are often missing.,negative,3,2025-04-03
+fb_00477,p_00277,u_0064,Youssef Mahmoud,The developer demonstrates great problem-solving skills under pressure.,positive,5,2025-03-20
+fb_00478,p_00278,u_0064,Mostafa Ahmed,The developer great communicator who keeps stakeholders informed.,positive,5,2025-06-16
+fb_00479,p_00278,u_0064,Amr Ibrahim,The developer documentation is sometimes incomplete or outdated.,negative,3,2026-02-22
+fb_00480,p_00279,u_0064,Aya Farouk,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-08-01
+fb_00481,p_00279,u_0064,Rania Yousef,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-07-04
+fb_00482,p_00280,u_0064,Nour Mahmoud,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-09-13
+fb_00483,p_00281,u_0064,Mariam Samir,The developer demonstrates great problem-solving skills under pressure.,positive,5,2026-01-06
+fb_00484,p_00281,u_0064,Kareem Zaki,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-04-22
+fb_00485,p_00282,u_0065,Mariam Zaki,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-11-06
+fb_00486,p_00282,u_0065,Youssef Mohamed,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2026-01-17
+fb_00487,p_00283,u_0066,Kareem Ali,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-08-23
+fb_00488,p_00283,u_0066,Eman Mahmoud,The developer code quality needs improvement — tests are often missing.,negative,3,2025-04-27
+fb_00489,p_00283,u_0066,Kareem Ibrahim,The developer demonstrates great problem-solving skills under pressure.,positive,5,2025-11-27
+fb_00490,p_00284,u_0066,Nour Khalil,The developer writes clean and well-documented code.,positive,5,2025-11-04
+fb_00491,p_00284,u_0066,Tarek Mohamed,The developer documentation is sometimes incomplete or outdated.,negative,3,2025-06-20
+fb_00492,p_00284,u_0066,Salma Ali,The developer very reliable and consistently meets project deadlines.,positive,5,2025-04-15
+fb_00493,p_00285,u_0066,Walid Ahmed,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-10-05
+fb_00494,p_00285,u_0066,Hana Gamal,The developer very reliable and consistently meets project deadlines.,positive,4,2025-04-03
+fb_00495,p_00286,u_0066,Nour Yousef,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-12-22
+fb_00496,p_00286,u_0066,Mohamed Ibrahim,The developer code reviews are sometimes rushed and miss edge cases.,negative,3,2025-02-07
+fb_00497,p_00287,u_0066,Hana Ahmed,The developer architecture decisions could be better thought through.,negative,3,2025-11-14
+fb_00498,p_00288,u_0066,Omar Ali,The developer very reliable and consistently meets project deadlines.,positive,4,2025-10-29
+fb_00499,p_00288,u_0066,Nada Samir,The developer could improve time management on complex tasks.,negative,2,2025-01-11
+fb_00500,p_00288,u_0066,Salma Hassan,The developer demonstrates great problem-solving skills under pressure.,positive,4,2026-04-08
+fb_00501,p_00289,u_0066,Hana Zaki,The developer very reliable and consistently meets project deadlines.,positive,5,2025-02-09
+fb_00502,p_00289,u_0066,Rania Zaki,The developer architecture decisions could be better thought through.,negative,3,2024-12-20
+fb_00503,p_00290,u_0066,Amr Samir,The developer writes clean and well-documented code.,positive,4,2025-01-02
+fb_00504,p_00290,u_0066,Mariam Mahmoud,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-03-18
+fb_00505,p_00291,u_0066,Eman Hassan,The developer code quality needs improvement — tests are often missing.,negative,2,2026-02-16
+fb_00506,p_00292,u_0066,Amr Mohamed,The developer could improve time management on complex tasks.,negative,3,2025-04-14
+fb_00507,p_00294,u_0068,Eman Zaki,The developer code quality needs improvement — tests are often missing.,negative,2,2025-06-25
+fb_00508,p_00294,u_0068,Mariam Khalil,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-12-07
+fb_00509,p_00294,u_0068,Layla Khalil,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-03-17
+fb_00510,p_00295,u_0068,Mariam Gamal,The developer documentation is sometimes incomplete or outdated.,negative,3,2025-02-13
+fb_00511,p_00295,u_0068,Mohamed Ahmed,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-07-20
+fb_00512,p_00296,u_0068,Khaled Ramadan,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2026-03-18
+fb_00513,p_00298,u_0068,Salma Yousef,The developer architecture decisions could be better thought through.,negative,2,2026-04-22
+fb_00514,p_00298,u_0068,Nada Gamal,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-05-11
+fb_00515,p_00299,u_0068,Eman Saleh,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-03-30
+fb_00516,p_00299,u_0068,Salma Farouk,The developer responsive to feedback and implements improvements quickly.,positive,4,2026-03-12
+fb_00517,p_00300,u_0069,Youssef Zaki,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2025-04-16
+fb_00518,p_00300,u_0069,Salma Farouk,The developer shows strong initiative and always goes the extra mile.,positive,5,2026-03-30
+fb_00519,p_00300,u_0069,Sara Samir,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-09-21
+fb_00520,p_00301,u_0069,Sara Samir,The developer very reliable and consistently meets project deadlines.,positive,4,2025-04-22
+fb_00521,p_00302,u_0069,Mostafa Samir,The developer writes clean and well-documented code.,positive,4,2025-05-01
+fb_00522,p_00302,u_0069,Youssef Gamal,The developer architecture decisions could be better thought through.,negative,2,2025-01-11
+fb_00523,p_00302,u_0069,Youssef Saleh,The developer very reliable and consistently meets project deadlines.,positive,4,2025-12-12
+fb_00524,p_00303,u_0069,Nada Farouk,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-07-24
+fb_00525,p_00303,u_0069,Eman Saleh,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-08-12
+fb_00526,p_00303,u_0069,Tarek Mohamed,The developer could improve time management on complex tasks.,negative,2,2026-01-15
+fb_00527,p_00304,u_0069,Eman Mohamed,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-06-03
+fb_00528,p_00306,u_0069,Omar Ramadan,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-08-23
+fb_00529,p_00307,u_0069,Sara Saleh,The developer writes clean and well-documented code.,positive,4,2025-12-23
+fb_00530,p_00309,u_0069,Hassan Yousef,The developer writes clean and well-documented code.,positive,4,2026-01-30
+fb_00531,p_00310,u_0070,Khaled Hassan,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-09-25
+fb_00532,p_00310,u_0070,Mona Farouk,The developer great communicator who keeps stakeholders informed.,positive,4,2025-03-07
+fb_00533,p_00310,u_0070,Mostafa Nasser,The developer could improve time management on complex tasks.,negative,2,2025-05-29
+fb_00534,p_00311,u_0070,Amr Mohamed,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-10-22
+fb_00535,p_00311,u_0070,Khaled Zaki,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2025-07-01
+fb_00536,p_00312,u_0071,Dina Ramadan,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-09-17
+fb_00537,p_00312,u_0071,Kareem Ahmed,The developer needs to improve communication during blockers.,negative,2,2025-07-19
+fb_00538,p_00313,u_0071,Tarek Ali,The developer very reliable and consistently meets project deadlines.,positive,4,2025-06-25
+fb_00539,p_00315,u_0072,Eman Mohamed,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-11-05
+fb_00540,p_00315,u_0072,Mohamed Ibrahim,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-10-24
+fb_00541,p_00316,u_0072,Ahmed Saleh,The developer writes clean and well-documented code.,positive,4,2025-02-22
+fb_00542,p_00316,u_0072,Sara Zaki,The developer could improve time management on complex tasks.,negative,2,2026-03-08
+fb_00543,p_00316,u_0072,Salma Zaki,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-05-02
+fb_00544,p_00317,u_0072,Salma Farouk,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2026-03-15
+fb_00545,p_00317,u_0072,Hassan Ramadan,The developer very reliable and consistently meets project deadlines.,positive,4,2025-09-16
+fb_00546,p_00317,u_0072,Khaled Ibrahim,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-11-29
+fb_00547,p_00318,u_0072,Nada Yousef,The developer needs to improve communication during blockers.,negative,3,2025-12-26
+fb_00548,p_00319,u_0072,Hana Mahmoud,The developer demonstrates great problem-solving skills under pressure.,positive,4,2024-12-30
+fb_00549,p_00320,u_0073,Dina Ramadan,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-04-08
+fb_00550,p_00321,u_0073,Omar Farouk,The developer could improve time management on complex tasks.,negative,2,2026-02-13
+fb_00551,p_00322,u_0073,Hassan Hassan,The developer code reviews are sometimes rushed and miss edge cases.,negative,3,2026-04-18
+fb_00552,p_00322,u_0073,Sara Hassan,The developer demonstrates great problem-solving skills under pressure.,positive,5,2026-01-27
+fb_00553,p_00323,u_0073,Tarek Samir,The developer writes clean and well-documented code.,positive,4,2025-05-19
+fb_00554,p_00324,u_0073,Mariam Ahmed,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-07-01
+fb_00555,p_00325,u_0073,Mona Samir,The developer demonstrates great problem-solving skills under pressure.,positive,4,2026-01-19
+fb_00556,p_00325,u_0073,Dina Ibrahim,The developer code quality needs improvement — tests are often missing.,negative,2,2026-02-18
+fb_00557,p_00326,u_0073,Amr Nasser,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-11-29
+fb_00558,p_00326,u_0073,Mona Yousef,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2026-03-01
+fb_00559,p_00327,u_0073,Mohamed Saleh,The developer documentation is sometimes incomplete or outdated.,negative,3,2025-03-29
+fb_00560,p_00327,u_0073,Kareem Ali,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-07-10
+fb_00561,p_00328,u_0074,Nour Ahmed,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-12-19
+fb_00562,p_00328,u_0074,Eman Zaki,The developer great communicator who keeps stakeholders informed.,positive,4,2025-09-24
+fb_00563,p_00328,u_0074,Rania Nasser,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-11-08
+fb_00564,p_00329,u_0074,Youssef Khalil,The developer documentation is sometimes incomplete or outdated.,negative,3,2025-04-14
+fb_00565,p_00329,u_0074,Sara Ramadan,The developer needs to improve communication during blockers.,negative,2,2026-04-23
+fb_00566,p_00329,u_0074,Mostafa Farouk,The developer architecture decisions could be better thought through.,negative,3,2025-07-07
+fb_00567,p_00330,u_0074,Salma Ramadan,The developer responsive to feedback and implements improvements quickly.,positive,4,2024-12-25
+fb_00568,p_00331,u_0075,Ahmed Nasser,The developer code quality needs improvement — tests are often missing.,negative,2,2025-06-09
+fb_00569,p_00333,u_0077,Nada Samir,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-04-24
+fb_00570,p_00333,u_0077,Layla Yousef,The developer writes clean and well-documented code.,positive,5,2025-05-04
+fb_00571,p_00334,u_0077,Nour Ramadan,The developer architecture decisions could be better thought through.,negative,3,2026-04-03
+fb_00572,p_00334,u_0077,Mariam Ibrahim,The developer architecture decisions could be better thought through.,negative,3,2025-06-26
+fb_00573,p_00334,u_0077,Youssef Zaki,The developer writes clean and well-documented code.,positive,4,2025-01-28
+fb_00574,p_00335,u_0077,Mostafa Yousef,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-02-13
+fb_00575,p_00335,u_0077,Rania Khalil,The developer very reliable and consistently meets project deadlines.,positive,5,2025-06-13
+fb_00576,p_00336,u_0077,Mohamed Hassan,The developer responsive to feedback and implements improvements quickly.,positive,4,2026-04-16
+fb_00577,p_00337,u_0077,Omar Ibrahim,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-05-09
+fb_00578,p_00338,u_0078,Omar Mahmoud,The developer code quality needs improvement — tests are often missing.,negative,2,2025-12-11
+fb_00579,p_00338,u_0078,Youssef Samir,The developer demonstrates great problem-solving skills under pressure.,positive,5,2026-04-15
+fb_00580,p_00339,u_0079,Ali Mohamed,The developer could improve time management on complex tasks.,negative,3,2025-04-20
+fb_00581,p_00339,u_0079,Hana Khalil,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-09-11
+fb_00582,p_00339,u_0079,Eman Hassan,The developer shows strong initiative and always goes the extra mile.,positive,5,2026-01-23
+fb_00583,p_00340,u_0079,Sara Samir,The developer very reliable and consistently meets project deadlines.,positive,4,2025-06-22
+fb_00584,p_00341,u_0079,Ahmed Khalil,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-12-05
+fb_00585,p_00341,u_0079,Eman Ibrahim,The developer writes clean and well-documented code.,positive,4,2026-04-21
+fb_00586,p_00342,u_0080,Tarek Ali,The developer demonstrates great problem-solving skills under pressure.,positive,4,2026-02-11
+fb_00587,p_00343,u_0080,Hana Nasser,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-08-25
+fb_00588,p_00343,u_0080,Hana Saleh,The developer great communicator who keeps stakeholders informed.,positive,4,2025-11-03
+fb_00589,p_00344,u_0080,Mona Ramadan,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-02-17
+fb_00590,p_00345,u_0080,Ahmed Saleh,The developer architecture decisions could be better thought through.,negative,3,2026-01-23
+fb_00591,p_00346,u_0080,Layla Gamal,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-07-16
+fb_00592,p_00347,u_0080,Dina Nasser,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2025-01-16
+fb_00593,p_00348,u_0080,Walid Ramadan,The developer great communicator who keeps stakeholders informed.,positive,4,2025-10-26
+fb_00594,p_00349,u_0081,Mona Mahmoud,The developer shows strong initiative and always goes the extra mile.,positive,4,2026-04-12
+fb_00595,p_00350,u_0081,Khaled Nasser,The developer great communicator who keeps stakeholders informed.,positive,4,2025-07-14
+fb_00596,p_00352,u_0081,Nada Nasser,The developer responsive to feedback and implements improvements quickly.,positive,5,2026-03-10
+fb_00597,p_00352,u_0081,Salma Yousef,The developer demonstrates great problem-solving skills under pressure.,positive,5,2025-02-03
+fb_00598,p_00352,u_0081,Youssef Samir,The developer demonstrates great problem-solving skills under pressure.,positive,5,2025-10-12
+fb_00599,p_00353,u_0081,Youssef Ali,The developer very reliable and consistently meets project deadlines.,positive,4,2025-05-19
+fb_00600,p_00353,u_0081,Mona Nasser,The developer architecture decisions could be better thought through.,negative,2,2026-04-22
+fb_00601,p_00355,u_0081,Aya Gamal,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-05-19
+fb_00602,p_00356,u_0081,Hassan Nasser,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-07-16
+fb_00603,p_00357,u_0082,Youssef Khalil,The developer great communicator who keeps stakeholders informed.,positive,4,2025-08-11
+fb_00604,p_00357,u_0082,Ali Farouk,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2026-01-07
+fb_00605,p_00357,u_0082,Eman Ibrahim,The developer architecture decisions could be better thought through.,negative,2,2025-06-04
+fb_00606,p_00358,u_0083,Ali Ibrahim,The developer writes clean and well-documented code.,positive,4,2025-11-21
+fb_00607,p_00358,u_0083,Mona Gamal,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2026-03-24
+fb_00608,p_00358,u_0083,Mariam Ahmed,The developer needs to improve communication during blockers.,negative,2,2026-03-26
+fb_00609,p_00359,u_0084,Tarek Mohamed,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-07-15
+fb_00610,p_00359,u_0084,Salma Yousef,The developer writes clean and well-documented code.,positive,4,2025-07-30
+fb_00611,p_00359,u_0084,Salma Khalil,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-06-14
+fb_00612,p_00361,u_0084,Ahmed Samir,The developer very reliable and consistently meets project deadlines.,positive,5,2026-02-07
+fb_00613,p_00361,u_0084,Mohamed Saleh,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-10-08
+fb_00614,p_00362,u_0084,Khaled Gamal,The developer shows strong initiative and always goes the extra mile.,positive,4,2026-01-21
+fb_00615,p_00362,u_0084,Youssef Ibrahim,The developer architecture decisions could be better thought through.,negative,3,2026-02-28
+fb_00616,p_00363,u_0084,Ahmed Gamal,The developer code quality needs improvement — tests are often missing.,negative,2,2025-08-21
+fb_00617,p_00363,u_0084,Ahmed Yousef,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-10-23
+fb_00618,p_00363,u_0084,Omar Mohamed,The developer responsive to feedback and implements improvements quickly.,positive,4,2026-02-19
+fb_00619,p_00365,u_0084,Omar Yousef,The developer shows strong initiative and always goes the extra mile.,positive,4,2026-02-09
+fb_00620,p_00365,u_0084,Sara Ahmed,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-09-16
+fb_00621,p_00366,u_0084,Omar Mahmoud,The developer demonstrates great problem-solving skills under pressure.,positive,4,2026-03-04
+fb_00622,p_00367,u_0085,Hana Saleh,The developer needs to improve communication during blockers.,negative,2,2026-03-06
+fb_00623,p_00367,u_0085,Kareem Farouk,The developer very reliable and consistently meets project deadlines.,positive,5,2025-11-06
+fb_00624,p_00367,u_0085,Dina Ibrahim,The developer code reviews are sometimes rushed and miss edge cases.,negative,3,2025-05-07
+fb_00625,p_00368,u_0085,Amr Nasser,The developer great communicator who keeps stakeholders informed.,positive,5,2025-07-08
+fb_00626,p_00369,u_0085,Youssef Ramadan,The developer needs to improve communication during blockers.,negative,3,2026-01-14
+fb_00627,p_00370,u_0085,Dina Mohamed,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2026-01-05
+fb_00628,p_00370,u_0085,Hassan Zaki,The developer great communicator who keeps stakeholders informed.,positive,4,2025-03-12
+fb_00629,p_00371,u_0085,Khaled Mohamed,The developer shows strong initiative and always goes the extra mile.,positive,5,2026-04-13
+fb_00630,p_00371,u_0085,Omar Ibrahim,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-04-02
+fb_00631,p_00371,u_0085,Youssef Zaki,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-06-21
+fb_00632,p_00372,u_0085,Dina Zaki,The developer very reliable and consistently meets project deadlines.,positive,5,2025-02-13
+fb_00633,p_00372,u_0085,Amr Mohamed,The developer shows strong initiative and always goes the extra mile.,positive,4,2026-02-27
+fb_00634,p_00372,u_0085,Mariam Ahmed,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-10-24
+fb_00635,p_00373,u_0086,Rania Saleh,The developer code quality needs improvement — tests are often missing.,negative,3,2025-04-20
+fb_00636,p_00374,u_0086,Youssef Farouk,The developer writes clean and well-documented code.,positive,5,2025-09-25
+fb_00637,p_00374,u_0086,Hassan Ahmed,The developer writes clean and well-documented code.,positive,4,2025-04-10
+fb_00638,p_00374,u_0086,Mona Mahmoud,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-12-26
+fb_00639,p_00375,u_0086,Sara Hassan,The developer writes clean and well-documented code.,positive,5,2025-05-19
+fb_00640,p_00376,u_0086,Hana Mahmoud,The developer code quality needs improvement — tests are often missing.,negative,3,2025-01-16
+fb_00641,p_00376,u_0086,Mariam Mahmoud,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-07-11
+fb_00642,p_00376,u_0086,Youssef Zaki,The developer shows strong initiative and always goes the extra mile.,positive,5,2026-01-03
+fb_00643,p_00377,u_0086,Aya Ahmed,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2026-02-19
+fb_00644,p_00377,u_0086,Layla Zaki,The developer code quality needs improvement — tests are often missing.,negative,2,2025-02-10
+fb_00645,p_00378,u_0086,Hana Hassan,The developer architecture decisions could be better thought through.,negative,3,2025-12-31
+fb_00646,p_00378,u_0086,Rania Saleh,The developer great communicator who keeps stakeholders informed.,positive,5,2026-03-08
+fb_00647,p_00378,u_0086,Nour Gamal,The developer very reliable and consistently meets project deadlines.,positive,4,2025-09-24
+fb_00648,p_00379,u_0087,Ahmed Ali,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-10-09
+fb_00649,p_00379,u_0087,Layla Saleh,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-07-14
+fb_00650,p_00379,u_0087,Amr Farouk,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-07-14
+fb_00651,p_00380,u_0087,Mostafa Saleh,The developer needs to improve communication during blockers.,negative,2,2026-03-05
+fb_00652,p_00380,u_0087,Ahmed Khalil,The developer writes clean and well-documented code.,positive,4,2025-02-01
+fb_00653,p_00381,u_0087,Rania Yousef,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-06-05
+fb_00654,p_00381,u_0087,Hassan Yousef,The developer shows strong initiative and always goes the extra mile.,positive,5,2024-12-27
+fb_00655,p_00381,u_0087,Nour Yousef,The developer great communicator who keeps stakeholders informed.,positive,5,2025-07-15
+fb_00656,p_00382,u_0087,Mostafa Yousef,The developer code quality needs improvement — tests are often missing.,negative,2,2025-01-26
+fb_00657,p_00382,u_0087,Tarek Nasser,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-08-10
+fb_00658,p_00382,u_0087,Salma Nasser,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-04-19
+fb_00659,p_00383,u_0087,Salma Gamal,The developer demonstrates great problem-solving skills under pressure.,positive,4,2026-04-21
+fb_00660,p_00383,u_0087,Tarek Saleh,The developer code quality needs improvement — tests are often missing.,negative,2,2026-04-21
+fb_00661,p_00384,u_0088,Mariam Gamal,The developer very reliable and consistently meets project deadlines.,positive,5,2025-12-23
+fb_00662,p_00384,u_0088,Mostafa Mahmoud,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-05-21
+fb_00663,p_00384,u_0088,Eman Nasser,The developer writes clean and well-documented code.,positive,4,2025-11-16
+fb_00664,p_00385,u_0088,Ali Samir,The developer needs to improve communication during blockers.,negative,3,2026-04-26
+fb_00665,p_00386,u_0088,Omar Ali,The developer great communicator who keeps stakeholders informed.,positive,4,2025-04-19
+fb_00666,p_00387,u_0088,Layla Ibrahim,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-01-02
+fb_00667,p_00387,u_0088,Khaled Khalil,The developer great communicator who keeps stakeholders informed.,positive,4,2026-04-27
+fb_00668,p_00387,u_0088,Layla Nasser,The developer great communicator who keeps stakeholders informed.,positive,5,2025-07-04
+fb_00669,p_00388,u_0088,Kareem Zaki,The developer architecture decisions could be better thought through.,negative,3,2025-09-04
+fb_00670,p_00388,u_0088,Youssef Ali,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-08-29
+fb_00671,p_00388,u_0088,Ali Samir,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-12-03
+fb_00672,p_00389,u_0088,Aya Yousef,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2025-06-26
+fb_00673,p_00389,u_0088,Ahmed Yousef,The developer could improve time management on complex tasks.,negative,3,2026-01-10
+fb_00674,p_00389,u_0088,Eman Nasser,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-12-06
+fb_00675,p_00390,u_0088,Mariam Ahmed,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-05-12
+fb_00676,p_00390,u_0088,Eman Ali,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-05-06
+fb_00677,p_00392,u_0088,Hassan Farouk,The developer architecture decisions could be better thought through.,negative,3,2025-03-30
+fb_00678,p_00392,u_0088,Mona Hassan,The developer architecture decisions could be better thought through.,negative,2,2025-11-09
+fb_00679,p_00393,u_0089,Hassan Gamal,The developer demonstrates great problem-solving skills under pressure.,positive,4,2026-03-08
+fb_00680,p_00394,u_0089,Tarek Khalil,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-05-02
+fb_00681,p_00395,u_0089,Aya Samir,The developer writes clean and well-documented code.,positive,5,2025-12-24
+fb_00682,p_00396,u_0089,Hassan Hassan,The developer could improve time management on complex tasks.,negative,2,2025-07-14
+fb_00683,p_00396,u_0089,Walid Ibrahim,The developer very reliable and consistently meets project deadlines.,positive,5,2025-09-17
+fb_00684,p_00397,u_0090,Nour Ibrahim,The developer writes clean and well-documented code.,positive,4,2025-10-02
+fb_00685,p_00397,u_0090,Dina Mohamed,The developer writes clean and well-documented code.,positive,5,2025-09-11
+fb_00686,p_00397,u_0090,Salma Ali,The developer needs to improve communication during blockers.,negative,2,2025-10-28
+fb_00687,p_00398,u_0090,Khaled Ibrahim,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-03-29
+fb_00688,p_00398,u_0090,Nour Zaki,The developer architecture decisions could be better thought through.,negative,2,2026-04-08
+fb_00689,p_00399,u_0090,Aya Mohamed,The developer great communicator who keeps stakeholders informed.,positive,4,2025-09-13
+fb_00690,p_00400,u_0090,Khaled Saleh,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-02-02
+fb_00691,p_00400,u_0090,Hassan Mahmoud,The developer very reliable and consistently meets project deadlines.,positive,4,2025-06-04
+fb_00692,p_00400,u_0090,Tarek Gamal,The developer code quality needs improvement — tests are often missing.,negative,3,2025-04-02
+fb_00693,p_00402,u_0091,Dina Nasser,The developer documentation is sometimes incomplete or outdated.,negative,2,2026-02-11
+fb_00694,p_00403,u_0091,Rania Saleh,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-08-06
+fb_00695,p_00403,u_0091,Ahmed Nasser,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2026-04-21
+fb_00696,p_00404,u_0091,Mona Saleh,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-01-07
+fb_00697,p_00405,u_0091,Nada Samir,The developer needs to improve communication during blockers.,negative,2,2025-12-11
+fb_00698,p_00405,u_0091,Salma Mohamed,The developer great communicator who keeps stakeholders informed.,positive,4,2026-01-11
+fb_00699,p_00409,u_0092,Youssef Ibrahim,The developer could improve time management on complex tasks.,negative,3,2025-07-13
+fb_00700,p_00409,u_0092,Tarek Samir,The developer documentation is sometimes incomplete or outdated.,negative,3,2025-07-21
+fb_00701,p_00410,u_0092,Amr Samir,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-05-12
+fb_00702,p_00412,u_0092,Layla Ramadan,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-09-07
+fb_00703,p_00412,u_0092,Mariam Mahmoud,The developer code reviews are sometimes rushed and miss edge cases.,negative,3,2025-12-30
+fb_00704,p_00414,u_0093,Tarek Saleh,The developer writes clean and well-documented code.,positive,5,2025-03-21
+fb_00705,p_00414,u_0093,Nada Zaki,The developer demonstrates great problem-solving skills under pressure.,positive,4,2026-04-29
+fb_00706,p_00414,u_0093,Hana Ali,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2025-02-27
+fb_00707,p_00415,u_0093,Youssef Saleh,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-06-28
+fb_00708,p_00417,u_0093,Rania Ahmed,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2025-02-25
+fb_00709,p_00417,u_0093,Tarek Gamal,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-01-24
+fb_00710,p_00417,u_0093,Tarek Farouk,The developer could improve time management on complex tasks.,negative,2,2025-09-13
+fb_00711,p_00418,u_0093,Salma Ramadan,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-12-04
+fb_00712,p_00419,u_0094,Mostafa Samir,The developer could improve time management on complex tasks.,negative,3,2025-07-05
+fb_00713,p_00420,u_0094,Youssef Farouk,The developer great communicator who keeps stakeholders informed.,positive,4,2025-07-24
+fb_00714,p_00420,u_0094,Eman Mahmoud,The developer great communicator who keeps stakeholders informed.,positive,5,2025-03-06
+fb_00715,p_00420,u_0094,Dina Gamal,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2026-04-04
+fb_00716,p_00421,u_0094,Mostafa Ibrahim,The developer code quality needs improvement — tests are often missing.,negative,2,2025-12-17
+fb_00717,p_00421,u_0094,Eman Hassan,The developer shows strong initiative and always goes the extra mile.,positive,4,2026-02-21
+fb_00718,p_00422,u_0094,Youssef Zaki,The developer architecture decisions could be better thought through.,negative,2,2025-11-05
+fb_00719,p_00423,u_0095,Hassan Ramadan,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2026-03-18
+fb_00720,p_00423,u_0095,Hana Mahmoud,The developer documentation is sometimes incomplete or outdated.,negative,3,2025-03-11
+fb_00721,p_00424,u_0095,Dina Mohamed,The developer great communicator who keeps stakeholders informed.,positive,4,2026-01-16
+fb_00722,p_00425,u_0095,Mariam Farouk,The developer shows strong initiative and always goes the extra mile.,positive,4,2026-01-26
+fb_00723,p_00425,u_0095,Layla Farouk,The developer could improve time management on complex tasks.,negative,3,2025-05-02
+fb_00724,p_00426,u_0095,Layla Hassan,The developer demonstrates great problem-solving skills under pressure.,positive,5,2025-03-09
+fb_00725,p_00426,u_0095,Tarek Hassan,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-09-07
+fb_00726,p_00426,u_0095,Hassan Zaki,The developer great communicator who keeps stakeholders informed.,positive,4,2025-12-28
+fb_00727,p_00427,u_0096,Walid Farouk,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-11-15
+fb_00728,p_00428,u_0097,Mariam Ibrahim,The developer needs to improve communication during blockers.,negative,2,2025-08-03
+fb_00729,p_00428,u_0097,Kareem Yousef,The developer very reliable and consistently meets project deadlines.,positive,4,2026-04-23
+fb_00730,p_00430,u_0097,Youssef Nasser,The developer documentation is sometimes incomplete or outdated.,negative,2,2026-01-03
+fb_00731,p_00431,u_0097,Eman Khalil,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-11-21
+fb_00732,p_00431,u_0097,Ali Mahmoud,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-09-29
+fb_00733,p_00432,u_0098,Tarek Yousef,The developer documentation is sometimes incomplete or outdated.,negative,3,2025-12-14
+fb_00734,p_00432,u_0098,Tarek Samir,The developer very reliable and consistently meets project deadlines.,positive,5,2025-05-05
+fb_00735,p_00432,u_0098,Eman Yousef,The developer great communicator who keeps stakeholders informed.,positive,5,2026-01-01
+fb_00736,p_00433,u_0098,Aya Saleh,The developer very reliable and consistently meets project deadlines.,positive,5,2025-05-17
+fb_00737,p_00433,u_0098,Kareem Ali,The developer code quality needs improvement — tests are often missing.,negative,3,2026-03-08
+fb_00738,p_00433,u_0098,Nada Ramadan,The developer needs to improve communication during blockers.,negative,2,2025-03-22
+fb_00739,p_00435,u_0098,Ahmed Hassan,The developer great communicator who keeps stakeholders informed.,positive,4,2025-08-02
+fb_00740,p_00435,u_0098,Tarek Ibrahim,The developer code quality needs improvement — tests are often missing.,negative,3,2026-01-12
+fb_00741,p_00437,u_0099,Mohamed Farouk,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-02-28
+fb_00742,p_00437,u_0099,Youssef Hassan,The developer very reliable and consistently meets project deadlines.,positive,4,2026-02-08
+fb_00743,p_00437,u_0099,Youssef Saleh,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-07-11
+fb_00744,p_00438,u_0099,Salma Ibrahim,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-01-08
+fb_00745,p_00438,u_0099,Salma Farouk,The developer demonstrates great problem-solving skills under pressure.,positive,5,2025-09-11
+fb_00746,p_00438,u_0099,Dina Yousef,The developer great communicator who keeps stakeholders informed.,positive,4,2025-12-09
+fb_00747,p_00439,u_0099,Mariam Samir,The developer writes clean and well-documented code.,positive,5,2025-03-24
+fb_00748,p_00439,u_0099,Hassan Zaki,The developer architecture decisions could be better thought through.,negative,2,2026-02-01
+fb_00749,p_00439,u_0099,Mohamed Mohamed,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-05-23
+fb_00750,p_00440,u_0099,Kareem Gamal,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-02-14
+fb_00751,p_00441,u_0099,Mohamed Gamal,The developer documentation is sometimes incomplete or outdated.,negative,2,2024-12-31
+fb_00752,p_00441,u_0099,Eman Nasser,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-11-24
+fb_00753,p_00442,u_0099,Layla Mahmoud,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-01-18
+fb_00754,p_00443,u_0100,Kareem Khalil,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-01-31
+fb_00755,p_00443,u_0100,Layla Ahmed,The developer architecture decisions could be better thought through.,negative,2,2025-03-04
+fb_00756,p_00443,u_0100,Eman Hassan,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-04-05
+fb_00757,p_00444,u_0100,Walid Farouk,The developer code reviews are sometimes rushed and miss edge cases.,negative,3,2025-08-15
+fb_00758,p_00445,u_0100,Nada Saleh,The developer code quality needs improvement — tests are often missing.,negative,2,2025-02-17
+fb_00759,p_00445,u_0100,Nour Hassan,The developer needs to improve communication during blockers.,negative,2,2025-01-10
+fb_00760,p_00445,u_0100,Sara Farouk,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2025-12-25
+fb_00761,p_00446,u_0100,Rania Ibrahim,The developer great communicator who keeps stakeholders informed.,positive,4,2025-01-07
+fb_00762,p_00446,u_0100,Hana Khalil,The developer documentation is sometimes incomplete or outdated.,negative,3,2025-04-05
+fb_00763,p_00447,u_0100,Amr Yousef,The developer documentation is sometimes incomplete or outdated.,negative,3,2026-01-21
+fb_00764,p_00447,u_0100,Mona Hassan,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-02-04
+fb_00765,p_00447,u_0100,Mariam Khalil,The developer architecture decisions could be better thought through.,negative,2,2026-04-06
+fb_00766,p_00448,u_0100,Youssef Hassan,The developer writes clean and well-documented code.,positive,5,2025-06-30
+fb_00767,p_00448,u_0100,Mohamed Ramadan,The developer architecture decisions could be better thought through.,negative,3,2026-04-29
+fb_00768,p_00449,u_0101,Eman Ramadan,The developer shows strong initiative and always goes the extra mile.,positive,4,2026-02-05
+fb_00769,p_00449,u_0101,Youssef Saleh,The developer writes clean and well-documented code.,positive,5,2026-02-14
+fb_00770,p_00450,u_0101,Amr Ahmed,The developer very reliable and consistently meets project deadlines.,positive,4,2025-05-10
+fb_00771,p_00452,u_0101,Salma Ali,The developer writes clean and well-documented code.,positive,5,2025-07-06
+fb_00772,p_00454,u_0102,Mohamed Gamal,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-05-01
+fb_00773,p_00454,u_0102,Ahmed Hassan,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2026-04-10
+fb_00774,p_00455,u_0102,Nada Hassan,The developer writes clean and well-documented code.,positive,5,2025-04-17
+fb_00775,p_00456,u_0102,Aya Nasser,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-08-03
+fb_00776,p_00456,u_0102,Hana Khalil,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-07-19
+fb_00777,p_00456,u_0102,Mona Samir,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-06-13
+fb_00778,p_00457,u_0102,Mariam Yousef,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-04-12
+fb_00779,p_00457,u_0102,Sara Ibrahim,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-02-21
+fb_00780,p_00458,u_0103,Layla Nasser,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-06-26
+fb_00781,p_00459,u_0103,Nada Ahmed,The developer demonstrates great problem-solving skills under pressure.,positive,5,2025-08-03
+fb_00782,p_00459,u_0103,Dina Mahmoud,The developer writes clean and well-documented code.,positive,5,2026-02-24
+fb_00783,p_00460,u_0103,Layla Gamal,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-02-28
+fb_00784,p_00462,u_0103,Nour Mohamed,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2026-01-17
+fb_00785,p_00462,u_0103,Nour Mohamed,The developer architecture decisions could be better thought through.,negative,2,2025-01-02
+fb_00786,p_00463,u_0103,Nour Farouk,The developer very reliable and consistently meets project deadlines.,positive,5,2025-05-10
+fb_00787,p_00463,u_0103,Layla Hassan,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-09-10
+fb_00788,p_00463,u_0103,Mostafa Ahmed,The developer code quality needs improvement — tests are often missing.,negative,3,2025-08-06
+fb_00789,p_00464,u_0103,Eman Ahmed,The developer code quality needs improvement — tests are often missing.,negative,3,2025-12-15
+fb_00790,p_00465,u_0103,Mostafa Mohamed,The developer very reliable and consistently meets project deadlines.,positive,5,2025-08-08
+fb_00791,p_00467,u_0104,Walid Ibrahim,The developer needs to improve communication during blockers.,negative,3,2025-01-29
+fb_00792,p_00469,u_0104,Dina Samir,The developer demonstrates great problem-solving skills under pressure.,positive,5,2025-08-28
+fb_00793,p_00470,u_0104,Aya Ahmed,The developer needs to improve communication during blockers.,negative,2,2025-01-01
+fb_00794,p_00470,u_0104,Aya Ali,The developer needs to improve communication during blockers.,negative,3,2025-08-05
+fb_00795,p_00472,u_0105,Layla Mohamed,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-02-19
+fb_00796,p_00472,u_0105,Mohamed Yousef,The developer writes clean and well-documented code.,positive,4,2025-10-26
+fb_00797,p_00473,u_0105,Khaled Gamal,The developer needs to improve communication during blockers.,negative,3,2026-03-20
+fb_00798,p_00473,u_0105,Omar Ali,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-09-14
+fb_00799,p_00474,u_0105,Ahmed Mohamed,The developer great communicator who keeps stakeholders informed.,positive,4,2025-05-05
+fb_00800,p_00475,u_0105,Mona Ali,The developer shows strong initiative and always goes the extra mile.,positive,4,2026-01-10
+fb_00801,p_00475,u_0105,Sara Farouk,The developer code quality needs improvement — tests are often missing.,negative,3,2025-11-26
+fb_00802,p_00476,u_0105,Sara Mohamed,The developer could improve time management on complex tasks.,negative,3,2025-10-15
+fb_00803,p_00476,u_0105,Omar Gamal,The developer architecture decisions could be better thought through.,negative,3,2025-10-09
+fb_00804,p_00477,u_0105,Walid Ahmed,The developer code reviews are sometimes rushed and miss edge cases.,negative,3,2026-01-25
+fb_00805,p_00478,u_0106,Nada Samir,The developer architecture decisions could be better thought through.,negative,2,2026-02-06
+fb_00806,p_00480,u_0106,Layla Zaki,The developer architecture decisions could be better thought through.,negative,3,2026-01-25
+fb_00807,p_00480,u_0106,Ali Ibrahim,The developer great communicator who keeps stakeholders informed.,positive,4,2025-03-31
+fb_00808,p_00480,u_0106,Mariam Ahmed,The developer great communicator who keeps stakeholders informed.,positive,5,2025-07-03
+fb_00809,p_00481,u_0106,Nour Khalil,The developer demonstrates great problem-solving skills under pressure.,positive,5,2026-04-23
+fb_00810,p_00481,u_0106,Layla Mahmoud,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-08-25
+fb_00811,p_00481,u_0106,Rania Ibrahim,The developer demonstrates great problem-solving skills under pressure.,positive,4,2026-01-14
+fb_00812,p_00482,u_0106,Eman Ramadan,The developer very reliable and consistently meets project deadlines.,positive,5,2025-10-14
+fb_00813,p_00482,u_0106,Nada Farouk,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-01-23
+fb_00814,p_00484,u_0107,Aya Zaki,The developer demonstrates great problem-solving skills under pressure.,positive,5,2026-02-27
+fb_00815,p_00484,u_0107,Ahmed Ibrahim,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-01-15
+fb_00816,p_00484,u_0107,Nour Ahmed,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-01-17
+fb_00817,p_00485,u_0107,Ali Saleh,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-02-06
+fb_00818,p_00486,u_0107,Rania Ali,The developer shows strong initiative and always goes the extra mile.,positive,5,2026-03-26
+fb_00819,p_00486,u_0107,Omar Farouk,The developer code quality needs improvement — tests are often missing.,negative,2,2025-12-29
+fb_00820,p_00486,u_0107,Mariam Samir,The developer demonstrates great problem-solving skills under pressure.,positive,4,2026-02-10
+fb_00821,p_00487,u_0107,Khaled Mahmoud,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-03-12
+fb_00822,p_00491,u_0110,Mostafa Samir,The developer writes clean and well-documented code.,positive,4,2025-10-08
+fb_00823,p_00492,u_0110,Amr Zaki,The developer writes clean and well-documented code.,positive,4,2025-09-22
+fb_00824,p_00492,u_0110,Khaled Samir,The developer code quality needs improvement — tests are often missing.,negative,2,2025-07-22
+fb_00825,p_00495,u_0110,Omar Gamal,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2026-02-24
+fb_00826,p_00495,u_0110,Omar Mahmoud,The developer architecture decisions could be better thought through.,negative,3,2025-02-04
+fb_00827,p_00497,u_0110,Mostafa Zaki,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-11-30
+fb_00828,p_00497,u_0110,Aya Nasser,The developer demonstrates great problem-solving skills under pressure.,positive,5,2025-10-02
+fb_00829,p_00497,u_0110,Amr Ramadan,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-10-12
+fb_00830,p_00498,u_0110,Mariam Yousef,The developer great communicator who keeps stakeholders informed.,positive,4,2025-05-05
+fb_00831,p_00498,u_0110,Rania Ramadan,The developer could improve time management on complex tasks.,negative,2,2025-05-01
+fb_00832,p_00498,u_0110,Kareem Khalil,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-06-19
+fb_00833,p_00499,u_0110,Ali Ibrahim,The developer architecture decisions could be better thought through.,negative,2,2025-08-26
+fb_00834,p_00499,u_0110,Salma Samir,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2025-06-08
+fb_00835,p_00500,u_0110,Amr Nasser,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-03-23
+fb_00836,p_00500,u_0110,Nada Zaki,The developer code quality needs improvement — tests are often missing.,negative,3,2025-12-14
+fb_00837,p_00500,u_0110,Hassan Samir,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-12-23
+fb_00838,p_00501,u_0111,Ahmed Mahmoud,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-09-07
+fb_00839,p_00501,u_0111,Amr Mohamed,The developer code quality needs improvement — tests are often missing.,negative,2,2025-10-03
+fb_00840,p_00503,u_0111,Aya Zaki,The developer documentation is sometimes incomplete or outdated.,negative,3,2025-10-12
+fb_00841,p_00503,u_0111,Khaled Samir,The developer responsive to feedback and implements improvements quickly.,positive,4,2024-12-20
+fb_00842,p_00504,u_0111,Khaled Samir,The developer very reliable and consistently meets project deadlines.,positive,5,2025-09-18
+fb_00843,p_00504,u_0111,Nada Mohamed,The developer very reliable and consistently meets project deadlines.,positive,5,2025-02-28
+fb_00844,p_00504,u_0111,Layla Hassan,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-10-24
+fb_00845,p_00505,u_0111,Nada Gamal,The developer code quality needs improvement — tests are often missing.,negative,2,2025-02-03
+fb_00846,p_00505,u_0111,Nour Nasser,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-06-21
+fb_00847,p_00505,u_0111,Mohamed Ramadan,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-02-13
+fb_00848,p_00507,u_0111,Hana Zaki,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2025-06-12
+fb_00849,p_00508,u_0111,Khaled Ali,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-07-13
+fb_00850,p_00509,u_0112,Aya Ali,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2026-01-08
+fb_00851,p_00509,u_0112,Khaled Ahmed,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-07-27
+fb_00852,p_00510,u_0112,Walid Mahmoud,The developer very reliable and consistently meets project deadlines.,positive,5,2025-01-03
+fb_00853,p_00510,u_0112,Hassan Gamal,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-08-17
+fb_00854,p_00511,u_0112,Mostafa Hassan,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-10-20
+fb_00855,p_00511,u_0112,Salma Samir,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2026-03-08
+fb_00856,p_00511,u_0112,Nour Mahmoud,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-08-03
+fb_00857,p_00512,u_0112,Rania Gamal,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-11-03
+fb_00858,p_00512,u_0112,Ali Khalil,The developer needs to improve communication during blockers.,negative,3,2025-09-25
+fb_00859,p_00513,u_0112,Walid Nasser,The developer very reliable and consistently meets project deadlines.,positive,5,2025-12-11
+fb_00860,p_00513,u_0112,Mona Zaki,The developer great communicator who keeps stakeholders informed.,positive,5,2025-10-06
+fb_00861,p_00514,u_0112,Tarek Ali,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-05-29
+fb_00862,p_00514,u_0112,Nour Ahmed,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-12-24
+fb_00863,p_00515,u_0113,Mariam Saleh,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-06-22
+fb_00864,p_00515,u_0113,Walid Mohamed,The developer needs to improve communication during blockers.,negative,3,2025-02-16
+fb_00865,p_00515,u_0113,Hana Yousef,The developer code quality needs improvement — tests are often missing.,negative,2,2025-04-15
+fb_00866,p_00516,u_0113,Mohamed Khalil,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-04-26
+fb_00867,p_00516,u_0113,Nour Samir,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-06-05
+fb_00868,p_00516,u_0113,Hassan Farouk,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-01-14
+fb_00869,p_00517,u_0113,Youssef Mahmoud,The developer demonstrates great problem-solving skills under pressure.,positive,5,2025-03-21
+fb_00870,p_00518,u_0113,Hassan Yousef,The developer needs to improve communication during blockers.,negative,3,2026-01-26
+fb_00871,p_00519,u_0113,Hana Farouk,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-01-14
+fb_00872,p_00519,u_0113,Khaled Hassan,The developer needs to improve communication during blockers.,negative,2,2026-02-12
+fb_00873,p_00519,u_0113,Tarek Khalil,The developer demonstrates great problem-solving skills under pressure.,positive,5,2025-08-27
+fb_00874,p_00520,u_0113,Kareem Farouk,The developer code quality needs improvement — tests are often missing.,negative,3,2026-01-17
+fb_00875,p_00520,u_0113,Mohamed Saleh,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-07-25
+fb_00876,p_00521,u_0114,Khaled Saleh,The developer could improve time management on complex tasks.,negative,3,2026-03-13
+fb_00877,p_00522,u_0114,Hana Ali,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-01-16
+fb_00878,p_00522,u_0114,Tarek Nasser,The developer code reviews are sometimes rushed and miss edge cases.,negative,3,2025-04-16
+fb_00879,p_00523,u_0114,Hana Hassan,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2025-02-18
+fb_00880,p_00525,u_0115,Amr Khalil,The developer documentation is sometimes incomplete or outdated.,negative,3,2025-12-10
+fb_00881,p_00526,u_0115,Youssef Saleh,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-10-29
+fb_00882,p_00526,u_0115,Nour Ahmed,The developer code quality needs improvement — tests are often missing.,negative,2,2025-05-12
+fb_00883,p_00526,u_0115,Omar Ali,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-09-19
+fb_00884,p_00527,u_0116,Ahmed Saleh,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-02-13
+fb_00885,p_00527,u_0116,Layla Ramadan,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-10-02
+fb_00886,p_00527,u_0116,Aya Nasser,The developer code quality needs improvement — tests are often missing.,negative,3,2025-08-04
+fb_00887,p_00528,u_0116,Amr Hassan,The developer demonstrates great problem-solving skills under pressure.,positive,5,2026-01-29
+fb_00888,p_00530,u_0117,Omar Hassan,The developer responsive to feedback and implements improvements quickly.,positive,4,2026-04-04
+fb_00889,p_00530,u_0117,Mostafa Mahmoud,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-12-31
+fb_00890,p_00531,u_0117,Dina Ramadan,The developer needs to improve communication during blockers.,negative,3,2026-03-08
+fb_00891,p_00531,u_0117,Amr Samir,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2026-02-12
+fb_00892,p_00532,u_0117,Mostafa Hassan,The developer could improve time management on complex tasks.,negative,3,2025-02-23
+fb_00893,p_00532,u_0117,Walid Saleh,The developer architecture decisions could be better thought through.,negative,2,2025-09-03
+fb_00894,p_00532,u_0117,Dina Saleh,The developer could improve time management on complex tasks.,negative,3,2025-01-13
+fb_00895,p_00533,u_0117,Khaled Mahmoud,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-05-15
+fb_00896,p_00534,u_0117,Mohamed Gamal,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-02-15
+fb_00897,p_00534,u_0117,Youssef Zaki,The developer documentation is sometimes incomplete or outdated.,negative,3,2025-05-15
+fb_00898,p_00534,u_0117,Mariam Nasser,The developer great communicator who keeps stakeholders informed.,positive,4,2025-08-07
+fb_00899,p_00535,u_0117,Mohamed Ibrahim,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-11-15
+fb_00900,p_00535,u_0117,Layla Hassan,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-03-28
+fb_00901,p_00536,u_0118,Omar Zaki,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-06-19
+fb_00902,p_00536,u_0118,Omar Nasser,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2026-04-26
+fb_00903,p_00536,u_0118,Khaled Ali,The developer code quality needs improvement — tests are often missing.,negative,2,2025-01-05
+fb_00904,p_00537,u_0118,Tarek Ramadan,The developer very reliable and consistently meets project deadlines.,positive,4,2025-05-05
+fb_00905,p_00537,u_0118,Tarek Gamal,The developer very reliable and consistently meets project deadlines.,positive,4,2026-03-16
+fb_00906,p_00538,u_0118,Ali Ramadan,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2025-09-09
+fb_00907,p_00538,u_0118,Amr Farouk,The developer needs to improve communication during blockers.,negative,3,2025-09-09
+fb_00908,p_00540,u_0118,Aya Mahmoud,The developer writes clean and well-documented code.,positive,5,2025-04-29
+fb_00909,p_00542,u_0119,Khaled Khalil,The developer demonstrates great problem-solving skills under pressure.,positive,4,2026-02-15
+fb_00910,p_00542,u_0119,Walid Ahmed,The developer writes clean and well-documented code.,positive,5,2025-10-24
+fb_00911,p_00542,u_0119,Walid Saleh,The developer great communicator who keeps stakeholders informed.,positive,4,2024-12-27
+fb_00912,p_00543,u_0119,Rania Yousef,The developer writes clean and well-documented code.,positive,4,2025-03-05
+fb_00913,p_00543,u_0119,Salma Ramadan,The developer demonstrates great problem-solving skills under pressure.,positive,5,2026-02-04
+fb_00914,p_00543,u_0119,Kareem Samir,The developer responsive to feedback and implements improvements quickly.,positive,4,2026-03-18
+fb_00915,p_00544,u_0119,Tarek Farouk,The developer demonstrates great problem-solving skills under pressure.,positive,4,2026-02-21
+fb_00916,p_00544,u_0119,Amr Yousef,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-04-28
+fb_00917,p_00544,u_0119,Omar Gamal,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-12-18
+fb_00918,p_00545,u_0119,Mohamed Gamal,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-10-19
+fb_00919,p_00545,u_0119,Rania Nasser,The developer very reliable and consistently meets project deadlines.,positive,4,2025-03-07
+fb_00920,p_00547,u_0120,Ahmed Khalil,The developer great communicator who keeps stakeholders informed.,positive,4,2026-04-17
+fb_00921,p_00548,u_0120,Mostafa Gamal,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-12-19
+fb_00922,p_00548,u_0120,Aya Hassan,The developer very reliable and consistently meets project deadlines.,positive,4,2025-01-11
+fb_00923,p_00548,u_0120,Aya Ibrahim,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2026-03-20
+fb_00924,p_00549,u_0121,Mostafa Khalil,The developer code reviews are sometimes rushed and miss edge cases.,negative,3,2025-07-30
+fb_00925,p_00550,u_0121,Mostafa Gamal,The developer code quality needs improvement — tests are often missing.,negative,3,2025-12-21
+fb_00926,p_00550,u_0121,Salma Ahmed,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-03-26
+fb_00927,p_00552,u_0121,Mona Mohamed,The developer shows strong initiative and always goes the extra mile.,positive,4,2026-03-24
+fb_00928,p_00552,u_0121,Ali Ibrahim,The developer writes clean and well-documented code.,positive,4,2025-10-17
+fb_00929,p_00553,u_0122,Khaled Khalil,The developer great communicator who keeps stakeholders informed.,positive,4,2025-03-29
+fb_00930,p_00553,u_0122,Kareem Ali,The developer needs to improve communication during blockers.,negative,2,2025-01-06
+fb_00931,p_00553,u_0122,Ahmed Farouk,The developer code reviews are sometimes rushed and miss edge cases.,negative,3,2026-04-02
+fb_00932,p_00554,u_0122,Tarek Ramadan,The developer could improve time management on complex tasks.,negative,3,2025-08-01
+fb_00933,p_00555,u_0122,Sara Khalil,The developer code reviews are sometimes rushed and miss edge cases.,negative,3,2026-03-24
+fb_00934,p_00557,u_0122,Omar Ahmed,The developer demonstrates great problem-solving skills under pressure.,positive,4,2026-03-28
+fb_00935,p_00557,u_0122,Mona Gamal,The developer writes clean and well-documented code.,positive,4,2025-12-17
+fb_00936,p_00557,u_0122,Mona Mohamed,The developer documentation is sometimes incomplete or outdated.,negative,3,2025-09-23
+fb_00937,p_00558,u_0122,Kareem Mahmoud,The developer architecture decisions could be better thought through.,negative,3,2025-01-10
+fb_00938,p_00558,u_0122,Dina Saleh,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-07-28
+fb_00939,p_00559,u_0123,Salma Hassan,The developer demonstrates great problem-solving skills under pressure.,positive,5,2025-09-19
+fb_00940,p_00559,u_0123,Aya Khalil,The developer responsive to feedback and implements improvements quickly.,positive,5,2026-01-25
+fb_00941,p_00560,u_0123,Salma Samir,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-08-18
+fb_00942,p_00561,u_0123,Nada Ahmed,The developer great communicator who keeps stakeholders informed.,positive,5,2025-01-04
+fb_00943,p_00561,u_0123,Aya Ali,The developer responsive to feedback and implements improvements quickly.,positive,5,2026-02-25
+fb_00944,p_00561,u_0123,Hassan Mohamed,The developer needs to improve communication during blockers.,negative,2,2025-02-22
+fb_00945,p_00562,u_0123,Hana Zaki,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-08-09
+fb_00946,p_00563,u_0123,Hassan Mohamed,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-01-29
+fb_00947,p_00563,u_0123,Kareem Ali,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2026-04-15
+fb_00948,p_00563,u_0123,Dina Ali,The developer needs to improve communication during blockers.,negative,3,2026-04-24
+fb_00949,p_00564,u_0123,Mona Ramadan,The developer great communicator who keeps stakeholders informed.,positive,4,2025-11-28
+fb_00950,p_00565,u_0123,Hassan Nasser,The developer could improve time management on complex tasks.,negative,2,2026-01-25
+fb_00951,p_00565,u_0123,Mariam Saleh,The developer architecture decisions could be better thought through.,negative,2,2025-05-12
+fb_00952,p_00565,u_0123,Kareem Khalil,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2025-07-31
+fb_00953,p_00566,u_0124,Nada Farouk,The developer documentation is sometimes incomplete or outdated.,negative,3,2025-09-08
+fb_00954,p_00566,u_0124,Sara Saleh,The developer great communicator who keeps stakeholders informed.,positive,5,2025-12-24
+fb_00955,p_00567,u_0124,Nour Gamal,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-12-03
+fb_00956,p_00567,u_0124,Sara Ali,The developer needs to improve communication during blockers.,negative,3,2026-01-23
+fb_00957,p_00567,u_0124,Kareem Hassan,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2026-02-25
+fb_00958,p_00568,u_0124,Walid Nasser,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2026-04-14
+fb_00959,p_00568,u_0124,Ali Khalil,The developer shows strong initiative and always goes the extra mile.,positive,4,2026-04-07
+fb_00960,p_00569,u_0124,Khaled Mohamed,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-03-17
+fb_00961,p_00569,u_0124,Khaled Gamal,The developer documentation is sometimes incomplete or outdated.,negative,3,2025-03-20
+fb_00962,p_00569,u_0124,Eman Zaki,The developer writes clean and well-documented code.,positive,5,2024-12-22
+fb_00963,p_00570,u_0124,Ali Zaki,The developer architecture decisions could be better thought through.,negative,2,2025-03-12
+fb_00964,p_00571,u_0124,Rania Ahmed,The developer needs to improve communication during blockers.,negative,2,2025-07-22
+fb_00965,p_00571,u_0124,Dina Mohamed,The developer architecture decisions could be better thought through.,negative,3,2025-01-22
+fb_00966,p_00571,u_0124,Salma Yousef,The developer could improve time management on complex tasks.,negative,2,2025-02-04
+fb_00967,p_00572,u_0124,Nada Hassan,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2026-03-18
+fb_00968,p_00573,u_0125,Tarek Hassan,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-01-30
+fb_00969,p_00574,u_0125,Rania Gamal,The developer writes clean and well-documented code.,positive,5,2025-01-16
+fb_00970,p_00574,u_0125,Mohamed Mohamed,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-08-13
+fb_00971,p_00574,u_0125,Kareem Ali,The developer needs to improve communication during blockers.,negative,2,2024-12-22
+fb_00972,p_00575,u_0125,Ali Ahmed,The developer code reviews are sometimes rushed and miss edge cases.,negative,3,2025-10-03
+fb_00973,p_00575,u_0125,Rania Saleh,The developer demonstrates great problem-solving skills under pressure.,positive,4,2026-02-01
+fb_00974,p_00576,u_0125,Kareem Samir,The developer responsive to feedback and implements improvements quickly.,positive,4,2026-03-07
+fb_00975,p_00576,u_0125,Youssef Nasser,The developer writes clean and well-documented code.,positive,5,2025-05-11
+fb_00976,p_00576,u_0125,Hana Gamal,The developer shows strong initiative and always goes the extra mile.,positive,4,2026-04-25
+fb_00977,p_00577,u_0126,Layla Ibrahim,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2026-02-08
+fb_00978,p_00577,u_0126,Eman Saleh,The developer very reliable and consistently meets project deadlines.,positive,4,2025-01-07
+fb_00979,p_00577,u_0126,Youssef Ali,The developer code quality needs improvement — tests are often missing.,negative,3,2025-04-12
+fb_00980,p_00578,u_0127,Mona Ibrahim,The developer needs to improve communication during blockers.,negative,3,2025-08-01
+fb_00981,p_00578,u_0127,Tarek Gamal,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-07-23
+fb_00982,p_00578,u_0127,Khaled Samir,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-01-08
+fb_00983,p_00579,u_0127,Kareem Samir,The developer very reliable and consistently meets project deadlines.,positive,4,2025-12-22
+fb_00984,p_00579,u_0127,Salma Samir,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-09-26
+fb_00985,p_00579,u_0127,Tarek Saleh,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-07-03
+fb_00986,p_00580,u_0127,Hassan Zaki,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-09-22
+fb_00987,p_00580,u_0127,Sara Farouk,The developer could improve time management on complex tasks.,negative,3,2026-04-08
+fb_00988,p_00580,u_0127,Hassan Ali,The developer code quality needs improvement — tests are often missing.,negative,3,2025-11-02
+fb_00989,p_00581,u_0128,Hassan Hassan,The developer writes clean and well-documented code.,positive,4,2025-10-05
+fb_00990,p_00581,u_0128,Nada Mohamed,The developer code quality needs improvement — tests are often missing.,negative,3,2026-03-26
+fb_00991,p_00583,u_0128,Ali Ramadan,The developer needs to improve communication during blockers.,negative,3,2025-12-29
+fb_00992,p_00583,u_0128,Nour Zaki,The developer architecture decisions could be better thought through.,negative,2,2025-02-09
+fb_00993,p_00584,u_0128,Mostafa Khalil,The developer great communicator who keeps stakeholders informed.,positive,4,2025-10-23
+fb_00994,p_00586,u_0128,Mona Ramadan,The developer could improve time management on complex tasks.,negative,3,2025-12-04
+fb_00995,p_00586,u_0128,Aya Yousef,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-07-15
+fb_00996,p_00586,u_0128,Rania Ali,The developer writes clean and well-documented code.,positive,5,2025-12-12
+fb_00997,p_00587,u_0128,Omar Yousef,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-03-23
+fb_00998,p_00588,u_0129,Sara Mohamed,The developer writes clean and well-documented code.,positive,4,2026-03-05
+fb_00999,p_00588,u_0129,Omar Ali,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-06-10
+fb_01000,p_00589,u_0129,Dina Saleh,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-08-02
+fb_01001,p_00590,u_0129,Sara Farouk,The developer writes clean and well-documented code.,positive,5,2025-01-11
+fb_01002,p_00590,u_0129,Nour Saleh,The developer great communicator who keeps stakeholders informed.,positive,5,2025-12-15
+fb_01003,p_00590,u_0129,Amr Nasser,The developer documentation is sometimes incomplete or outdated.,negative,2,2026-04-10
+fb_01004,p_00592,u_0129,Ali Mohamed,The developer writes clean and well-documented code.,positive,4,2025-11-26
+fb_01005,p_00592,u_0129,Sara Mohamed,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-05-16
+fb_01006,p_00593,u_0129,Eman Mohamed,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-12-08
+fb_01007,p_00593,u_0129,Ahmed Mahmoud,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-02-22
+fb_01008,p_00593,u_0129,Hana Mohamed,The developer very reliable and consistently meets project deadlines.,positive,5,2025-01-21
+fb_01009,p_00594,u_0129,Rania Yousef,The developer shows strong initiative and always goes the extra mile.,positive,5,2026-03-15
+fb_01010,p_00595,u_0130,Salma Ali,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2026-01-13
+fb_01011,p_00595,u_0130,Mariam Nasser,The developer writes clean and well-documented code.,positive,5,2025-03-05
+fb_01012,p_00595,u_0130,Omar Mohamed,The developer needs to improve communication during blockers.,negative,2,2025-07-16
+fb_01013,p_00596,u_0130,Ali Mohamed,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-10-08
+fb_01014,p_00596,u_0130,Omar Samir,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-12-22
+fb_01015,p_00597,u_0130,Walid Zaki,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-08-22
+fb_01016,p_00597,u_0130,Walid Zaki,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-11-24
+fb_01017,p_00598,u_0130,Mona Nasser,The developer demonstrates great problem-solving skills under pressure.,positive,5,2026-03-06
+fb_01018,p_00599,u_0130,Layla Farouk,The developer needs to improve communication during blockers.,negative,3,2026-01-12
+fb_01019,p_00600,u_0130,Mohamed Hassan,The developer code quality needs improvement — tests are often missing.,negative,3,2026-02-17
+fb_01020,p_00601,u_0130,Hassan Ali,The developer documentation is sometimes incomplete or outdated.,negative,3,2025-02-24
+fb_01021,p_00602,u_0130,Amr Samir,The developer code quality needs improvement — tests are often missing.,negative,3,2025-03-24
+fb_01022,p_00602,u_0130,Mariam Nasser,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-04-11
+fb_01023,p_00603,u_0130,Omar Mohamed,The developer code quality needs improvement — tests are often missing.,negative,2,2025-10-08
+fb_01024,p_00607,u_0132,Mariam Mohamed,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-04-24
+fb_01025,p_00608,u_0132,Mostafa Mahmoud,The developer responsive to feedback and implements improvements quickly.,positive,4,2024-12-27
+fb_01026,p_00609,u_0132,Omar Khalil,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-08-04
+fb_01027,p_00610,u_0133,Mona Zaki,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2026-04-24
+fb_01028,p_00611,u_0133,Salma Saleh,The developer architecture decisions could be better thought through.,negative,3,2025-06-03
+fb_01029,p_00611,u_0133,Omar Hassan,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-05-28
+fb_01030,p_00612,u_0133,Rania Khalil,The developer very reliable and consistently meets project deadlines.,positive,4,2026-02-01
+fb_01031,p_00613,u_0133,Amr Ali,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-09-12
+fb_01032,p_00614,u_0133,Amr Zaki,The developer needs to improve communication during blockers.,negative,2,2025-12-10
+fb_01033,p_00615,u_0133,Nour Ahmed,The developer needs to improve communication during blockers.,negative,3,2026-02-24
+fb_01034,p_00615,u_0133,Salma Mohamed,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2025-03-26
+fb_01035,p_00615,u_0133,Nour Yousef,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-01-23
+fb_01036,p_00616,u_0134,Mostafa Nasser,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-12-25
+fb_01037,p_00616,u_0134,Kareem Ahmed,The developer could improve time management on complex tasks.,negative,3,2025-02-12
+fb_01038,p_00617,u_0134,Salma Ali,The developer very reliable and consistently meets project deadlines.,positive,5,2025-09-27
+fb_01039,p_00619,u_0134,Tarek Nasser,The developer architecture decisions could be better thought through.,negative,3,2025-12-08
+fb_01040,p_00619,u_0134,Walid Ramadan,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-07-03
+fb_01041,p_00619,u_0134,Walid Mohamed,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2026-04-03
+fb_01042,p_00620,u_0134,Omar Samir,The developer very reliable and consistently meets project deadlines.,positive,5,2025-10-27
+fb_01043,p_00621,u_0134,Aya Saleh,The developer great communicator who keeps stakeholders informed.,positive,5,2025-06-07
+fb_01044,p_00623,u_0135,Mostafa Hassan,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-12-24
+fb_01045,p_00623,u_0135,Ahmed Mohamed,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-09-28
+fb_01046,p_00624,u_0135,Ali Zaki,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-02-27
+fb_01047,p_00625,u_0136,Khaled Ahmed,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-05-11
+fb_01048,p_00625,u_0136,Ali Ibrahim,The developer demonstrates great problem-solving skills under pressure.,positive,4,2026-04-07
+fb_01049,p_00625,u_0136,Omar Khalil,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-10-11
+fb_01050,p_00626,u_0136,Mariam Hassan,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-02-23
+fb_01051,p_00626,u_0136,Sara Mahmoud,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-04-11
+fb_01052,p_00626,u_0136,Walid Farouk,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-06-21
+fb_01053,p_00628,u_0136,Rania Ali,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-01-10
+fb_01054,p_00629,u_0137,Tarek Zaki,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-07-16
+fb_01055,p_00630,u_0137,Mariam Gamal,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-06-14
+fb_01056,p_00630,u_0137,Amr Farouk,The developer very reliable and consistently meets project deadlines.,positive,5,2025-06-20
+fb_01057,p_00631,u_0137,Nada Samir,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-02-25
+fb_01058,p_00631,u_0137,Ali Hassan,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-07-20
+fb_01059,p_00632,u_0137,Layla Mahmoud,The developer shows strong initiative and always goes the extra mile.,positive,5,2026-03-07
+fb_01060,p_00632,u_0137,Kareem Ramadan,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-02-19
+fb_01061,p_00632,u_0137,Khaled Ibrahim,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-01-23
+fb_01062,p_00634,u_0137,Youssef Nasser,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2026-02-03
+fb_01063,p_00634,u_0137,Hana Farouk,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-09-02
+fb_01064,p_00634,u_0137,Salma Zaki,The developer needs to improve communication during blockers.,negative,3,2026-02-23
+fb_01065,p_00636,u_0137,Amr Saleh,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-07-04
+fb_01066,p_00636,u_0137,Youssef Ahmed,The developer needs to improve communication during blockers.,negative,3,2025-06-23
+fb_01067,p_00638,u_0138,Mona Saleh,The developer architecture decisions could be better thought through.,negative,3,2025-05-22
+fb_01068,p_00638,u_0138,Hana Khalil,The developer great communicator who keeps stakeholders informed.,positive,4,2025-12-05
+fb_01069,p_00639,u_0138,Walid Ibrahim,The developer very reliable and consistently meets project deadlines.,positive,5,2025-06-14
+fb_01070,p_00639,u_0138,Nada Khalil,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2025-08-09
+fb_01071,p_00640,u_0138,Hassan Hassan,The developer documentation is sometimes incomplete or outdated.,negative,3,2026-03-16
+fb_01072,p_00641,u_0138,Khaled Ibrahim,The developer documentation is sometimes incomplete or outdated.,negative,3,2025-11-25
+fb_01073,p_00642,u_0139,Ali Samir,The developer writes clean and well-documented code.,positive,5,2025-05-05
+fb_01074,p_00643,u_0139,Mostafa Gamal,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2025-09-19
+fb_01075,p_00643,u_0139,Eman Nasser,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-03-05
+fb_01076,p_00643,u_0139,Walid Ahmed,The developer demonstrates great problem-solving skills under pressure.,positive,5,2025-05-03
+fb_01077,p_00645,u_0140,Rania Zaki,The developer could improve time management on complex tasks.,negative,2,2025-12-23
+fb_01078,p_00646,u_0140,Dina Yousef,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-06-24
+fb_01079,p_00646,u_0140,Rania Mahmoud,The developer very reliable and consistently meets project deadlines.,positive,4,2026-04-20
+fb_01080,p_00648,u_0141,Omar Ahmed,The developer very reliable and consistently meets project deadlines.,positive,5,2026-02-27
+fb_01081,p_00649,u_0141,Ahmed Ali,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-06-27
+fb_01082,p_00649,u_0141,Walid Nasser,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-09-01
+fb_01083,p_00649,u_0141,Hassan Nasser,The developer needs to improve communication during blockers.,negative,3,2025-12-24
+fb_01084,p_00651,u_0142,Dina Ibrahim,The developer documentation is sometimes incomplete or outdated.,negative,3,2025-06-27
+fb_01085,p_00651,u_0142,Hassan Khalil,The developer demonstrates great problem-solving skills under pressure.,positive,5,2026-04-26
+fb_01086,p_00651,u_0142,Mohamed Zaki,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-02-22
+fb_01087,p_00652,u_0142,Dina Mohamed,The developer could improve time management on complex tasks.,negative,2,2025-10-09
+fb_01088,p_00653,u_0142,Mostafa Ahmed,The developer demonstrates great problem-solving skills under pressure.,positive,5,2025-03-24
+fb_01089,p_00653,u_0142,Tarek Saleh,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-10-10
+fb_01090,p_00654,u_0142,Aya Ahmed,The developer great communicator who keeps stakeholders informed.,positive,4,2024-12-26
+fb_01091,p_00654,u_0142,Youssef Ibrahim,The developer demonstrates great problem-solving skills under pressure.,positive,5,2026-01-21
+fb_01092,p_00656,u_0143,Khaled Hassan,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-02-20
+fb_01093,p_00656,u_0143,Sara Yousef,The developer demonstrates great problem-solving skills under pressure.,positive,5,2025-11-18
+fb_01094,p_00656,u_0143,Rania Saleh,The developer very reliable and consistently meets project deadlines.,positive,4,2026-04-15
+fb_01095,p_00657,u_0143,Tarek Zaki,The developer demonstrates great problem-solving skills under pressure.,positive,5,2025-04-08
+fb_01096,p_00657,u_0143,Amr Nasser,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-04-11
+fb_01097,p_00658,u_0143,Nour Zaki,The developer very reliable and consistently meets project deadlines.,positive,4,2025-01-04
+fb_01098,p_00658,u_0143,Layla Samir,The developer shows strong initiative and always goes the extra mile.,positive,5,2026-04-04
+fb_01099,p_00658,u_0143,Omar Ali,The developer code quality needs improvement — tests are often missing.,negative,3,2025-02-05
+fb_01100,p_00659,u_0143,Mohamed Ali,The developer documentation is sometimes incomplete or outdated.,negative,3,2026-01-02
+fb_01101,p_00659,u_0143,Mostafa Saleh,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-05-01
+fb_01102,p_00659,u_0143,Ali Zaki,The developer code reviews are sometimes rushed and miss edge cases.,negative,3,2025-01-13
+fb_01103,p_00660,u_0143,Ali Zaki,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-12-09
+fb_01104,p_00661,u_0144,Eman Gamal,The developer writes clean and well-documented code.,positive,4,2025-04-12
+fb_01105,p_00661,u_0144,Amr Hassan,The developer great communicator who keeps stakeholders informed.,positive,5,2025-07-12
+fb_01106,p_00661,u_0144,Mohamed Ibrahim,The developer responsive to feedback and implements improvements quickly.,positive,5,2024-12-21
+fb_01107,p_00662,u_0144,Ali Gamal,The developer code quality needs improvement — tests are often missing.,negative,2,2026-04-07
+fb_01108,p_00663,u_0144,Amr Zaki,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-01-01
+fb_01109,p_00663,u_0144,Tarek Yousef,The developer writes clean and well-documented code.,positive,4,2025-01-07
+fb_01110,p_00663,u_0144,Layla Gamal,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-12-28
+fb_01111,p_00665,u_0144,Tarek Farouk,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-02-19
+fb_01112,p_00666,u_0144,Rania Nasser,The developer could improve time management on complex tasks.,negative,2,2026-01-17
+fb_01113,p_00666,u_0144,Mostafa Saleh,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-08-30
+fb_01114,p_00667,u_0144,Nour Ibrahim,The developer very reliable and consistently meets project deadlines.,positive,5,2025-11-03
+fb_01115,p_00669,u_0145,Mostafa Saleh,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-03-20
+fb_01116,p_00669,u_0145,Nada Yousef,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-10-10
+fb_01117,p_00670,u_0145,Rania Ali,The developer great communicator who keeps stakeholders informed.,positive,4,2025-12-23
+fb_01118,p_00670,u_0145,Mariam Yousef,The developer writes clean and well-documented code.,positive,4,2026-03-30
+fb_01119,p_00670,u_0145,Youssef Yousef,The developer documentation is sometimes incomplete or outdated.,negative,3,2025-04-15
+fb_01120,p_00671,u_0146,Ahmed Mahmoud,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2026-03-01
+fb_01121,p_00671,u_0146,Dina Ibrahim,The developer very reliable and consistently meets project deadlines.,positive,4,2025-04-15
+fb_01122,p_00671,u_0146,Mostafa Ali,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-08-17
+fb_01123,p_00672,u_0146,Salma Farouk,The developer code quality needs improvement — tests are often missing.,negative,2,2025-09-07
+fb_01124,p_00672,u_0146,Layla Saleh,The developer architecture decisions could be better thought through.,negative,2,2026-01-15
+fb_01125,p_00673,u_0146,Hassan Mohamed,The developer very reliable and consistently meets project deadlines.,positive,4,2024-12-27
+fb_01126,p_00673,u_0146,Hassan Ahmed,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-11-15
+fb_01127,p_00673,u_0146,Salma Yousef,The developer very reliable and consistently meets project deadlines.,positive,4,2025-12-16
+fb_01128,p_00674,u_0147,Mariam Saleh,The developer great communicator who keeps stakeholders informed.,positive,5,2026-04-06
+fb_01129,p_00676,u_0147,Hassan Farouk,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-06-04
+fb_01130,p_00676,u_0147,Youssef Hassan,The developer demonstrates great problem-solving skills under pressure.,positive,4,2026-04-27
+fb_01131,p_00676,u_0147,Youssef Hassan,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2026-04-04
+fb_01132,p_00677,u_0148,Nada Mahmoud,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-03-08
+fb_01133,p_00677,u_0148,Eman Nasser,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2025-12-22
+fb_01134,p_00677,u_0148,Aya Ramadan,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-07-15
+fb_01135,p_00678,u_0148,Mohamed Ali,The developer writes clean and well-documented code.,positive,4,2026-03-25
+fb_01136,p_00679,u_0148,Eman Farouk,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2025-01-23
+fb_01137,p_00679,u_0148,Salma Mohamed,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-07-11
+fb_01138,p_00680,u_0148,Nour Gamal,The developer demonstrates great problem-solving skills under pressure.,positive,4,2024-12-23
+fb_01139,p_00680,u_0148,Rania Gamal,The developer writes clean and well-documented code.,positive,5,2026-01-19
+fb_01140,p_00680,u_0148,Tarek Hassan,The developer architecture decisions could be better thought through.,negative,2,2026-03-19
+fb_01141,p_00681,u_0148,Aya Khalil,The developer needs to improve communication during blockers.,negative,2,2025-09-06
+fb_01142,p_00681,u_0148,Rania Nasser,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-11-21
+fb_01143,p_00681,u_0148,Tarek Ramadan,The developer shows strong initiative and always goes the extra mile.,positive,5,2026-01-28
+fb_01144,p_00682,u_0148,Khaled Nasser,The developer could improve time management on complex tasks.,negative,2,2026-02-02
+fb_01145,p_00682,u_0148,Mariam Ahmed,The developer code reviews are sometimes rushed and miss edge cases.,negative,3,2025-02-02
+fb_01146,p_00683,u_0148,Omar Ahmed,The developer demonstrates great problem-solving skills under pressure.,positive,5,2025-06-06
+fb_01147,p_00683,u_0148,Kareem Zaki,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-10-11
+fb_01148,p_00684,u_0148,Kareem Ali,The developer very reliable and consistently meets project deadlines.,positive,5,2025-09-26
+fb_01149,p_00684,u_0148,Sara Farouk,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2026-02-08
+fb_01150,p_00684,u_0148,Aya Khalil,The developer could improve time management on complex tasks.,negative,2,2025-11-26
+fb_01151,p_00687,u_0149,Layla Ahmed,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2025-12-28
+fb_01152,p_00688,u_0149,Omar Ibrahim,The developer could improve time management on complex tasks.,negative,2,2026-01-08
+fb_01153,p_00688,u_0149,Amr Samir,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-07-15
+fb_01154,p_00688,u_0149,Layla Ibrahim,The developer architecture decisions could be better thought through.,negative,2,2025-03-14
+fb_01155,p_00689,u_0150,Rania Ahmed,The developer great communicator who keeps stakeholders informed.,positive,4,2025-02-25
+fb_01156,p_00689,u_0150,Mariam Saleh,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-08-12
+fb_01157,p_00690,u_0150,Ali Samir,The developer great communicator who keeps stakeholders informed.,positive,5,2025-06-18
+fb_01158,p_00690,u_0150,Mohamed Yousef,The developer code reviews are sometimes rushed and miss edge cases.,negative,3,2025-04-02
+fb_01159,p_00691,u_0151,Tarek Mahmoud,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-01-04
+fb_01160,p_00692,u_0151,Aya Ibrahim,The developer writes clean and well-documented code.,positive,4,2025-03-04
+fb_01161,p_00692,u_0151,Kareem Ahmed,The developer code quality needs improvement — tests are often missing.,negative,3,2026-02-24
+fb_01162,p_00692,u_0151,Layla Saleh,The developer could improve time management on complex tasks.,negative,3,2025-05-08
+fb_01163,p_00693,u_0151,Mona Farouk,The developer great communicator who keeps stakeholders informed.,positive,4,2025-12-19
+fb_01164,p_00693,u_0151,Hana Samir,The developer documentation is sometimes incomplete or outdated.,negative,3,2025-07-10
+fb_01165,p_00694,u_0152,Hana Farouk,The developer code reviews are sometimes rushed and miss edge cases.,negative,3,2025-05-21
+fb_01166,p_00694,u_0152,Mona Zaki,The developer great communicator who keeps stakeholders informed.,positive,4,2025-07-22
+fb_01167,p_00695,u_0152,Hana Ramadan,The developer writes clean and well-documented code.,positive,4,2025-04-30
+fb_01168,p_00696,u_0152,Rania Ali,The developer needs to improve communication during blockers.,negative,3,2025-12-12
+fb_01169,p_00696,u_0152,Sara Nasser,The developer documentation is sometimes incomplete or outdated.,negative,3,2025-05-08
+fb_01170,p_00698,u_0152,Amr Farouk,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-02-14
+fb_01171,p_00698,u_0152,Youssef Nasser,The developer writes clean and well-documented code.,positive,5,2025-04-13
+fb_01172,p_00698,u_0152,Walid Ali,The developer code quality needs improvement — tests are often missing.,negative,3,2025-12-23
+fb_01173,p_00699,u_0153,Nour Hassan,The developer could improve time management on complex tasks.,negative,2,2025-08-13
+fb_01174,p_00700,u_0153,Mona Ibrahim,The developer responsive to feedback and implements improvements quickly.,positive,4,2026-03-01
+fb_01175,p_00700,u_0153,Mostafa Nasser,The developer could improve time management on complex tasks.,negative,3,2025-10-29
+fb_01176,p_00701,u_0153,Hana Yousef,The developer could improve time management on complex tasks.,negative,3,2025-04-25
+fb_01177,p_00701,u_0153,Khaled Gamal,The developer could improve time management on complex tasks.,negative,3,2026-01-05
+fb_01178,p_00702,u_0153,Omar Saleh,The developer could improve time management on complex tasks.,negative,3,2025-10-29
+fb_01179,p_00703,u_0153,Nada Ibrahim,The developer very reliable and consistently meets project deadlines.,positive,5,2025-05-10
+fb_01180,p_00704,u_0154,Kareem Zaki,The developer very reliable and consistently meets project deadlines.,positive,5,2026-03-14
+fb_01181,p_00704,u_0154,Mostafa Saleh,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-03-04
+fb_01182,p_00704,u_0154,Tarek Samir,The developer architecture decisions could be better thought through.,negative,3,2025-02-23
+fb_01183,p_00705,u_0154,Kareem Yousef,The developer very reliable and consistently meets project deadlines.,positive,5,2025-02-09
+fb_01184,p_00705,u_0154,Ahmed Zaki,The developer code quality needs improvement — tests are often missing.,negative,3,2025-02-24
+fb_01185,p_00705,u_0154,Nour Gamal,The developer documentation is sometimes incomplete or outdated.,negative,3,2026-01-13
+fb_01186,p_00706,u_0154,Mostafa Ali,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-05-15
+fb_01187,p_00708,u_0156,Dina Ali,The developer responsive to feedback and implements improvements quickly.,positive,5,2026-02-02
+fb_01188,p_00708,u_0156,Sara Ibrahim,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-01-10
+fb_01189,p_00708,u_0156,Hana Gamal,The developer architecture decisions could be better thought through.,negative,3,2025-07-03
+fb_01190,p_00710,u_0156,Rania Nasser,The developer architecture decisions could be better thought through.,negative,2,2026-02-14
+fb_01191,p_00711,u_0156,Dina Ahmed,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2026-01-22
+fb_01192,p_00712,u_0156,Tarek Gamal,The developer needs to improve communication during blockers.,negative,3,2026-03-07
+fb_01193,p_00713,u_0156,Mohamed Ali,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-11-06
+fb_01194,p_00713,u_0156,Ahmed Samir,The developer great communicator who keeps stakeholders informed.,positive,5,2026-02-05
+fb_01195,p_00714,u_0156,Omar Mahmoud,The developer very reliable and consistently meets project deadlines.,positive,5,2025-09-28
+fb_01196,p_00715,u_0156,Tarek Khalil,The developer code reviews are sometimes rushed and miss edge cases.,negative,3,2025-04-12
+fb_01197,p_00715,u_0156,Salma Samir,The developer documentation is sometimes incomplete or outdated.,negative,3,2025-01-13
+fb_01198,p_00716,u_0157,Mohamed Gamal,The developer documentation is sometimes incomplete or outdated.,negative,3,2025-03-10
+fb_01199,p_00717,u_0157,Rania Ibrahim,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-08-11
+fb_01200,p_00717,u_0157,Hana Ibrahim,The developer could improve time management on complex tasks.,negative,2,2024-12-29
+fb_01201,p_00717,u_0157,Amr Ramadan,The developer code reviews are sometimes rushed and miss edge cases.,negative,3,2025-09-04
+fb_01202,p_00718,u_0157,Salma Gamal,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-01-05
+fb_01203,p_00718,u_0157,Walid Ramadan,The developer writes clean and well-documented code.,positive,4,2025-10-07
+fb_01204,p_00718,u_0157,Kareem Mohamed,The developer responsive to feedback and implements improvements quickly.,positive,4,2026-03-18
+fb_01205,p_00719,u_0158,Layla Farouk,The developer code reviews are sometimes rushed and miss edge cases.,negative,3,2025-01-21
+fb_01206,p_00719,u_0158,Sara Mahmoud,The developer very reliable and consistently meets project deadlines.,positive,4,2026-02-23
+fb_01207,p_00719,u_0158,Rania Samir,The developer documentation is sometimes incomplete or outdated.,negative,3,2026-04-18
+fb_01208,p_00720,u_0158,Nada Mahmoud,The developer architecture decisions could be better thought through.,negative,3,2025-07-08
+fb_01209,p_00721,u_0159,Eman Gamal,The developer could improve time management on complex tasks.,negative,2,2025-03-31
+fb_01210,p_00721,u_0159,Youssef Nasser,The developer architecture decisions could be better thought through.,negative,2,2024-12-24
+fb_01211,p_00722,u_0159,Hassan Nasser,The developer could improve time management on complex tasks.,negative,2,2025-04-09
+fb_01212,p_00723,u_0159,Ahmed Ibrahim,The developer very reliable and consistently meets project deadlines.,positive,4,2025-04-28
+fb_01213,p_00724,u_0159,Eman Ramadan,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-11-28
+fb_01214,p_00724,u_0159,Dina Zaki,The developer great communicator who keeps stakeholders informed.,positive,4,2025-08-01
+fb_01215,p_00725,u_0160,Nada Nasser,The developer needs to improve communication during blockers.,negative,3,2026-01-08
+fb_01216,p_00725,u_0160,Eman Mohamed,The developer very reliable and consistently meets project deadlines.,positive,4,2025-05-11
+fb_01217,p_00726,u_0160,Omar Zaki,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2026-03-31
+fb_01218,p_00726,u_0160,Salma Saleh,The developer architecture decisions could be better thought through.,negative,3,2026-02-10
+fb_01219,p_00726,u_0160,Ahmed Ibrahim,The developer very reliable and consistently meets project deadlines.,positive,5,2025-12-21
+fb_01220,p_00727,u_0160,Mona Farouk,The developer architecture decisions could be better thought through.,negative,2,2026-04-18
+fb_01221,p_00728,u_0160,Omar Farouk,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2026-04-24
+fb_01222,p_00728,u_0160,Mona Mohamed,The developer documentation is sometimes incomplete or outdated.,negative,3,2025-01-18
+fb_01223,p_00728,u_0160,Khaled Yousef,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-12-28
+fb_01224,p_00730,u_0160,Ali Yousef,The developer great communicator who keeps stakeholders informed.,positive,5,2025-06-02
+fb_01225,p_00731,u_0161,Khaled Mohamed,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-06-22
+fb_01226,p_00731,u_0161,Salma Gamal,The developer very reliable and consistently meets project deadlines.,positive,5,2025-03-08
+fb_01227,p_00733,u_0161,Tarek Samir,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-03-22
+fb_01228,p_00733,u_0161,Sara Saleh,The developer architecture decisions could be better thought through.,negative,3,2025-07-05
+fb_01229,p_00733,u_0161,Walid Mahmoud,The developer demonstrates great problem-solving skills under pressure.,positive,4,2026-04-18
+fb_01230,p_00734,u_0162,Amr Nasser,The developer very reliable and consistently meets project deadlines.,positive,4,2026-01-30
+fb_01231,p_00735,u_0162,Omar Mohamed,The developer code quality needs improvement — tests are often missing.,negative,2,2025-09-17
+fb_01232,p_00736,u_0162,Rania Ramadan,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-12-07
+fb_01233,p_00736,u_0162,Mariam Zaki,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-08-09
+fb_01234,p_00737,u_0162,Mona Ramadan,The developer great communicator who keeps stakeholders informed.,positive,4,2026-02-01
+fb_01235,p_00738,u_0162,Dina Ahmed,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-12-10
+fb_01236,p_00738,u_0162,Eman Zaki,The developer writes clean and well-documented code.,positive,4,2025-08-29
+fb_01237,p_00738,u_0162,Youssef Zaki,The developer documentation is sometimes incomplete or outdated.,negative,3,2026-04-18
+fb_01238,p_00739,u_0162,Rania Samir,The developer very reliable and consistently meets project deadlines.,positive,5,2025-03-23
+fb_01239,p_00739,u_0162,Mona Hassan,The developer could improve time management on complex tasks.,negative,2,2025-02-15
+fb_01240,p_00740,u_0163,Tarek Yousef,The developer code reviews are sometimes rushed and miss edge cases.,negative,3,2025-10-18
+fb_01241,p_00740,u_0163,Mohamed Zaki,The developer responsive to feedback and implements improvements quickly.,positive,4,2026-01-02
+fb_01242,p_00741,u_0163,Mohamed Ibrahim,The developer architecture decisions could be better thought through.,negative,3,2025-05-19
+fb_01243,p_00741,u_0163,Mona Samir,The developer code quality needs improvement — tests are often missing.,negative,3,2025-09-06
+fb_01244,p_00741,u_0163,Ahmed Mahmoud,The developer writes clean and well-documented code.,positive,5,2024-12-30
+fb_01245,p_00743,u_0164,Nada Yousef,The developer could improve time management on complex tasks.,negative,3,2026-01-16
+fb_01246,p_00744,u_0164,Nada Saleh,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-03-27
+fb_01247,p_00744,u_0164,Layla Mahmoud,The developer great communicator who keeps stakeholders informed.,positive,4,2025-07-11
+fb_01248,p_00744,u_0164,Aya Zaki,The developer very reliable and consistently meets project deadlines.,positive,5,2025-07-20
+fb_01249,p_00745,u_0165,Layla Farouk,The developer needs to improve communication during blockers.,negative,3,2026-01-30
+fb_01250,p_00746,u_0165,Kareem Hassan,The developer could improve time management on complex tasks.,negative,2,2025-07-22
+fb_01251,p_00747,u_0165,Salma Ahmed,The developer writes clean and well-documented code.,positive,4,2026-02-07
+fb_01252,p_00748,u_0165,Dina Nasser,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2025-03-07
+fb_01253,p_00748,u_0165,Omar Ali,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-04-10
+fb_01254,p_00748,u_0165,Tarek Ali,The developer architecture decisions could be better thought through.,negative,3,2025-04-18
+fb_01255,p_00749,u_0165,Eman Saleh,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2025-11-15
+fb_01256,p_00749,u_0165,Mariam Saleh,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-01-10
+fb_01257,p_00750,u_0166,Mariam Mahmoud,The developer writes clean and well-documented code.,positive,4,2025-11-15
+fb_01258,p_00750,u_0166,Nour Ibrahim,The developer writes clean and well-documented code.,positive,4,2025-12-25
+fb_01259,p_00751,u_0166,Sara Mohamed,The developer architecture decisions could be better thought through.,negative,3,2025-10-09
+fb_01260,p_00752,u_0166,Walid Gamal,The developer very reliable and consistently meets project deadlines.,positive,4,2025-01-21
+fb_01261,p_00752,u_0166,Aya Gamal,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-02-06
+fb_01262,p_00752,u_0166,Omar Ali,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-09-07
+fb_01263,p_00753,u_0166,Walid Ali,The developer shows strong initiative and always goes the extra mile.,positive,4,2026-03-10
+fb_01264,p_00753,u_0166,Salma Farouk,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-05-21
+fb_01265,p_00753,u_0166,Kareem Ahmed,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-05-03
+fb_01266,p_00754,u_0166,Mona Mahmoud,The developer responsive to feedback and implements improvements quickly.,positive,4,2026-02-21
+fb_01267,p_00754,u_0166,Sara Saleh,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-03-20
+fb_01268,p_00754,u_0166,Amr Yousef,The developer great communicator who keeps stakeholders informed.,positive,5,2025-04-24
+fb_01269,p_00755,u_0166,Ali Khalil,The developer responsive to feedback and implements improvements quickly.,positive,5,2026-04-18
+fb_01270,p_00755,u_0166,Eman Ahmed,The developer demonstrates great problem-solving skills under pressure.,positive,5,2025-12-25
+fb_01271,p_00756,u_0166,Aya Ahmed,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2025-12-21
+fb_01272,p_00757,u_0166,Omar Ibrahim,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2024-12-28
+fb_01273,p_00757,u_0166,Sara Mahmoud,The developer code quality needs improvement — tests are often missing.,negative,2,2025-10-29
+fb_01274,p_00758,u_0167,Mona Ramadan,The developer shows strong initiative and always goes the extra mile.,positive,5,2026-04-14
+fb_01275,p_00758,u_0167,Omar Farouk,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-03-08
+fb_01276,p_00759,u_0167,Kareem Ramadan,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-11-18
+fb_01277,p_00759,u_0167,Mohamed Ahmed,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2025-01-18
+fb_01278,p_00760,u_0167,Hana Mohamed,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-12-16
+fb_01279,p_00761,u_0167,Mohamed Ramadan,The developer could improve time management on complex tasks.,negative,2,2025-09-22
+fb_01280,p_00762,u_0168,Mohamed Gamal,The developer needs to improve communication during blockers.,negative,2,2024-12-21
+fb_01281,p_00762,u_0168,Tarek Saleh,The developer code quality needs improvement — tests are often missing.,negative,2,2025-05-07
+fb_01282,p_00763,u_0168,Salma Ramadan,The developer very reliable and consistently meets project deadlines.,positive,4,2026-04-12
+fb_01283,p_00764,u_0168,Hana Gamal,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-11-22
+fb_01284,p_00764,u_0168,Sara Farouk,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-09-19
+fb_01285,p_00765,u_0169,Hana Zaki,The developer great communicator who keeps stakeholders informed.,positive,4,2026-03-04
+fb_01286,p_00765,u_0169,Mohamed Zaki,The developer architecture decisions could be better thought through.,negative,3,2025-11-29
+fb_01287,p_00765,u_0169,Mohamed Gamal,The developer very reliable and consistently meets project deadlines.,positive,5,2025-07-16
+fb_01288,p_00766,u_0169,Ali Ahmed,The developer could improve time management on complex tasks.,negative,3,2025-03-20
+fb_01289,p_00766,u_0169,Rania Khalil,The developer shows strong initiative and always goes the extra mile.,positive,5,2026-04-28
+fb_01290,p_00766,u_0169,Omar Ibrahim,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-11-24
+fb_01291,p_00767,u_0169,Rania Ramadan,The developer very reliable and consistently meets project deadlines.,positive,4,2025-02-08
+fb_01292,p_00767,u_0169,Dina Zaki,The developer very reliable and consistently meets project deadlines.,positive,4,2025-08-13
+fb_01293,p_00767,u_0169,Mostafa Farouk,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-12-17
+fb_01294,p_00768,u_0169,Hassan Zaki,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-08-29
+fb_01295,p_00768,u_0169,Hana Saleh,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2026-02-15
+fb_01296,p_00768,u_0169,Ali Zaki,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2026-03-03
+fb_01297,p_00769,u_0169,Omar Nasser,The developer very reliable and consistently meets project deadlines.,positive,4,2025-08-16
+fb_01298,p_00769,u_0169,Nour Farouk,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-06-18
+fb_01299,p_00769,u_0169,Kareem Gamal,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-09-23
+fb_01300,p_00772,u_0170,Layla Hassan,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2025-12-21
+fb_01301,p_00772,u_0170,Walid Khalil,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-06-26
+fb_01302,p_00772,u_0170,Salma Khalil,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-10-29
+fb_01303,p_00773,u_0170,Youssef Ali,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-04-03
+fb_01304,p_00773,u_0170,Kareem Nasser,The developer architecture decisions could be better thought through.,negative,2,2025-06-13
+fb_01305,p_00777,u_0172,Mariam Khalil,The developer could improve time management on complex tasks.,negative,2,2026-01-15
+fb_01306,p_00777,u_0172,Youssef Nasser,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-08-04
+fb_01307,p_00778,u_0172,Nada Khalil,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-10-18
+fb_01308,p_00778,u_0172,Omar Saleh,The developer demonstrates great problem-solving skills under pressure.,positive,5,2025-10-09
+fb_01309,p_00779,u_0172,Salma Mohamed,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-05-26
+fb_01310,p_00779,u_0172,Khaled Samir,The developer great communicator who keeps stakeholders informed.,positive,5,2025-12-06
+fb_01311,p_00779,u_0172,Hassan Mahmoud,The developer demonstrates great problem-solving skills under pressure.,positive,4,2026-04-22
+fb_01312,p_00780,u_0172,Mostafa Gamal,The developer architecture decisions could be better thought through.,negative,3,2025-02-15
+fb_01313,p_00780,u_0172,Mona Gamal,The developer very reliable and consistently meets project deadlines.,positive,5,2025-09-11
+fb_01314,p_00780,u_0172,Mohamed Khalil,The developer writes clean and well-documented code.,positive,4,2025-07-02
+fb_01315,p_00781,u_0172,Khaled Mahmoud,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2024-12-25
+fb_01316,p_00781,u_0172,Mariam Yousef,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2026-03-13
+fb_01317,p_00782,u_0173,Nour Gamal,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-03-13
+fb_01318,p_00783,u_0173,Sara Khalil,The developer needs to improve communication during blockers.,negative,3,2025-05-17
+fb_01319,p_00783,u_0173,Ahmed Gamal,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-05-07
+fb_01320,p_00785,u_0173,Mostafa Ahmed,The developer writes clean and well-documented code.,positive,4,2024-12-20
+fb_01321,p_00785,u_0173,Mariam Saleh,The developer very reliable and consistently meets project deadlines.,positive,4,2025-06-06
+fb_01322,p_00785,u_0173,Nada Nasser,The developer very reliable and consistently meets project deadlines.,positive,5,2025-05-03
+fb_01323,p_00786,u_0173,Hana Gamal,The developer writes clean and well-documented code.,positive,4,2024-12-27
+fb_01324,p_00786,u_0173,Dina Zaki,The developer needs to improve communication during blockers.,negative,2,2025-01-13
+fb_01325,p_00786,u_0173,Mariam Ali,The developer code quality needs improvement — tests are often missing.,negative,3,2026-01-13
+fb_01326,p_00788,u_0174,Ali Ibrahim,The developer writes clean and well-documented code.,positive,4,2026-03-31
+fb_01327,p_00788,u_0174,Hassan Mahmoud,The developer writes clean and well-documented code.,positive,4,2025-10-01
+fb_01328,p_00788,u_0174,Mohamed Gamal,The developer architecture decisions could be better thought through.,negative,3,2025-09-23
+fb_01329,p_00789,u_0174,Hana Farouk,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-09-03
+fb_01330,p_00789,u_0174,Ali Ahmed,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-03-12
+fb_01331,p_00789,u_0174,Ahmed Ahmed,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-07-26
+fb_01332,p_00790,u_0174,Sara Ibrahim,The developer shows strong initiative and always goes the extra mile.,positive,5,2026-04-04
+fb_01333,p_00790,u_0174,Youssef Nasser,The developer could improve time management on complex tasks.,negative,2,2025-07-09
+fb_01334,p_00791,u_0174,Hana Samir,The developer could improve time management on complex tasks.,negative,3,2026-02-12
+fb_01335,p_00791,u_0174,Mona Mohamed,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-03-02
+fb_01336,p_00793,u_0174,Nada Nasser,The developer could improve time management on complex tasks.,negative,3,2026-03-11
+fb_01337,p_00794,u_0174,Aya Hassan,The developer needs to improve communication during blockers.,negative,2,2025-02-21
+fb_01338,p_00794,u_0174,Rania Ibrahim,The developer writes clean and well-documented code.,positive,5,2025-08-02
+fb_01339,p_00796,u_0175,Layla Zaki,The developer could improve time management on complex tasks.,negative,3,2025-05-24
+fb_01340,p_00799,u_0177,Dina Nasser,The developer could improve time management on complex tasks.,negative,2,2025-10-23
+fb_01341,p_00799,u_0177,Nour Gamal,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-09-19
+fb_01342,p_00799,u_0177,Layla Gamal,The developer code quality needs improvement — tests are often missing.,negative,2,2025-02-28
+fb_01343,p_00800,u_0177,Mohamed Ahmed,The developer could improve time management on complex tasks.,negative,2,2025-12-14
+fb_01344,p_00800,u_0177,Ahmed Ramadan,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-07-09
+fb_01345,p_00802,u_0177,Omar Zaki,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-04-20
+fb_01346,p_00803,u_0177,Layla Hassan,The developer needs to improve communication during blockers.,negative,3,2026-01-19
+fb_01347,p_00803,u_0177,Salma Ramadan,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2025-11-01
+fb_01348,p_00803,u_0177,Walid Yousef,The developer could improve time management on complex tasks.,negative,3,2025-09-29
+fb_01349,p_00805,u_0178,Mariam Mahmoud,The developer architecture decisions could be better thought through.,negative,2,2025-12-03
+fb_01350,p_00805,u_0178,Walid Gamal,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-02-09
+fb_01351,p_00806,u_0178,Tarek Farouk,The developer architecture decisions could be better thought through.,negative,3,2025-10-30
+fb_01352,p_00806,u_0178,Sara Ali,The developer code quality needs improvement — tests are often missing.,negative,2,2025-09-16
+fb_01353,p_00807,u_0178,Nada Ahmed,The developer could improve time management on complex tasks.,negative,3,2025-08-06
+fb_01354,p_00807,u_0178,Layla Ibrahim,The developer demonstrates great problem-solving skills under pressure.,positive,5,2025-11-11
+fb_01355,p_00807,u_0178,Mona Farouk,The developer documentation is sometimes incomplete or outdated.,negative,3,2025-02-15
+fb_01356,p_00808,u_0178,Mona Ramadan,The developer architecture decisions could be better thought through.,negative,3,2025-04-01
+fb_01357,p_00808,u_0178,Mohamed Mohamed,The developer architecture decisions could be better thought through.,negative,3,2025-04-17
+fb_01358,p_00809,u_0178,Rania Ibrahim,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-09-17
+fb_01359,p_00809,u_0178,Omar Ramadan,The developer code quality needs improvement — tests are often missing.,negative,2,2025-04-21
+fb_01360,p_00810,u_0178,Hana Zaki,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-09-08
+fb_01361,p_00810,u_0178,Salma Ahmed,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2026-01-30
+fb_01362,p_00810,u_0178,Layla Ibrahim,The developer architecture decisions could be better thought through.,negative,2,2025-05-15
+fb_01363,p_00811,u_0178,Mariam Ahmed,The developer writes clean and well-documented code.,positive,5,2025-03-22
+fb_01364,p_00811,u_0178,Mona Khalil,The developer code reviews are sometimes rushed and miss edge cases.,negative,3,2026-02-18
+fb_01365,p_00811,u_0178,Eman Ibrahim,The developer writes clean and well-documented code.,positive,5,2026-02-08
+fb_01366,p_00812,u_0179,Kareem Gamal,The developer architecture decisions could be better thought through.,negative,2,2025-06-20
+fb_01367,p_00812,u_0179,Mohamed Mahmoud,The developer great communicator who keeps stakeholders informed.,positive,5,2026-03-10
+fb_01368,p_00812,u_0179,Eman Farouk,The developer shows strong initiative and always goes the extra mile.,positive,5,2026-01-04
+fb_01369,p_00814,u_0180,Kareem Zaki,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-05-27
+fb_01370,p_00814,u_0180,Youssef Nasser,The developer needs to improve communication during blockers.,negative,3,2026-03-19
+fb_01371,p_00815,u_0180,Khaled Zaki,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-01-15
+fb_01372,p_00815,u_0180,Walid Mohamed,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-01-13
+fb_01373,p_00816,u_0180,Layla Ibrahim,The developer writes clean and well-documented code.,positive,4,2025-09-18
+fb_01374,p_00816,u_0180,Aya Ahmed,The developer writes clean and well-documented code.,positive,4,2025-09-22
+fb_01375,p_00816,u_0180,Mona Hassan,The developer demonstrates great problem-solving skills under pressure.,positive,5,2025-07-07
+fb_01376,p_00817,u_0180,Nada Saleh,The developer demonstrates great problem-solving skills under pressure.,positive,5,2025-10-14
+fb_01377,p_00817,u_0180,Salma Zaki,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2026-02-14
+fb_01378,p_00818,u_0180,Kareem Ali,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2026-04-18
+fb_01379,p_00818,u_0180,Kareem Mohamed,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-03-03
+fb_01380,p_00819,u_0180,Eman Samir,The developer great communicator who keeps stakeholders informed.,positive,4,2026-02-12
+fb_01381,p_00820,u_0180,Mohamed Yousef,The developer architecture decisions could be better thought through.,negative,3,2026-03-25
+fb_01382,p_00821,u_0181,Kareem Samir,The developer writes clean and well-documented code.,positive,5,2026-04-02
+fb_01383,p_00822,u_0181,Khaled Saleh,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-07-25
+fb_01384,p_00822,u_0181,Mostafa Khalil,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-01-31
+fb_01385,p_00823,u_0181,Mohamed Samir,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2026-01-09
+fb_01386,p_00824,u_0181,Omar Nasser,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-10-28
+fb_01387,p_00824,u_0181,Salma Ahmed,The developer great communicator who keeps stakeholders informed.,positive,5,2026-04-17
+fb_01388,p_00825,u_0181,Eman Saleh,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2026-02-19
+fb_01389,p_00825,u_0181,Kareem Mohamed,The developer needs to improve communication during blockers.,negative,3,2025-05-30
+fb_01390,p_00826,u_0181,Hana Nasser,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-04-12
+fb_01391,p_00827,u_0181,Tarek Ramadan,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2026-01-10
+fb_01392,p_00827,u_0181,Mariam Ali,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-02-22
+fb_01393,p_00828,u_0181,Nour Nasser,The developer shows strong initiative and always goes the extra mile.,positive,4,2026-01-27
+fb_01394,p_00828,u_0181,Rania Gamal,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2026-03-01
+fb_01395,p_00828,u_0181,Mona Hassan,The developer great communicator who keeps stakeholders informed.,positive,5,2025-06-16
+fb_01396,p_00829,u_0181,Sara Nasser,The developer needs to improve communication during blockers.,negative,2,2025-12-08
+fb_01397,p_00831,u_0182,Nour Gamal,The developer architecture decisions could be better thought through.,negative,2,2025-01-10
+fb_01398,p_00831,u_0182,Youssef Mahmoud,The developer code quality needs improvement — tests are often missing.,negative,2,2025-12-20
+fb_01399,p_00831,u_0182,Omar Zaki,The developer responsive to feedback and implements improvements quickly.,positive,5,2026-04-11
+fb_01400,p_00832,u_0182,Mohamed Khalil,The developer great communicator who keeps stakeholders informed.,positive,5,2025-03-01
+fb_01401,p_00832,u_0182,Mohamed Ramadan,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-09-06
+fb_01402,p_00832,u_0182,Kareem Ibrahim,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-06-18
+fb_01403,p_00833,u_0182,Walid Mohamed,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-09-24
+fb_01404,p_00834,u_0182,Omar Ali,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-08-07
+fb_01405,p_00834,u_0182,Ali Ali,The developer shows strong initiative and always goes the extra mile.,positive,5,2026-02-13
+fb_01406,p_00835,u_0182,Kareem Hassan,The developer needs to improve communication during blockers.,negative,3,2025-06-15
+fb_01407,p_00835,u_0182,Nour Khalil,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-04-25
+fb_01408,p_00836,u_0182,Mariam Hassan,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-08-18
+fb_01409,p_00836,u_0182,Ahmed Gamal,The developer great communicator who keeps stakeholders informed.,positive,4,2025-09-24
+fb_01410,p_00837,u_0183,Hana Mohamed,The developer responsive to feedback and implements improvements quickly.,positive,5,2026-04-02
+fb_01411,p_00837,u_0183,Mostafa Ahmed,The developer documentation is sometimes incomplete or outdated.,negative,3,2026-02-06
+fb_01412,p_00837,u_0183,Walid Yousef,The developer code quality needs improvement — tests are often missing.,negative,3,2025-01-28
+fb_01413,p_00838,u_0183,Tarek Yousef,The developer great communicator who keeps stakeholders informed.,positive,4,2025-06-09
+fb_01414,p_00839,u_0183,Hana Gamal,The developer demonstrates great problem-solving skills under pressure.,positive,5,2025-01-10
+fb_01415,p_00839,u_0183,Sara Ibrahim,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-02-27
+fb_01416,p_00839,u_0183,Ahmed Mahmoud,The developer very reliable and consistently meets project deadlines.,positive,4,2025-08-26
+fb_01417,p_00840,u_0183,Mostafa Gamal,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-05-03
+fb_01418,p_00840,u_0183,Amr Ahmed,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-10-19
+fb_01419,p_00841,u_0183,Kareem Khalil,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-07-22
+fb_01420,p_00841,u_0183,Walid Saleh,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-10-07
+fb_01421,p_00842,u_0183,Khaled Nasser,The developer architecture decisions could be better thought through.,negative,3,2026-01-15
+fb_01422,p_00843,u_0183,Nour Gamal,The developer writes clean and well-documented code.,positive,4,2026-02-18
+fb_01423,p_00843,u_0183,Salma Ramadan,The developer writes clean and well-documented code.,positive,5,2025-02-27
+fb_01424,p_00844,u_0184,Mohamed Mohamed,The developer could improve time management on complex tasks.,negative,3,2026-02-05
+fb_01425,p_00844,u_0184,Nour Saleh,The developer shows strong initiative and always goes the extra mile.,positive,5,2026-02-22
+fb_01426,p_00845,u_0184,Mohamed Mahmoud,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-10-18
+fb_01427,p_00845,u_0184,Mostafa Farouk,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-09-26
+fb_01428,p_00846,u_0184,Mostafa Ibrahim,The developer writes clean and well-documented code.,positive,4,2025-04-08
+fb_01429,p_00846,u_0184,Amr Mohamed,The developer great communicator who keeps stakeholders informed.,positive,5,2025-02-06
+fb_01430,p_00847,u_0184,Nada Zaki,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2026-04-16
+fb_01431,p_00850,u_0185,Hana Mohamed,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2025-09-25
+fb_01432,p_00850,u_0185,Dina Mahmoud,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-01-09
+fb_01433,p_00851,u_0185,Rania Zaki,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-10-28
+fb_01434,p_00851,u_0185,Dina Farouk,The developer code reviews are sometimes rushed and miss edge cases.,negative,3,2025-02-26
+fb_01435,p_00852,u_0185,Omar Mohamed,The developer could improve time management on complex tasks.,negative,2,2025-12-17
+fb_01436,p_00854,u_0186,Nour Nasser,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-03-11
+fb_01437,p_00854,u_0186,Salma Yousef,The developer documentation is sometimes incomplete or outdated.,negative,2,2025-01-19
+fb_01438,p_00854,u_0186,Nour Yousef,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-03-03
+fb_01439,p_00855,u_0186,Ahmed Nasser,The developer great communicator who keeps stakeholders informed.,positive,5,2025-03-07
+fb_01440,p_00855,u_0186,Kareem Khalil,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-03-23
+fb_01441,p_00856,u_0186,Mona Saleh,The developer great communicator who keeps stakeholders informed.,positive,4,2025-03-24
+fb_01442,p_00857,u_0187,Ali Yousef,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2025-03-18
+fb_01443,p_00857,u_0187,Salma Gamal,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-01-07
+fb_01444,p_00858,u_0187,Hana Ahmed,The developer architecture decisions could be better thought through.,negative,3,2025-04-09
+fb_01445,p_00859,u_0187,Salma Khalil,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-12-10
+fb_01446,p_00860,u_0187,Sara Mohamed,The developer documentation is sometimes incomplete or outdated.,negative,3,2026-01-23
+fb_01447,p_00860,u_0187,Hana Ramadan,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-01-24
+fb_01448,p_00860,u_0187,Hana Samir,The developer very reliable and consistently meets project deadlines.,positive,4,2024-12-25
+fb_01449,p_00861,u_0187,Ahmed Mohamed,The developer writes clean and well-documented code.,positive,4,2025-08-30
+fb_01450,p_00861,u_0187,Kareem Mohamed,The developer could improve time management on complex tasks.,negative,2,2026-02-01
+fb_01451,p_00863,u_0187,Omar Ibrahim,The developer needs to improve communication during blockers.,negative,2,2025-11-20
+fb_01452,p_00863,u_0187,Omar Ahmed,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2025-09-22
+fb_01453,p_00864,u_0187,Omar Yousef,The developer great communicator who keeps stakeholders informed.,positive,5,2025-08-30
+fb_01454,p_00864,u_0187,Ahmed Saleh,The developer code quality needs improvement — tests are often missing.,negative,3,2025-05-30
+fb_01455,p_00866,u_0188,Nour Farouk,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-10-07
+fb_01456,p_00866,u_0188,Layla Gamal,The developer code quality needs improvement — tests are often missing.,negative,2,2025-08-09
+fb_01457,p_00866,u_0188,Hana Mohamed,The developer documentation is sometimes incomplete or outdated.,negative,2,2026-02-15
+fb_01458,p_00867,u_0188,Youssef Hassan,The developer demonstrates great problem-solving skills under pressure.,positive,5,2025-03-03
+fb_01459,p_00869,u_0188,Youssef Ali,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-04-08
+fb_01460,p_00870,u_0188,Youssef Ramadan,The developer code quality needs improvement — tests are often missing.,negative,2,2025-10-14
+fb_01461,p_00870,u_0188,Amr Saleh,The developer code reviews are sometimes rushed and miss edge cases.,negative,3,2026-03-17
+fb_01462,p_00870,u_0188,Ahmed Ibrahim,The developer architecture decisions could be better thought through.,negative,2,2025-07-23
+fb_01463,p_00871,u_0189,Nour Ibrahim,The developer writes clean and well-documented code.,positive,4,2025-08-17
+fb_01464,p_00871,u_0189,Nada Gamal,The developer great communicator who keeps stakeholders informed.,positive,5,2025-12-23
+fb_01465,p_00871,u_0189,Khaled Ali,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-10-15
+fb_01466,p_00872,u_0190,Sara Hassan,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-02-12
+fb_01467,p_00872,u_0190,Tarek Zaki,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-03-17
+fb_01468,p_00872,u_0190,Walid Mahmoud,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-04-29
+fb_01469,p_00873,u_0190,Youssef Ibrahim,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-07-02
+fb_01470,p_00873,u_0190,Mostafa Samir,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2025-05-28
+fb_01471,p_00874,u_0190,Eman Ibrahim,The developer architecture decisions could be better thought through.,negative,3,2026-02-13
+fb_01472,p_00874,u_0190,Kareem Ahmed,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-08-28
+fb_01473,p_00875,u_0190,Omar Khalil,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-01-11
+fb_01474,p_00875,u_0190,Eman Ramadan,The developer architecture decisions could be better thought through.,negative,2,2025-07-09
+fb_01475,p_00876,u_0190,Mohamed Saleh,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-04-16
+fb_01476,p_00876,u_0190,Mostafa Khalil,The developer could improve time management on complex tasks.,negative,3,2025-08-06
+fb_01477,p_00876,u_0190,Mostafa Hassan,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-04-13
+fb_01478,p_00877,u_0190,Tarek Mahmoud,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-03-25
+fb_01479,p_00877,u_0190,Aya Ahmed,The developer code quality needs improvement — tests are often missing.,negative,2,2025-04-01
+fb_01480,p_00877,u_0190,Mariam Ramadan,The developer great communicator who keeps stakeholders informed.,positive,4,2026-03-08
+fb_01481,p_00878,u_0190,Ahmed Zaki,The developer writes clean and well-documented code.,positive,4,2026-01-13
+fb_01482,p_00879,u_0190,Ahmed Samir,The developer code quality needs improvement — tests are often missing.,negative,3,2025-04-26
+fb_01483,p_00880,u_0191,Amr Ibrahim,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-10-29
+fb_01484,p_00880,u_0191,Mostafa Nasser,The developer architecture decisions could be better thought through.,negative,2,2025-02-20
+fb_01485,p_00881,u_0191,Ahmed Nasser,The developer code quality needs improvement — tests are often missing.,negative,2,2025-07-04
+fb_01486,p_00881,u_0191,Rania Hassan,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2025-04-02
+fb_01487,p_00885,u_0191,Eman Ramadan,The developer great communicator who keeps stakeholders informed.,positive,4,2025-07-06
+fb_01488,p_00885,u_0191,Tarek Mahmoud,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2026-04-16
+fb_01489,p_00886,u_0192,Hassan Ibrahim,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-01-14
+fb_01490,p_00886,u_0192,Kareem Samir,The developer architecture decisions could be better thought through.,negative,3,2025-12-05
+fb_01491,p_00886,u_0192,Nour Zaki,The developer needs to improve communication during blockers.,negative,2,2025-12-25
+fb_01492,p_00887,u_0192,Nour Samir,The developer shows strong initiative and always goes the extra mile.,positive,4,2025-05-31
+fb_01493,p_00890,u_0193,Walid Mahmoud,The developer writes clean and well-documented code.,positive,5,2025-09-02
+fb_01494,p_00892,u_0193,Youssef Mohamed,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-11-10
+fb_01495,p_00893,u_0194,Omar Ali,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-06-03
+fb_01496,p_00893,u_0194,Hana Khalil,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-08-05
+fb_01497,p_00894,u_0194,Mona Nasser,The developer demonstrates great problem-solving skills under pressure.,positive,5,2026-03-06
+fb_01498,p_00894,u_0194,Youssef Ramadan,The developer great communicator who keeps stakeholders informed.,positive,4,2025-02-06
+fb_01499,p_00896,u_0195,Ali Ramadan,The developer demonstrates great problem-solving skills under pressure.,positive,4,2026-02-07
+fb_01500,p_00898,u_0195,Walid Samir,The developer shows strong initiative and always goes the extra mile.,positive,4,2026-04-05
+fb_01501,p_00899,u_0196,Nada Zaki,The developer great communicator who keeps stakeholders informed.,positive,5,2026-04-29
+fb_01502,p_00900,u_0196,Youssef Mohamed,The developer needs to improve communication during blockers.,negative,3,2025-09-02
+fb_01503,p_00901,u_0196,Youssef Farouk,The developer writes clean and well-documented code.,positive,4,2026-01-28
+fb_01504,p_00902,u_0196,Hana Mahmoud,The developer very reliable and consistently meets project deadlines.,positive,4,2026-04-20
+fb_01505,p_00902,u_0196,Amr Mohamed,The developer writes clean and well-documented code.,positive,4,2025-05-19
+fb_01506,p_00903,u_0197,Salma Hassan,The developer code quality needs improvement — tests are often missing.,negative,3,2025-02-12
+fb_01507,p_00904,u_0197,Omar Yousef,The developer needs to improve communication during blockers.,negative,2,2026-01-26
+fb_01508,p_00904,u_0197,Dina Nasser,The developer writes clean and well-documented code.,positive,4,2025-05-15
+fb_01509,p_00904,u_0197,Nour Zaki,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-01-20
+fb_01510,p_00905,u_0197,Sara Mahmoud,The developer very reliable and consistently meets project deadlines.,positive,5,2025-07-17
+fb_01511,p_00905,u_0197,Youssef Samir,The developer code quality needs improvement — tests are often missing.,negative,2,2025-09-13
+fb_01512,p_00906,u_0197,Omar Ramadan,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2025-04-01
+fb_01513,p_00907,u_0197,Omar Ali,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-02-22
+fb_01514,p_00908,u_0197,Salma Ramadan,The developer demonstrates great problem-solving skills under pressure.,positive,5,2024-12-25
+fb_01515,p_00909,u_0198,Tarek Ibrahim,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-05-28
+fb_01516,p_00909,u_0198,Mona Yousef,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2026-03-22
+fb_01517,p_00910,u_0198,Rania Gamal,The developer responsive to feedback and implements improvements quickly.,positive,5,2025-07-04
+fb_01518,p_00911,u_0198,Tarek Ibrahim,The developer code quality needs improvement — tests are often missing.,negative,2,2025-06-25
+fb_01519,p_00912,u_0198,Eman Mahmoud,The developer very reliable and consistently meets project deadlines.,positive,5,2026-02-25
+fb_01520,p_00912,u_0198,Dina Samir,The developer documentation is sometimes incomplete or outdated.,negative,3,2025-01-31
+fb_01521,p_00913,u_0198,Aya Ali,The developer excellent collaboration skills and supports teammates effectively.,positive,4,2026-01-07
+fb_01522,p_00913,u_0198,Mariam Hassan,The developer great communicator who keeps stakeholders informed.,positive,5,2025-08-08
+fb_01523,p_00914,u_0198,Walid Saleh,The developer responsive to feedback and implements improvements quickly.,positive,5,2026-04-12
+fb_01524,p_00915,u_0199,Youssef Gamal,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-05-10
+fb_01525,p_00915,u_0199,Hana Gamal,The developer great communicator who keeps stakeholders informed.,positive,5,2025-09-07
+fb_01526,p_00916,u_0199,Layla Farouk,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-11-24
+fb_01527,p_00916,u_0199,Ali Ibrahim,The developer code quality needs improvement — tests are often missing.,negative,3,2024-12-27
+fb_01528,p_00917,u_0199,Mostafa Mahmoud,The developer shows strong initiative and always goes the extra mile.,positive,5,2025-05-23
+fb_01529,p_00918,u_0199,Khaled Saleh,The developer could improve time management on complex tasks.,negative,2,2025-05-26
+fb_01530,p_00919,u_0199,Eman Saleh,The developer needs to improve communication during blockers.,negative,3,2025-09-26
+fb_01531,p_00920,u_0199,Omar Ali,The developer excellent collaboration skills and supports teammates effectively.,positive,5,2026-02-24
+fb_01532,p_00921,u_0199,Aya Ali,The developer writes clean and well-documented code.,positive,5,2025-10-10
+fb_01533,p_00921,u_0199,Hassan Yousef,The developer delivers tasks on time and communicates proactively with the team.,positive,5,2026-02-03
+fb_01534,p_00922,u_0200,Nour Ahmed,The developer shows strong initiative and always goes the extra mile.,positive,5,2026-01-20
+fb_01535,p_00922,u_0200,Omar Samir,The developer architecture decisions could be better thought through.,negative,2,2025-08-14
+fb_01536,p_00923,u_0200,Hana Ibrahim,The developer code reviews are sometimes rushed and miss edge cases.,negative,3,2025-04-14
+fb_01537,p_00924,u_0200,Mostafa Gamal,The developer demonstrates great problem-solving skills under pressure.,positive,4,2025-12-25
+fb_01538,p_00924,u_0200,Khaled Nasser,The developer architecture decisions could be better thought through.,negative,3,2025-09-20
+fb_01539,p_00926,u_0200,Khaled Gamal,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-06-15
+fb_01540,p_00927,u_0200,Aya Ahmed,The developer delivers tasks on time and communicates proactively with the team.,positive,4,2026-02-10
+fb_01541,p_00928,u_0200,Eman Mahmoud,The developer code reviews are sometimes rushed and miss edge cases.,negative,2,2026-02-03
+fb_01542,p_00928,u_0200,Ahmed Ahmed,The developer very reliable and consistently meets project deadlines.,positive,5,2025-01-15
+fb_01543,p_00929,u_0200,Ahmed Gamal,The developer responsive to feedback and implements improvements quickly.,positive,4,2025-08-31
+fb_01544,p_00929,u_0200,Eman Yousef,The developer code reviews are sometimes rushed and miss edge cases.,negative,3,2025-01-16

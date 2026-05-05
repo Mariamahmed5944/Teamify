@@ -1,0 +1,121 @@
+{
+  "user_id": "u_0001",
+  "user_name": "Ahmed Ramadan",
+  "career_level": "Mid-level Developer",
+  "generated_at": "2026-05-04T20:21:24Z",
+  "career_progress": {
+    "score": 63.6,
+    "level": "Senior Developer",
+    "next_milestone": "System Design",
+    "breakdown": {
+      "skill_mastery": 42.9,
+      "performance_avg": 73.9,
+      "project_rate": 100.0,
+      "course_score": 40.0,
+      "sentiment_score": 62.5
+    }
+  },
+  "weaknesses": [
+    {
+      "area": "commitment",
+      "score": 74.8,
+      "severity": "medium",
+      "message": "Commitment is 74.8/100 — below threshold of 75."
+    },
+    {
+      "area": "quality",
+      "score": 74.6,
+      "severity": "medium",
+      "message": "Quality is 74.6/100 — below threshold of 75."
+    }
+  ],
+  "strengths": [],
+  "skill_gaps": {
+    "target_role": "Senior Developer",
+    "required_skills": [
+      "Microservices",
+      "Code Review",
+      "System Design",
+      "GraphQL",
+      "AWS",
+      "CI/CD"
+    ],
+    "owned_skills": [
+      "GraphQL"
+    ],
+    "missing_skills": [
+      "System Design",
+      "Microservices",
+      "AWS",
+      "CI/CD",
+      "Code Review"
+    ],
+    "gap_pct": 83.3,
+    "priority_skill": "System Design"
+  },
+  "feedback_nlp": {
+    "avg_sentiment_score": 0.625,
+    "sentiment_label": "positive",
+    "top_keywords": [
+      "communication",
+      "code quality"
+    ],
+    "feedback_count": 8
+  },
+  "top_courses": [
+    {
+      "title": "System Design for Developers",
+      "platform": "Coursera",
+      "relevance": 0.678,
+      "fills": [
+        "Microservices",
+        "System Design"
+      ],
+      "rating": "4.8",
+      "hours": "24"
+    },
+    {
+      "title": "Microservices Architecture",
+      "platform": "Coursera",
+      "relevance": 0.674,
+      "fills": [
+        "AWS",
+        "Microservices"
+      ],
+      "rating": "4.8",
+      "hours": "35"
+    },
+    {
+      "title": "AWS Certified Developer",
+      "platform": "A Cloud Guru",
+      "relevance": 0.662,
+      "fills": [
+        "CI/CD",
+        "AWS"
+      ],
+      "rating": "4.7",
+      "hours": "40"
+    },
+    {
+      "title": "Docker & Kubernetes Mastery",
+      "platform": "Udemy",
+      "relevance": 0.552,
+      "fills": [
+        "CI/CD"
+      ],
+      "rating": "4.6",
+      "hours": "20"
+    },
+    {
+      "title": "CI/CD with GitHub Actions",
+      "platform": "A Cloud Guru",
+      "relevance": 0.552,
+      "fills": [
+        "CI/CD"
+      ],
+      "rating": "4.6",
+      "hours": "15"
+    }
+  ],
+  "mentor_report": "## Career Summary\nAhmed is currently a Senior Developer with an overall career score of 63.6%.\nStrong collaboration scores reflect reliable team contribution.\nThe next target role is Senior Developer.\n\n## Strengths\n- Consistent project delivery\n\n## Areas to Improve\n- Commitment: 74.8/100 — medium priority\n- Quality: 74.6/100 — medium priority\n- Skill gaps for Senior Developer: System Design, Microservices, AWS\n\n## Your Next Step\nPrioritise learning **System Design** — it is the highest-demand missing skill\nfor the Senior Developer role. Enroll in a structured course this week and\napply it in a real side project to build verifiable experience.\n"
+}

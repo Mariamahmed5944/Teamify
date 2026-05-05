@@ -1,0 +1,930 @@
+project_id,user_id,title,role,status,duration_days,tech_stack,start_date
+p_00001,u_0001,Project 1,Full-Stack Engineer,completed,49,GraphQL,2024-06-17
+p_00002,u_0001,Project 2,Full-Stack Engineer,completed,91,SQL,2026-01-29
+p_00003,u_0001,Project 3,Full-Stack Engineer,completed,98,REST APIs,2025-06-16
+p_00004,u_0001,Project 4,Full-Stack Engineer,completed,47,Git,2025-10-12
+p_00005,u_0001,Project 5,Full-Stack Engineer,completed,81,React,2025-05-20
+p_00006,u_0002,Project 6,DevOps Engineer,in_progress,110,HTML/CSS,2025-06-30
+p_00007,u_0003,Project 7,Backend Engineer,completed,58,React,2026-03-22
+p_00008,u_0003,Project 8,Backend Engineer,completed,118,TypeScript,2024-07-26
+p_00009,u_0003,Project 9,Backend Engineer,completed,65,Microservices,2025-04-07
+p_00010,u_0003,Project 10,Backend Engineer,completed,110,Kubernetes,2025-01-28
+p_00011,u_0003,Project 11,Backend Engineer,completed,104,Unit Testing,2025-10-01
+p_00012,u_0003,Project 12,Backend Engineer,completed,81,HTML/CSS,2024-06-15
+p_00013,u_0004,Project 13,DevOps Engineer,in_progress,101,React,2024-09-10
+p_00014,u_0004,Project 14,DevOps Engineer,in_progress,95,CI/CD,2025-08-19
+p_00015,u_0005,Project 15,ML Engineer,completed,26,GraphQL,2026-04-04
+p_00016,u_0005,Project 16,ML Engineer,completed,73,Git,2026-01-26
+p_00017,u_0005,Project 17,ML Engineer,completed,80,PostgreSQL,2024-12-04
+p_00018,u_0005,Project 18,ML Engineer,completed,15,Python,2024-08-11
+p_00019,u_0005,Project 19,ML Engineer,completed,26,Redis,2024-09-17
+p_00020,u_0005,Project 20,ML Engineer,completed,58,Git,2025-03-20
+p_00021,u_0005,Project 21,ML Engineer,completed,18,Python,2026-02-27
+p_00022,u_0006,Project 22,Backend Engineer,in_progress,95,TypeScript,2024-10-03
+p_00023,u_0006,Project 23,Backend Engineer,completed,91,FastAPI,2025-06-22
+p_00024,u_0006,Project 24,Backend Engineer,completed,96,Node.js,2024-12-09
+p_00025,u_0007,Project 25,Frontend Engineer,completed,23,REST APIs,2025-03-13
+p_00026,u_0007,Project 26,Frontend Engineer,completed,102,PostgreSQL,2025-02-21
+p_00027,u_0007,Project 27,Frontend Engineer,completed,23,GraphQL,2024-08-05
+p_00028,u_0007,Project 28,Frontend Engineer,completed,56,React,2025-02-22
+p_00029,u_0008,Project 29,Backend Engineer,completed,39,MongoDB,2025-07-10
+p_00030,u_0008,Project 30,Backend Engineer,completed,76,TypeScript,2024-10-28
+p_00031,u_0008,Project 31,Backend Engineer,completed,69,AWS,2026-02-21
+p_00032,u_0008,Project 32,Backend Engineer,completed,70,GraphQL,2024-09-16
+p_00033,u_0008,Project 33,Backend Engineer,completed,23,Node.js,2025-02-14
+p_00034,u_0008,Project 34,Backend Engineer,completed,16,Microservices,2024-11-02
+p_00035,u_0009,Project 35,Full-Stack Engineer,completed,103,PostgreSQL,2025-07-08
+p_00036,u_0009,Project 36,Full-Stack Engineer,completed,79,Microservices,2025-10-05
+p_00037,u_0009,Project 37,Full-Stack Engineer,completed,107,Docker,2025-12-08
+p_00038,u_0010,Project 38,ML Engineer,completed,82,CI/CD,2025-05-10
+p_00039,u_0010,Project 39,ML Engineer,completed,65,React,2026-03-12
+p_00040,u_0010,Project 40,ML Engineer,cancelled,96,Docker,2025-06-12
+p_00041,u_0010,Project 41,ML Engineer,completed,57,Docker,2025-09-16
+p_00042,u_0010,Project 42,ML Engineer,completed,51,AWS,2024-11-30
+p_00043,u_0010,Project 43,ML Engineer,completed,63,AWS,2025-04-05
+p_00044,u_0010,Project 44,ML Engineer,completed,27,CI/CD,2025-10-14
+p_00045,u_0010,Project 45,ML Engineer,completed,94,REST APIs,2024-12-14
+p_00046,u_0011,Project 46,Full-Stack Engineer,completed,89,Git,2025-10-16
+p_00047,u_0011,Project 47,Full-Stack Engineer,completed,115,Kubernetes,2026-03-23
+p_00048,u_0011,Project 48,Full-Stack Engineer,completed,82,REST APIs,2024-06-19
+p_00049,u_0012,Project 49,Frontend Engineer,completed,19,Unit Testing,2024-10-02
+p_00050,u_0012,Project 50,Frontend Engineer,completed,97,Redis,2025-09-15
+p_00051,u_0012,Project 51,Frontend Engineer,in_progress,82,FastAPI,2026-01-17
+p_00052,u_0012,Project 52,Frontend Engineer,completed,23,React,2024-10-25
+p_00053,u_0012,Project 53,Frontend Engineer,completed,16,Microservices,2026-02-26
+p_00054,u_0013,Project 54,Backend Engineer,completed,20,System Design,2024-09-10
+p_00055,u_0013,Project 55,Backend Engineer,completed,35,Node.js,2024-08-07
+p_00056,u_0013,Project 56,Backend Engineer,completed,27,TypeScript,2025-10-25
+p_00057,u_0013,Project 57,Backend Engineer,completed,92,Git,2024-08-06
+p_00058,u_0013,Project 58,Backend Engineer,completed,68,PostgreSQL,2025-07-19
+p_00059,u_0013,Project 59,Backend Engineer,completed,101,Node.js,2025-12-13
+p_00060,u_0014,Project 60,Full-Stack Engineer,completed,56,Docker,2024-10-04
+p_00061,u_0015,Project 61,Full-Stack Engineer,completed,84,SQL,2025-08-26
+p_00062,u_0015,Project 62,Full-Stack Engineer,completed,88,React,2024-10-17
+p_00063,u_0015,Project 63,Full-Stack Engineer,completed,94,MongoDB,2025-06-23
+p_00064,u_0015,Project 64,Full-Stack Engineer,completed,16,Microservices,2024-08-24
+p_00065,u_0016,Project 65,Frontend Engineer,completed,89,System Design,2025-08-03
+p_00066,u_0016,Project 66,Frontend Engineer,completed,115,Microservices,2024-10-10
+p_00067,u_0016,Project 67,Frontend Engineer,completed,95,GraphQL,2025-11-20
+p_00068,u_0017,Project 68,DevOps Engineer,completed,18,MongoDB,2024-12-04
+p_00069,u_0017,Project 69,DevOps Engineer,completed,92,Docker,2026-03-07
+p_00070,u_0017,Project 70,DevOps Engineer,completed,52,CI/CD,2025-08-05
+p_00071,u_0017,Project 71,DevOps Engineer,completed,44,AWS,2024-10-01
+p_00072,u_0017,Project 72,DevOps Engineer,cancelled,26,MongoDB,2025-06-08
+p_00073,u_0017,Project 73,DevOps Engineer,in_progress,83,Redis,2025-01-13
+p_00074,u_0018,Project 74,Backend Engineer,completed,115,FastAPI,2025-10-01
+p_00075,u_0018,Project 75,Backend Engineer,completed,34,React,2024-07-28
+p_00076,u_0018,Project 76,Backend Engineer,completed,50,AWS,2025-08-22
+p_00077,u_0018,Project 77,Backend Engineer,completed,92,REST APIs,2024-07-17
+p_00078,u_0019,Project 78,DevOps Engineer,completed,17,Microservices,2025-11-12
+p_00079,u_0019,Project 79,DevOps Engineer,completed,44,REST APIs,2026-01-30
+p_00080,u_0019,Project 80,DevOps Engineer,completed,67,AWS,2025-05-02
+p_00081,u_0020,Project 81,ML Engineer,completed,108,HTML/CSS,2024-12-24
+p_00082,u_0021,Project 82,DevOps Engineer,completed,20,HTML/CSS,2024-10-29
+p_00083,u_0021,Project 83,DevOps Engineer,completed,92,REST APIs,2024-12-02
+p_00084,u_0022,Project 84,DevOps Engineer,completed,94,CI/CD,2025-03-06
+p_00085,u_0022,Project 85,DevOps Engineer,completed,30,React,2026-01-06
+p_00086,u_0022,Project 86,DevOps Engineer,completed,31,TypeScript,2025-09-22
+p_00087,u_0022,Project 87,DevOps Engineer,completed,35,PostgreSQL,2025-01-14
+p_00088,u_0022,Project 88,DevOps Engineer,in_progress,91,SQL,2026-03-18
+p_00089,u_0022,Project 89,DevOps Engineer,in_progress,35,Node.js,2025-12-21
+p_00090,u_0023,Project 90,ML Engineer,completed,41,Node.js,2025-09-30
+p_00091,u_0023,Project 91,ML Engineer,in_progress,49,Python,2025-08-15
+p_00092,u_0023,Project 92,ML Engineer,completed,45,Git,2025-05-04
+p_00093,u_0024,Project 93,Frontend Engineer,in_progress,14,HTML/CSS,2024-07-18
+p_00094,u_0024,Project 94,Frontend Engineer,completed,74,Redis,2024-07-07
+p_00095,u_0024,Project 95,Frontend Engineer,completed,64,Microservices,2024-09-11
+p_00096,u_0024,Project 96,Frontend Engineer,completed,44,Docker,2025-12-26
+p_00097,u_0024,Project 97,Frontend Engineer,completed,102,HTML/CSS,2025-01-12
+p_00098,u_0024,Project 98,Frontend Engineer,completed,51,Git,2026-03-28
+p_00099,u_0024,Project 99,Frontend Engineer,cancelled,16,Microservices,2025-04-11
+p_00100,u_0024,Project 100,Frontend Engineer,completed,72,Node.js,2026-01-21
+p_00101,u_0024,Project 101,Frontend Engineer,completed,72,REST APIs,2024-10-22
+p_00102,u_0025,Project 102,DevOps Engineer,completed,104,Python,2026-03-07
+p_00103,u_0025,Project 103,DevOps Engineer,completed,102,PostgreSQL,2025-11-28
+p_00104,u_0025,Project 104,DevOps Engineer,completed,68,GraphQL,2026-02-20
+p_00105,u_0025,Project 105,DevOps Engineer,completed,115,AWS,2024-08-24
+p_00106,u_0025,Project 106,DevOps Engineer,completed,56,React,2025-11-12
+p_00107,u_0025,Project 107,DevOps Engineer,in_progress,100,CI/CD,2024-07-25
+p_00108,u_0026,Project 108,Backend Engineer,completed,60,CI/CD,2024-11-29
+p_00109,u_0026,Project 109,Backend Engineer,completed,104,Docker,2025-12-29
+p_00110,u_0026,Project 110,Backend Engineer,completed,40,FastAPI,2025-05-11
+p_00111,u_0026,Project 111,Backend Engineer,completed,28,Microservices,2026-01-18
+p_00112,u_0026,Project 112,Backend Engineer,in_progress,103,AWS,2025-01-19
+p_00113,u_0026,Project 113,Backend Engineer,completed,48,Redis,2025-08-10
+p_00114,u_0027,Project 114,Full-Stack Engineer,completed,76,Redis,2025-11-24
+p_00115,u_0027,Project 115,Full-Stack Engineer,completed,74,Kubernetes,2025-11-30
+p_00116,u_0027,Project 116,Full-Stack Engineer,in_progress,71,MongoDB,2025-06-14
+p_00117,u_0028,Project 117,ML Engineer,completed,64,SQL,2025-03-25
+p_00118,u_0028,Project 118,ML Engineer,in_progress,23,TypeScript,2024-11-18
+p_00119,u_0028,Project 119,ML Engineer,completed,103,FastAPI,2025-10-24
+p_00120,u_0029,Project 120,DevOps Engineer,completed,101,Kubernetes,2024-10-16
+p_00121,u_0029,Project 121,DevOps Engineer,completed,67,REST APIs,2026-03-25
+p_00122,u_0029,Project 122,DevOps Engineer,completed,38,Docker,2024-06-25
+p_00123,u_0029,Project 123,DevOps Engineer,in_progress,43,Redis,2026-03-25
+p_00124,u_0029,Project 124,DevOps Engineer,completed,88,PostgreSQL,2026-03-26
+p_00125,u_0029,Project 125,DevOps Engineer,completed,76,Node.js,2025-11-27
+p_00126,u_0030,Project 126,Full-Stack Engineer,completed,115,System Design,2024-11-25
+p_00127,u_0030,Project 127,Full-Stack Engineer,completed,43,Microservices,2025-06-18
+p_00128,u_0030,Project 128,Full-Stack Engineer,in_progress,112,React,2024-11-01
+p_00129,u_0030,Project 129,Full-Stack Engineer,completed,72,SQL,2026-02-26
+p_00130,u_0030,Project 130,Full-Stack Engineer,in_progress,105,Kubernetes,2025-03-22
+p_00131,u_0030,Project 131,Full-Stack Engineer,completed,36,FastAPI,2024-11-15
+p_00132,u_0031,Project 132,DevOps Engineer,completed,70,GraphQL,2025-06-16
+p_00133,u_0032,Project 133,Backend Engineer,completed,58,FastAPI,2025-06-19
+p_00134,u_0032,Project 134,Backend Engineer,completed,34,Kubernetes,2025-04-07
+p_00135,u_0032,Project 135,Backend Engineer,completed,17,Unit Testing,2025-10-27
+p_00136,u_0032,Project 136,Backend Engineer,completed,72,PostgreSQL,2024-11-09
+p_00137,u_0033,Project 137,Backend Engineer,in_progress,110,Node.js,2024-10-31
+p_00138,u_0033,Project 138,Backend Engineer,completed,107,REST APIs,2025-05-15
+p_00139,u_0033,Project 139,Backend Engineer,completed,107,Microservices,2024-07-14
+p_00140,u_0033,Project 140,Backend Engineer,completed,84,TypeScript,2025-04-14
+p_00141,u_0033,Project 141,Backend Engineer,completed,93,Git,2025-09-02
+p_00142,u_0033,Project 142,Backend Engineer,completed,55,React,2026-02-15
+p_00143,u_0033,Project 143,Backend Engineer,completed,88,Redis,2025-01-16
+p_00144,u_0034,Project 144,ML Engineer,completed,71,Docker,2025-11-09
+p_00145,u_0034,Project 145,ML Engineer,completed,76,PostgreSQL,2026-02-10
+p_00146,u_0034,Project 146,ML Engineer,completed,21,CI/CD,2025-07-15
+p_00147,u_0034,Project 147,ML Engineer,completed,68,CI/CD,2025-07-03
+p_00148,u_0034,Project 148,ML Engineer,completed,50,CI/CD,2025-05-28
+p_00149,u_0035,Project 149,Frontend Engineer,completed,70,HTML/CSS,2025-08-30
+p_00150,u_0035,Project 150,Frontend Engineer,completed,117,HTML/CSS,2025-08-01
+p_00151,u_0035,Project 151,Frontend Engineer,completed,89,MongoDB,2024-08-30
+p_00152,u_0035,Project 152,Frontend Engineer,completed,52,Microservices,2025-11-22
+p_00153,u_0035,Project 153,Frontend Engineer,cancelled,22,Node.js,2025-06-22
+p_00154,u_0035,Project 154,Frontend Engineer,completed,66,GraphQL,2025-08-01
+p_00155,u_0036,Project 155,Full-Stack Engineer,completed,120,Unit Testing,2025-03-26
+p_00156,u_0036,Project 156,Full-Stack Engineer,completed,19,System Design,2026-01-23
+p_00157,u_0036,Project 157,Full-Stack Engineer,completed,85,REST APIs,2025-01-18
+p_00158,u_0036,Project 158,Full-Stack Engineer,completed,14,FastAPI,2025-02-26
+p_00159,u_0036,Project 159,Full-Stack Engineer,completed,95,Microservices,2024-10-08
+p_00160,u_0036,Project 160,Full-Stack Engineer,completed,50,HTML/CSS,2024-12-03
+p_00161,u_0037,Project 161,Frontend Engineer,completed,77,Docker,2026-02-06
+p_00162,u_0037,Project 162,Frontend Engineer,completed,88,Microservices,2026-01-03
+p_00163,u_0037,Project 163,Frontend Engineer,completed,47,Microservices,2024-10-03
+p_00164,u_0037,Project 164,Frontend Engineer,completed,107,Node.js,2024-06-20
+p_00165,u_0037,Project 165,Frontend Engineer,in_progress,34,Node.js,2024-08-01
+p_00166,u_0037,Project 166,Frontend Engineer,completed,73,FastAPI,2025-06-03
+p_00167,u_0038,Project 167,Full-Stack Engineer,completed,59,React,2025-03-26
+p_00168,u_0038,Project 168,Full-Stack Engineer,completed,95,Docker,2025-11-11
+p_00169,u_0038,Project 169,Full-Stack Engineer,completed,94,SQL,2024-09-07
+p_00170,u_0039,Project 170,Frontend Engineer,in_progress,119,System Design,2025-03-07
+p_00171,u_0039,Project 171,Frontend Engineer,completed,102,CI/CD,2024-09-09
+p_00172,u_0039,Project 172,Frontend Engineer,completed,59,FastAPI,2024-06-16
+p_00173,u_0039,Project 173,Frontend Engineer,completed,50,CI/CD,2025-10-12
+p_00174,u_0039,Project 174,Frontend Engineer,completed,34,TypeScript,2025-01-12
+p_00175,u_0039,Project 175,Frontend Engineer,completed,42,AWS,2025-12-27
+p_00176,u_0039,Project 176,Frontend Engineer,completed,120,Redis,2025-11-29
+p_00177,u_0039,Project 177,Frontend Engineer,completed,103,TypeScript,2025-08-04
+p_00178,u_0039,Project 178,Frontend Engineer,completed,23,TypeScript,2024-10-15
+p_00179,u_0040,Project 179,DevOps Engineer,completed,31,REST APIs,2026-02-04
+p_00180,u_0041,Project 180,Backend Engineer,completed,118,TypeScript,2025-01-16
+p_00181,u_0041,Project 181,Backend Engineer,completed,102,FastAPI,2025-01-21
+p_00182,u_0041,Project 182,Backend Engineer,completed,40,FastAPI,2024-08-22
+p_00183,u_0041,Project 183,Backend Engineer,completed,111,TypeScript,2024-08-21
+p_00184,u_0041,Project 184,Backend Engineer,completed,75,HTML/CSS,2024-07-16
+p_00185,u_0042,Project 185,Full-Stack Engineer,completed,74,TypeScript,2025-02-17
+p_00186,u_0043,Project 186,ML Engineer,completed,114,TypeScript,2026-02-09
+p_00187,u_0043,Project 187,ML Engineer,completed,39,SQL,2025-05-28
+p_00188,u_0043,Project 188,ML Engineer,completed,32,GraphQL,2026-01-17
+p_00189,u_0044,Project 189,DevOps Engineer,completed,92,Git,2025-11-02
+p_00190,u_0044,Project 190,DevOps Engineer,completed,26,Node.js,2024-06-17
+p_00191,u_0044,Project 191,DevOps Engineer,completed,105,AWS,2025-03-18
+p_00192,u_0044,Project 192,DevOps Engineer,completed,110,Kubernetes,2024-06-07
+p_00193,u_0044,Project 193,DevOps Engineer,cancelled,26,AWS,2025-11-01
+p_00194,u_0045,Project 194,ML Engineer,completed,100,TypeScript,2024-12-05
+p_00195,u_0045,Project 195,ML Engineer,in_progress,62,HTML/CSS,2025-01-08
+p_00196,u_0045,Project 196,ML Engineer,completed,66,TypeScript,2025-04-20
+p_00197,u_0046,Project 197,Full-Stack Engineer,completed,111,CI/CD,2025-03-25
+p_00198,u_0047,Project 198,Backend Engineer,completed,63,System Design,2025-09-13
+p_00199,u_0047,Project 199,Backend Engineer,completed,53,REST APIs,2025-01-20
+p_00200,u_0047,Project 200,Backend Engineer,completed,51,HTML/CSS,2024-12-13
+p_00201,u_0048,Project 201,Backend Engineer,completed,100,Microservices,2024-09-18
+p_00202,u_0048,Project 202,Backend Engineer,completed,80,Docker,2024-10-03
+p_00203,u_0048,Project 203,Backend Engineer,completed,65,Node.js,2024-09-15
+p_00204,u_0048,Project 204,Backend Engineer,completed,35,Docker,2025-06-10
+p_00205,u_0048,Project 205,Backend Engineer,cancelled,57,AWS,2026-02-02
+p_00206,u_0048,Project 206,Backend Engineer,in_progress,65,TypeScript,2025-01-27
+p_00207,u_0049,Project 207,Frontend Engineer,completed,110,Unit Testing,2025-06-02
+p_00208,u_0049,Project 208,Frontend Engineer,completed,91,Unit Testing,2025-10-12
+p_00209,u_0050,Project 209,Backend Engineer,completed,46,Microservices,2025-10-25
+p_00210,u_0050,Project 210,Backend Engineer,completed,31,Python,2024-09-12
+p_00211,u_0050,Project 211,Backend Engineer,completed,120,Docker,2025-10-26
+p_00212,u_0051,Project 212,Backend Engineer,completed,55,FastAPI,2025-04-09
+p_00213,u_0051,Project 213,Backend Engineer,completed,26,Docker,2025-11-17
+p_00214,u_0051,Project 214,Backend Engineer,completed,115,REST APIs,2024-12-26
+p_00215,u_0051,Project 215,Backend Engineer,completed,77,Microservices,2025-11-01
+p_00216,u_0051,Project 216,Backend Engineer,completed,57,Kubernetes,2025-12-14
+p_00217,u_0051,Project 217,Backend Engineer,completed,111,React,2025-08-17
+p_00218,u_0052,Project 218,ML Engineer,in_progress,70,REST APIs,2024-07-09
+p_00219,u_0052,Project 219,ML Engineer,completed,85,System Design,2024-11-18
+p_00220,u_0052,Project 220,ML Engineer,completed,31,System Design,2025-07-06
+p_00221,u_0052,Project 221,ML Engineer,completed,28,Node.js,2025-10-18
+p_00222,u_0052,Project 222,ML Engineer,completed,101,Kubernetes,2026-01-09
+p_00223,u_0052,Project 223,ML Engineer,completed,85,SQL,2025-11-03
+p_00224,u_0052,Project 224,ML Engineer,completed,47,Microservices,2026-01-29
+p_00225,u_0052,Project 225,ML Engineer,in_progress,92,CI/CD,2025-03-21
+p_00226,u_0053,Project 226,Backend Engineer,completed,60,CI/CD,2026-01-21
+p_00227,u_0053,Project 227,Backend Engineer,completed,94,PostgreSQL,2025-06-27
+p_00228,u_0053,Project 228,Backend Engineer,completed,58,CI/CD,2025-07-29
+p_00229,u_0054,Project 229,ML Engineer,completed,53,Node.js,2024-08-28
+p_00230,u_0054,Project 230,ML Engineer,in_progress,22,System Design,2024-09-28
+p_00231,u_0054,Project 231,ML Engineer,completed,16,Kubernetes,2025-05-02
+p_00232,u_0055,Project 232,DevOps Engineer,completed,67,GraphQL,2024-06-23
+p_00233,u_0055,Project 233,DevOps Engineer,completed,89,Python,2025-04-23
+p_00234,u_0055,Project 234,DevOps Engineer,completed,63,PostgreSQL,2026-01-10
+p_00235,u_0055,Project 235,DevOps Engineer,completed,76,TypeScript,2024-12-30
+p_00236,u_0055,Project 236,DevOps Engineer,completed,78,PostgreSQL,2024-11-20
+p_00237,u_0055,Project 237,DevOps Engineer,completed,60,HTML/CSS,2024-12-26
+p_00238,u_0056,Project 238,Backend Engineer,completed,20,System Design,2026-01-11
+p_00239,u_0056,Project 239,Backend Engineer,completed,42,MongoDB,2024-09-05
+p_00240,u_0057,Project 240,DevOps Engineer,completed,86,Redis,2025-10-02
+p_00241,u_0057,Project 241,DevOps Engineer,completed,58,Docker,2026-04-01
+p_00242,u_0057,Project 242,DevOps Engineer,completed,78,System Design,2025-08-20
+p_00243,u_0057,Project 243,DevOps Engineer,completed,54,AWS,2025-08-01
+p_00244,u_0057,Project 244,DevOps Engineer,completed,93,Redis,2025-09-10
+p_00245,u_0057,Project 245,DevOps Engineer,completed,84,SQL,2024-06-22
+p_00246,u_0057,Project 246,DevOps Engineer,completed,80,SQL,2026-01-14
+p_00247,u_0057,Project 247,DevOps Engineer,completed,98,REST APIs,2025-03-04
+p_00248,u_0057,Project 248,DevOps Engineer,in_progress,82,MongoDB,2025-08-21
+p_00249,u_0058,Project 249,Backend Engineer,completed,32,Git,2024-11-04
+p_00250,u_0058,Project 250,Backend Engineer,completed,111,System Design,2025-08-22
+p_00251,u_0058,Project 251,Backend Engineer,completed,120,Docker,2026-03-14
+p_00252,u_0059,Project 252,Backend Engineer,completed,46,MongoDB,2025-01-30
+p_00253,u_0059,Project 253,Backend Engineer,completed,28,FastAPI,2024-12-16
+p_00254,u_0059,Project 254,Backend Engineer,completed,116,System Design,2025-09-21
+p_00255,u_0059,Project 255,Backend Engineer,completed,69,HTML/CSS,2026-03-27
+p_00256,u_0059,Project 256,Backend Engineer,in_progress,39,SQL,2025-03-09
+p_00257,u_0059,Project 257,Backend Engineer,completed,47,GraphQL,2025-12-18
+p_00258,u_0059,Project 258,Backend Engineer,completed,19,Microservices,2024-06-23
+p_00259,u_0060,Project 259,DevOps Engineer,completed,22,HTML/CSS,2025-06-10
+p_00260,u_0060,Project 260,DevOps Engineer,completed,25,Unit Testing,2024-10-24
+p_00261,u_0060,Project 261,DevOps Engineer,completed,87,Redis,2024-10-04
+p_00262,u_0061,Project 262,DevOps Engineer,completed,29,PostgreSQL,2025-05-06
+p_00263,u_0061,Project 263,DevOps Engineer,completed,108,Unit Testing,2025-01-30
+p_00264,u_0061,Project 264,DevOps Engineer,in_progress,41,FastAPI,2024-09-20
+p_00265,u_0061,Project 265,DevOps Engineer,completed,49,REST APIs,2025-07-26
+p_00266,u_0061,Project 266,DevOps Engineer,completed,89,React,2025-10-18
+p_00267,u_0062,Project 267,Full-Stack Engineer,completed,74,Git,2025-03-14
+p_00268,u_0062,Project 268,Full-Stack Engineer,in_progress,32,CI/CD,2025-10-02
+p_00269,u_0062,Project 269,Full-Stack Engineer,completed,119,System Design,2024-06-24
+p_00270,u_0062,Project 270,Full-Stack Engineer,completed,91,React,2024-07-28
+p_00271,u_0062,Project 271,Full-Stack Engineer,completed,114,Git,2025-02-17
+p_00272,u_0062,Project 272,Full-Stack Engineer,completed,53,CI/CD,2024-10-05
+p_00273,u_0062,Project 273,Full-Stack Engineer,completed,44,REST APIs,2025-07-05
+p_00274,u_0062,Project 274,Full-Stack Engineer,completed,64,GraphQL,2025-04-07
+p_00275,u_0063,Project 275,Full-Stack Engineer,in_progress,34,REST APIs,2026-03-11
+p_00276,u_0064,Project 276,ML Engineer,in_progress,119,Microservices,2025-09-28
+p_00277,u_0064,Project 277,ML Engineer,completed,56,HTML/CSS,2024-09-13
+p_00278,u_0064,Project 278,ML Engineer,completed,103,GraphQL,2025-11-03
+p_00279,u_0064,Project 279,ML Engineer,completed,67,MongoDB,2025-12-15
+p_00280,u_0064,Project 280,ML Engineer,completed,72,Python,2024-07-26
+p_00281,u_0064,Project 281,ML Engineer,completed,37,REST APIs,2026-03-21
+p_00282,u_0065,Project 282,Full-Stack Engineer,completed,54,Node.js,2024-08-26
+p_00283,u_0066,Project 283,Frontend Engineer,completed,112,FastAPI,2026-02-01
+p_00284,u_0066,Project 284,Frontend Engineer,completed,115,PostgreSQL,2025-09-08
+p_00285,u_0066,Project 285,Frontend Engineer,completed,108,FastAPI,2025-02-24
+p_00286,u_0066,Project 286,Frontend Engineer,completed,89,PostgreSQL,2025-03-18
+p_00287,u_0066,Project 287,Frontend Engineer,completed,67,CI/CD,2024-12-06
+p_00288,u_0066,Project 288,Frontend Engineer,completed,62,Node.js,2025-01-18
+p_00289,u_0066,Project 289,Frontend Engineer,completed,16,Kubernetes,2026-03-27
+p_00290,u_0066,Project 290,Frontend Engineer,completed,43,Docker,2025-09-19
+p_00291,u_0066,Project 291,Frontend Engineer,completed,103,SQL,2024-07-23
+p_00292,u_0066,Project 292,Frontend Engineer,completed,68,MongoDB,2025-02-24
+p_00293,u_0067,Project 293,DevOps Engineer,in_progress,29,Python,2025-11-23
+p_00294,u_0068,Project 294,Backend Engineer,completed,40,AWS,2025-03-02
+p_00295,u_0068,Project 295,Backend Engineer,completed,77,Unit Testing,2024-10-14
+p_00296,u_0068,Project 296,Backend Engineer,completed,40,MongoDB,2025-01-09
+p_00297,u_0068,Project 297,Backend Engineer,cancelled,50,AWS,2025-08-05
+p_00298,u_0068,Project 298,Backend Engineer,completed,115,FastAPI,2024-07-02
+p_00299,u_0068,Project 299,Backend Engineer,completed,47,Git,2026-02-25
+p_00300,u_0069,Project 300,Frontend Engineer,completed,72,Docker,2024-06-13
+p_00301,u_0069,Project 301,Frontend Engineer,completed,55,Unit Testing,2025-01-06
+p_00302,u_0069,Project 302,Frontend Engineer,completed,104,HTML/CSS,2026-02-04
+p_00303,u_0069,Project 303,Frontend Engineer,completed,26,Kubernetes,2024-08-02
+p_00304,u_0069,Project 304,Frontend Engineer,completed,44,Microservices,2025-05-31
+p_00305,u_0069,Project 305,Frontend Engineer,cancelled,99,MongoDB,2024-07-19
+p_00306,u_0069,Project 306,Frontend Engineer,completed,78,MongoDB,2025-06-28
+p_00307,u_0069,Project 307,Frontend Engineer,completed,64,CI/CD,2024-10-16
+p_00308,u_0069,Project 308,Frontend Engineer,in_progress,85,React,2026-01-18
+p_00309,u_0069,Project 309,Frontend Engineer,completed,35,Redis,2025-10-20
+p_00310,u_0070,Project 310,DevOps Engineer,completed,81,HTML/CSS,2024-10-26
+p_00311,u_0070,Project 311,DevOps Engineer,completed,54,React,2024-10-11
+p_00312,u_0071,Project 312,Full-Stack Engineer,completed,47,MongoDB,2025-02-28
+p_00313,u_0071,Project 313,Full-Stack Engineer,completed,69,SQL,2025-04-22
+p_00314,u_0072,Project 314,ML Engineer,in_progress,98,REST APIs,2024-07-27
+p_00315,u_0072,Project 315,ML Engineer,completed,20,Git,2024-12-07
+p_00316,u_0072,Project 316,ML Engineer,completed,47,SQL,2025-09-24
+p_00317,u_0072,Project 317,ML Engineer,completed,77,React,2025-08-29
+p_00318,u_0072,Project 318,ML Engineer,completed,104,Kubernetes,2025-10-12
+p_00319,u_0072,Project 319,ML Engineer,completed,28,FastAPI,2024-10-07
+p_00320,u_0073,Project 320,ML Engineer,completed,35,Redis,2025-03-09
+p_00321,u_0073,Project 321,ML Engineer,completed,98,Node.js,2025-01-06
+p_00322,u_0073,Project 322,ML Engineer,completed,14,Redis,2026-01-08
+p_00323,u_0073,Project 323,ML Engineer,completed,23,Git,2025-10-26
+p_00324,u_0073,Project 324,ML Engineer,completed,56,Python,2025-03-21
+p_00325,u_0073,Project 325,ML Engineer,completed,101,TypeScript,2025-07-11
+p_00326,u_0073,Project 326,ML Engineer,completed,27,PostgreSQL,2024-11-07
+p_00327,u_0073,Project 327,ML Engineer,completed,72,Microservices,2025-09-10
+p_00328,u_0074,Project 328,Frontend Engineer,completed,19,MongoDB,2025-09-09
+p_00329,u_0074,Project 329,Frontend Engineer,completed,107,Node.js,2024-10-13
+p_00330,u_0074,Project 330,Frontend Engineer,completed,20,System Design,2025-04-29
+p_00331,u_0075,Project 331,ML Engineer,completed,65,GraphQL,2024-12-02
+p_00332,u_0076,Project 332,Frontend Engineer,in_progress,34,Unit Testing,2025-07-20
+p_00333,u_0077,Project 333,Frontend Engineer,completed,69,System Design,2026-02-10
+p_00334,u_0077,Project 334,Frontend Engineer,completed,99,TypeScript,2025-06-14
+p_00335,u_0077,Project 335,Frontend Engineer,completed,76,REST APIs,2025-07-05
+p_00336,u_0077,Project 336,Frontend Engineer,completed,86,MongoDB,2025-08-10
+p_00337,u_0077,Project 337,Frontend Engineer,completed,68,CI/CD,2026-02-21
+p_00338,u_0078,Project 338,Backend Engineer,completed,57,REST APIs,2025-01-18
+p_00339,u_0079,Project 339,Backend Engineer,completed,81,Docker,2025-03-27
+p_00340,u_0079,Project 340,Backend Engineer,completed,24,Microservices,2025-04-06
+p_00341,u_0079,Project 341,Backend Engineer,completed,30,System Design,2025-02-12
+p_00342,u_0080,Project 342,Frontend Engineer,completed,23,React,2025-11-10
+p_00343,u_0080,Project 343,Frontend Engineer,completed,68,HTML/CSS,2024-09-07
+p_00344,u_0080,Project 344,Frontend Engineer,completed,106,Node.js,2025-02-17
+p_00345,u_0080,Project 345,Frontend Engineer,completed,88,Docker,2025-10-31
+p_00346,u_0080,Project 346,Frontend Engineer,completed,108,REST APIs,2024-12-03
+p_00347,u_0080,Project 347,Frontend Engineer,completed,64,React,2024-08-27
+p_00348,u_0080,Project 348,Frontend Engineer,completed,104,System Design,2025-04-20
+p_00349,u_0081,Project 349,ML Engineer,completed,57,SQL,2025-01-05
+p_00350,u_0081,Project 350,ML Engineer,completed,109,MongoDB,2025-02-23
+p_00351,u_0081,Project 351,ML Engineer,in_progress,27,HTML/CSS,2025-12-02
+p_00352,u_0081,Project 352,ML Engineer,completed,64,TypeScript,2024-06-16
+p_00353,u_0081,Project 353,ML Engineer,completed,75,REST APIs,2025-07-22
+p_00354,u_0081,Project 354,ML Engineer,in_progress,109,MongoDB,2025-10-14
+p_00355,u_0081,Project 355,ML Engineer,completed,118,MongoDB,2025-06-07
+p_00356,u_0081,Project 356,ML Engineer,completed,102,Unit Testing,2025-04-08
+p_00357,u_0082,Project 357,ML Engineer,completed,118,Python,2024-12-12
+p_00358,u_0083,Project 358,ML Engineer,completed,69,Kubernetes,2024-12-15
+p_00359,u_0084,Project 359,ML Engineer,completed,16,TypeScript,2024-11-20
+p_00360,u_0084,Project 360,ML Engineer,in_progress,108,REST APIs,2025-10-12
+p_00361,u_0084,Project 361,ML Engineer,completed,71,Node.js,2025-02-06
+p_00362,u_0084,Project 362,ML Engineer,completed,86,Unit Testing,2024-07-25
+p_00363,u_0084,Project 363,ML Engineer,completed,27,HTML/CSS,2025-08-02
+p_00364,u_0084,Project 364,ML Engineer,in_progress,108,Node.js,2026-02-03
+p_00365,u_0084,Project 365,ML Engineer,completed,51,React,2025-10-15
+p_00366,u_0084,Project 366,ML Engineer,completed,79,Node.js,2026-02-19
+p_00367,u_0085,Project 367,Backend Engineer,completed,68,Node.js,2025-04-22
+p_00368,u_0085,Project 368,Backend Engineer,completed,48,HTML/CSS,2025-09-30
+p_00369,u_0085,Project 369,Backend Engineer,completed,93,CI/CD,2025-09-05
+p_00370,u_0085,Project 370,Backend Engineer,completed,16,SQL,2025-03-24
+p_00371,u_0085,Project 371,Backend Engineer,completed,74,CI/CD,2025-08-25
+p_00372,u_0085,Project 372,Backend Engineer,completed,42,Node.js,2025-05-16
+p_00373,u_0086,Project 373,Backend Engineer,completed,63,HTML/CSS,2026-04-02
+p_00374,u_0086,Project 374,Backend Engineer,completed,115,Microservices,2024-11-15
+p_00375,u_0086,Project 375,Backend Engineer,completed,50,Docker,2025-10-10
+p_00376,u_0086,Project 376,Backend Engineer,completed,39,SQL,2026-02-13
+p_00377,u_0086,Project 377,Backend Engineer,completed,115,HTML/CSS,2025-10-21
+p_00378,u_0086,Project 378,Backend Engineer,completed,40,Kubernetes,2024-07-21
+p_00379,u_0087,Project 379,DevOps Engineer,completed,36,Redis,2024-07-05
+p_00380,u_0087,Project 380,DevOps Engineer,completed,57,HTML/CSS,2024-09-27
+p_00381,u_0087,Project 381,DevOps Engineer,completed,29,Kubernetes,2025-01-18
+p_00382,u_0087,Project 382,DevOps Engineer,completed,57,CI/CD,2024-07-20
+p_00383,u_0087,Project 383,DevOps Engineer,completed,85,GraphQL,2024-11-04
+p_00384,u_0088,Project 384,Full-Stack Engineer,completed,110,TypeScript,2024-09-19
+p_00385,u_0088,Project 385,Full-Stack Engineer,completed,92,TypeScript,2025-12-30
+p_00386,u_0088,Project 386,Full-Stack Engineer,completed,27,SQL,2026-03-10
+p_00387,u_0088,Project 387,Full-Stack Engineer,completed,40,CI/CD,2024-11-10
+p_00388,u_0088,Project 388,Full-Stack Engineer,completed,104,REST APIs,2025-11-03
+p_00389,u_0088,Project 389,Full-Stack Engineer,completed,26,FastAPI,2026-03-27
+p_00390,u_0088,Project 390,Full-Stack Engineer,completed,118,FastAPI,2024-10-06
+p_00391,u_0088,Project 391,Full-Stack Engineer,in_progress,70,HTML/CSS,2024-06-09
+p_00392,u_0088,Project 392,Full-Stack Engineer,completed,117,Microservices,2025-05-18
+p_00393,u_0089,Project 393,Backend Engineer,completed,110,HTML/CSS,2025-06-07
+p_00394,u_0089,Project 394,Backend Engineer,completed,45,FastAPI,2025-11-27
+p_00395,u_0089,Project 395,Backend Engineer,completed,43,FastAPI,2025-08-16
+p_00396,u_0089,Project 396,Backend Engineer,completed,66,REST APIs,2025-11-13
+p_00397,u_0090,Project 397,DevOps Engineer,completed,15,Redis,2024-08-13
+p_00398,u_0090,Project 398,DevOps Engineer,completed,54,Unit Testing,2024-11-18
+p_00399,u_0090,Project 399,DevOps Engineer,completed,64,React,2026-03-21
+p_00400,u_0090,Project 400,DevOps Engineer,completed,87,React,2026-03-11
+p_00401,u_0090,Project 401,DevOps Engineer,cancelled,116,Redis,2025-04-01
+p_00402,u_0091,Project 402,Full-Stack Engineer,completed,54,CI/CD,2024-06-11
+p_00403,u_0091,Project 403,Full-Stack Engineer,completed,81,MongoDB,2024-10-31
+p_00404,u_0091,Project 404,Full-Stack Engineer,completed,71,AWS,2025-12-12
+p_00405,u_0091,Project 405,Full-Stack Engineer,completed,93,REST APIs,2025-05-22
+p_00406,u_0091,Project 406,Full-Stack Engineer,in_progress,114,Unit Testing,2024-12-22
+p_00407,u_0091,Project 407,Full-Stack Engineer,in_progress,24,React,2025-12-05
+p_00408,u_0092,Project 408,DevOps Engineer,cancelled,50,AWS,2024-09-06
+p_00409,u_0092,Project 409,DevOps Engineer,completed,53,Redis,2025-05-17
+p_00410,u_0092,Project 410,DevOps Engineer,completed,34,Python,2024-07-01
+p_00411,u_0092,Project 411,DevOps Engineer,in_progress,83,Node.js,2025-02-22
+p_00412,u_0092,Project 412,DevOps Engineer,completed,113,System Design,2025-08-09
+p_00413,u_0092,Project 413,DevOps Engineer,cancelled,28,React,2025-06-19
+p_00414,u_0093,Project 414,Full-Stack Engineer,completed,29,REST APIs,2025-04-04
+p_00415,u_0093,Project 415,Full-Stack Engineer,completed,14,REST APIs,2025-05-16
+p_00416,u_0093,Project 416,Full-Stack Engineer,cancelled,117,Node.js,2026-01-03
+p_00417,u_0093,Project 417,Full-Stack Engineer,completed,94,Kubernetes,2026-02-02
+p_00418,u_0093,Project 418,Full-Stack Engineer,completed,52,System Design,2026-01-10
+p_00419,u_0094,Project 419,Full-Stack Engineer,completed,27,PostgreSQL,2025-11-13
+p_00420,u_0094,Project 420,Full-Stack Engineer,completed,119,CI/CD,2025-09-11
+p_00421,u_0094,Project 421,Full-Stack Engineer,completed,105,HTML/CSS,2025-07-29
+p_00422,u_0094,Project 422,Full-Stack Engineer,completed,21,HTML/CSS,2024-10-14
+p_00423,u_0095,Project 423,Full-Stack Engineer,completed,81,Unit Testing,2026-01-26
+p_00424,u_0095,Project 424,Full-Stack Engineer,completed,113,Unit Testing,2025-02-28
+p_00425,u_0095,Project 425,Full-Stack Engineer,completed,95,HTML/CSS,2025-08-27
+p_00426,u_0095,Project 426,Full-Stack Engineer,completed,76,HTML/CSS,2024-11-16
+p_00427,u_0096,Project 427,Frontend Engineer,completed,104,Redis,2025-11-26
+p_00428,u_0097,Project 428,Full-Stack Engineer,completed,34,Kubernetes,2025-06-16
+p_00429,u_0097,Project 429,Full-Stack Engineer,in_progress,29,MongoDB,2025-07-26
+p_00430,u_0097,Project 430,Full-Stack Engineer,completed,61,Node.js,2025-03-26
+p_00431,u_0097,Project 431,Full-Stack Engineer,completed,33,TypeScript,2025-06-18
+p_00432,u_0098,Project 432,Full-Stack Engineer,completed,115,FastAPI,2024-10-26
+p_00433,u_0098,Project 433,Full-Stack Engineer,completed,67,React,2025-04-11
+p_00434,u_0098,Project 434,Full-Stack Engineer,in_progress,41,SQL,2025-10-16
+p_00435,u_0098,Project 435,Full-Stack Engineer,completed,84,CI/CD,2024-08-11
+p_00436,u_0098,Project 436,Full-Stack Engineer,in_progress,67,Microservices,2026-01-10
+p_00437,u_0099,Project 437,DevOps Engineer,completed,106,MongoDB,2024-10-16
+p_00438,u_0099,Project 438,DevOps Engineer,completed,78,REST APIs,2025-09-06
+p_00439,u_0099,Project 439,DevOps Engineer,completed,33,PostgreSQL,2024-09-02
+p_00440,u_0099,Project 440,DevOps Engineer,completed,99,MongoDB,2025-07-27
+p_00441,u_0099,Project 441,DevOps Engineer,completed,64,PostgreSQL,2025-12-08
+p_00442,u_0099,Project 442,DevOps Engineer,completed,99,REST APIs,2025-03-14
+p_00443,u_0100,Project 443,Backend Engineer,completed,115,System Design,2025-12-29
+p_00444,u_0100,Project 444,Backend Engineer,completed,96,Kubernetes,2024-08-29
+p_00445,u_0100,Project 445,Backend Engineer,completed,93,Kubernetes,2026-01-14
+p_00446,u_0100,Project 446,Backend Engineer,completed,86,Redis,2024-12-13
+p_00447,u_0100,Project 447,Backend Engineer,completed,78,Python,2024-10-04
+p_00448,u_0100,Project 448,Backend Engineer,completed,82,SQL,2024-06-22
+p_00449,u_0101,Project 449,Full-Stack Engineer,completed,117,Kubernetes,2026-02-14
+p_00450,u_0101,Project 450,Full-Stack Engineer,completed,89,React,2025-10-19
+p_00451,u_0101,Project 451,Full-Stack Engineer,in_progress,16,PostgreSQL,2025-08-24
+p_00452,u_0101,Project 452,Full-Stack Engineer,completed,17,Redis,2025-04-23
+p_00453,u_0102,Project 453,Full-Stack Engineer,cancelled,83,SQL,2025-03-22
+p_00454,u_0102,Project 454,Full-Stack Engineer,completed,46,Docker,2024-11-07
+p_00455,u_0102,Project 455,Full-Stack Engineer,completed,66,SQL,2024-08-02
+p_00456,u_0102,Project 456,Full-Stack Engineer,completed,55,SQL,2024-06-30
+p_00457,u_0102,Project 457,Full-Stack Engineer,completed,52,Unit Testing,2024-09-12
+p_00458,u_0103,Project 458,Backend Engineer,completed,119,TypeScript,2024-07-26
+p_00459,u_0103,Project 459,Backend Engineer,completed,110,MongoDB,2026-01-24
+p_00460,u_0103,Project 460,Backend Engineer,completed,79,Redis,2025-07-02
+p_00461,u_0103,Project 461,Backend Engineer,in_progress,48,React,2025-04-24
+p_00462,u_0103,Project 462,Backend Engineer,completed,66,Docker,2025-10-11
+p_00463,u_0103,Project 463,Backend Engineer,completed,95,Git,2024-06-22
+p_00464,u_0103,Project 464,Backend Engineer,completed,89,TypeScript,2025-02-10
+p_00465,u_0103,Project 465,Backend Engineer,completed,97,FastAPI,2025-04-10
+p_00466,u_0104,Project 466,Backend Engineer,in_progress,78,AWS,2024-10-26
+p_00467,u_0104,Project 467,Backend Engineer,completed,35,Git,2025-12-05
+p_00468,u_0104,Project 468,Backend Engineer,in_progress,85,REST APIs,2024-07-15
+p_00469,u_0104,Project 469,Backend Engineer,completed,73,MongoDB,2025-03-26
+p_00470,u_0104,Project 470,Backend Engineer,completed,35,Python,2024-08-03
+p_00471,u_0104,Project 471,Backend Engineer,in_progress,75,GraphQL,2026-02-05
+p_00472,u_0105,Project 472,Frontend Engineer,completed,79,System Design,2024-07-19
+p_00473,u_0105,Project 473,Frontend Engineer,completed,82,Node.js,2024-08-13
+p_00474,u_0105,Project 474,Frontend Engineer,completed,64,TypeScript,2024-10-24
+p_00475,u_0105,Project 475,Frontend Engineer,completed,49,HTML/CSS,2025-01-04
+p_00476,u_0105,Project 476,Frontend Engineer,completed,116,PostgreSQL,2025-05-19
+p_00477,u_0105,Project 477,Frontend Engineer,completed,110,REST APIs,2025-03-09
+p_00478,u_0106,Project 478,Backend Engineer,completed,90,PostgreSQL,2024-06-19
+p_00479,u_0106,Project 479,Backend Engineer,in_progress,31,Python,2026-02-16
+p_00480,u_0106,Project 480,Backend Engineer,completed,15,SQL,2025-07-31
+p_00481,u_0106,Project 481,Backend Engineer,completed,103,Microservices,2025-07-10
+p_00482,u_0106,Project 482,Backend Engineer,completed,114,Docker,2025-12-06
+p_00483,u_0107,Project 483,DevOps Engineer,in_progress,62,MongoDB,2025-06-04
+p_00484,u_0107,Project 484,DevOps Engineer,completed,112,Python,2024-10-08
+p_00485,u_0107,Project 485,DevOps Engineer,completed,38,REST APIs,2024-06-12
+p_00486,u_0107,Project 486,DevOps Engineer,completed,16,GraphQL,2025-06-04
+p_00487,u_0107,Project 487,DevOps Engineer,completed,118,MongoDB,2026-03-05
+p_00488,u_0108,Project 488,Backend Engineer,in_progress,18,GraphQL,2025-10-20
+p_00489,u_0108,Project 489,Backend Engineer,in_progress,104,MongoDB,2025-01-03
+p_00490,u_0109,Project 490,DevOps Engineer,in_progress,86,Redis,2025-10-21
+p_00491,u_0110,Project 491,DevOps Engineer,completed,22,Node.js,2024-10-12
+p_00492,u_0110,Project 492,DevOps Engineer,completed,30,GraphQL,2026-01-07
+p_00493,u_0110,Project 493,DevOps Engineer,in_progress,80,GraphQL,2024-12-16
+p_00494,u_0110,Project 494,DevOps Engineer,in_progress,16,Kubernetes,2026-02-22
+p_00495,u_0110,Project 495,DevOps Engineer,completed,85,REST APIs,2024-06-05
+p_00496,u_0110,Project 496,DevOps Engineer,in_progress,96,React,2025-04-29
+p_00497,u_0110,Project 497,DevOps Engineer,completed,66,GraphQL,2024-10-05
+p_00498,u_0110,Project 498,DevOps Engineer,completed,73,Microservices,2025-06-08
+p_00499,u_0110,Project 499,DevOps Engineer,completed,19,Git,2024-07-21
+p_00500,u_0110,Project 500,DevOps Engineer,completed,67,Kubernetes,2025-09-05
+p_00501,u_0111,Project 501,Frontend Engineer,completed,87,Python,2025-01-20
+p_00502,u_0111,Project 502,Frontend Engineer,cancelled,68,Docker,2025-02-13
+p_00503,u_0111,Project 503,Frontend Engineer,completed,56,System Design,2024-08-06
+p_00504,u_0111,Project 504,Frontend Engineer,completed,26,Python,2025-10-07
+p_00505,u_0111,Project 505,Frontend Engineer,completed,17,Node.js,2026-03-06
+p_00506,u_0111,Project 506,Frontend Engineer,in_progress,46,Git,2024-09-21
+p_00507,u_0111,Project 507,Frontend Engineer,completed,57,React,2025-05-10
+p_00508,u_0111,Project 508,Frontend Engineer,completed,44,Docker,2026-02-07
+p_00509,u_0112,Project 509,Full-Stack Engineer,completed,24,React,2024-07-07
+p_00510,u_0112,Project 510,Full-Stack Engineer,completed,102,Docker,2024-10-11
+p_00511,u_0112,Project 511,Full-Stack Engineer,completed,116,REST APIs,2024-07-29
+p_00512,u_0112,Project 512,Full-Stack Engineer,completed,94,HTML/CSS,2024-08-09
+p_00513,u_0112,Project 513,Full-Stack Engineer,completed,21,Kubernetes,2024-07-26
+p_00514,u_0112,Project 514,Full-Stack Engineer,completed,62,Unit Testing,2024-09-09
+p_00515,u_0113,Project 515,Backend Engineer,completed,93,Python,2025-09-10
+p_00516,u_0113,Project 516,Backend Engineer,completed,115,HTML/CSS,2026-02-28
+p_00517,u_0113,Project 517,Backend Engineer,completed,57,Python,2025-09-10
+p_00518,u_0113,Project 518,Backend Engineer,completed,89,AWS,2024-09-21
+p_00519,u_0113,Project 519,Backend Engineer,completed,90,Docker,2026-01-31
+p_00520,u_0113,Project 520,Backend Engineer,completed,38,Node.js,2024-10-10
+p_00521,u_0114,Project 521,DevOps Engineer,completed,93,REST APIs,2024-12-10
+p_00522,u_0114,Project 522,DevOps Engineer,completed,116,React,2024-08-03
+p_00523,u_0114,Project 523,DevOps Engineer,completed,88,HTML/CSS,2025-11-10
+p_00524,u_0115,Project 524,Frontend Engineer,in_progress,113,FastAPI,2024-10-31
+p_00525,u_0115,Project 525,Frontend Engineer,completed,91,PostgreSQL,2025-03-28
+p_00526,u_0115,Project 526,Frontend Engineer,completed,15,Redis,2026-01-24
+p_00527,u_0116,Project 527,DevOps Engineer,completed,120,Kubernetes,2024-07-28
+p_00528,u_0116,Project 528,DevOps Engineer,completed,39,AWS,2026-03-20
+p_00529,u_0116,Project 529,DevOps Engineer,in_progress,114,Docker,2025-05-18
+p_00530,u_0117,Project 530,ML Engineer,completed,88,Node.js,2025-05-12
+p_00531,u_0117,Project 531,ML Engineer,completed,67,PostgreSQL,2024-11-16
+p_00532,u_0117,Project 532,ML Engineer,completed,115,React,2025-10-23
+p_00533,u_0117,Project 533,ML Engineer,completed,14,Git,2025-01-24
+p_00534,u_0117,Project 534,ML Engineer,completed,41,Git,2025-10-08
+p_00535,u_0117,Project 535,ML Engineer,completed,118,PostgreSQL,2025-06-22
+p_00536,u_0118,Project 536,Backend Engineer,completed,23,CI/CD,2024-07-03
+p_00537,u_0118,Project 537,Backend Engineer,completed,32,System Design,2025-08-27
+p_00538,u_0118,Project 538,Backend Engineer,completed,88,CI/CD,2024-07-17
+p_00539,u_0118,Project 539,Backend Engineer,cancelled,39,AWS,2025-03-20
+p_00540,u_0118,Project 540,Backend Engineer,completed,47,SQL,2025-05-16
+p_00541,u_0118,Project 541,Backend Engineer,in_progress,45,SQL,2024-12-20
+p_00542,u_0119,Project 542,ML Engineer,completed,100,FastAPI,2025-06-26
+p_00543,u_0119,Project 543,ML Engineer,completed,28,PostgreSQL,2025-01-04
+p_00544,u_0119,Project 544,ML Engineer,completed,44,CI/CD,2025-06-19
+p_00545,u_0119,Project 545,ML Engineer,completed,81,MongoDB,2025-08-21
+p_00546,u_0120,Project 546,DevOps Engineer,in_progress,30,AWS,2024-12-16
+p_00547,u_0120,Project 547,DevOps Engineer,completed,102,CI/CD,2025-04-24
+p_00548,u_0120,Project 548,DevOps Engineer,completed,95,Git,2024-07-20
+p_00549,u_0121,Project 549,ML Engineer,completed,55,Git,2024-07-27
+p_00550,u_0121,Project 550,ML Engineer,completed,49,FastAPI,2025-11-05
+p_00551,u_0121,Project 551,ML Engineer,in_progress,76,AWS,2024-08-25
+p_00552,u_0121,Project 552,ML Engineer,completed,115,MongoDB,2024-08-08
+p_00553,u_0122,Project 553,ML Engineer,completed,73,SQL,2025-04-28
+p_00554,u_0122,Project 554,ML Engineer,completed,81,Microservices,2025-10-22
+p_00555,u_0122,Project 555,ML Engineer,completed,88,Unit Testing,2026-03-18
+p_00556,u_0122,Project 556,ML Engineer,in_progress,88,React,2025-01-01
+p_00557,u_0122,Project 557,ML Engineer,completed,39,REST APIs,2025-01-29
+p_00558,u_0122,Project 558,ML Engineer,completed,53,HTML/CSS,2025-06-24
+p_00559,u_0123,Project 559,DevOps Engineer,completed,31,Docker,2025-04-01
+p_00560,u_0123,Project 560,DevOps Engineer,completed,59,Git,2026-01-21
+p_00561,u_0123,Project 561,DevOps Engineer,completed,79,MongoDB,2025-05-13
+p_00562,u_0123,Project 562,DevOps Engineer,completed,73,HTML/CSS,2025-07-26
+p_00563,u_0123,Project 563,DevOps Engineer,completed,77,PostgreSQL,2025-03-09
+p_00564,u_0123,Project 564,DevOps Engineer,completed,36,REST APIs,2025-01-28
+p_00565,u_0123,Project 565,DevOps Engineer,completed,23,CI/CD,2024-08-26
+p_00566,u_0124,Project 566,Backend Engineer,completed,23,CI/CD,2024-07-12
+p_00567,u_0124,Project 567,Backend Engineer,completed,56,AWS,2025-05-06
+p_00568,u_0124,Project 568,Backend Engineer,completed,109,GraphQL,2024-12-15
+p_00569,u_0124,Project 569,Backend Engineer,completed,31,Kubernetes,2025-02-25
+p_00570,u_0124,Project 570,Backend Engineer,completed,52,System Design,2025-05-23
+p_00571,u_0124,Project 571,Backend Engineer,completed,65,Unit Testing,2026-01-17
+p_00572,u_0124,Project 572,Backend Engineer,completed,15,Microservices,2026-04-03
+p_00573,u_0125,Project 573,ML Engineer,completed,109,AWS,2025-10-01
+p_00574,u_0125,Project 574,ML Engineer,completed,89,Kubernetes,2025-09-25
+p_00575,u_0125,Project 575,ML Engineer,completed,73,PostgreSQL,2024-08-29
+p_00576,u_0125,Project 576,ML Engineer,completed,38,HTML/CSS,2025-08-04
+p_00577,u_0126,Project 577,Frontend Engineer,completed,31,Node.js,2024-10-12
+p_00578,u_0127,Project 578,ML Engineer,completed,67,HTML/CSS,2025-07-21
+p_00579,u_0127,Project 579,ML Engineer,completed,102,Kubernetes,2025-04-05
+p_00580,u_0127,Project 580,ML Engineer,completed,16,Node.js,2024-07-05
+p_00581,u_0128,Project 581,DevOps Engineer,completed,91,MongoDB,2026-01-11
+p_00582,u_0128,Project 582,DevOps Engineer,in_progress,62,AWS,2025-07-08
+p_00583,u_0128,Project 583,DevOps Engineer,completed,63,AWS,2025-10-02
+p_00584,u_0128,Project 584,DevOps Engineer,completed,86,REST APIs,2026-03-19
+p_00585,u_0128,Project 585,DevOps Engineer,in_progress,25,SQL,2024-09-17
+p_00586,u_0128,Project 586,DevOps Engineer,completed,36,React,2026-02-10
+p_00587,u_0128,Project 587,DevOps Engineer,completed,37,AWS,2024-08-13
+p_00588,u_0129,Project 588,Backend Engineer,completed,81,Docker,2025-09-11
+p_00589,u_0129,Project 589,Backend Engineer,completed,80,Python,2024-11-25
+p_00590,u_0129,Project 590,Backend Engineer,completed,66,Unit Testing,2024-11-10
+p_00591,u_0129,Project 591,Backend Engineer,cancelled,30,Kubernetes,2025-08-05
+p_00592,u_0129,Project 592,Backend Engineer,completed,22,Unit Testing,2024-12-31
+p_00593,u_0129,Project 593,Backend Engineer,completed,40,System Design,2025-08-19
+p_00594,u_0129,Project 594,Backend Engineer,completed,99,Microservices,2024-11-12
+p_00595,u_0130,Project 595,Backend Engineer,completed,101,REST APIs,2025-03-12
+p_00596,u_0130,Project 596,Backend Engineer,completed,32,REST APIs,2024-08-07
+p_00597,u_0130,Project 597,Backend Engineer,completed,91,Git,2025-11-23
+p_00598,u_0130,Project 598,Backend Engineer,completed,86,Microservices,2025-09-17
+p_00599,u_0130,Project 599,Backend Engineer,completed,19,Docker,2025-03-24
+p_00600,u_0130,Project 600,Backend Engineer,completed,72,CI/CD,2025-04-03
+p_00601,u_0130,Project 601,Backend Engineer,completed,119,SQL,2025-08-02
+p_00602,u_0130,Project 602,Backend Engineer,completed,93,HTML/CSS,2025-09-14
+p_00603,u_0130,Project 603,Backend Engineer,completed,98,SQL,2026-01-06
+p_00604,u_0131,Project 604,Backend Engineer,in_progress,34,GraphQL,2026-03-08
+p_00605,u_0132,Project 605,Full-Stack Engineer,in_progress,66,Kubernetes,2024-10-05
+p_00606,u_0132,Project 606,Full-Stack Engineer,cancelled,23,TypeScript,2025-11-01
+p_00607,u_0132,Project 607,Full-Stack Engineer,completed,55,HTML/CSS,2025-09-07
+p_00608,u_0132,Project 608,Full-Stack Engineer,completed,40,Redis,2024-07-18
+p_00609,u_0132,Project 609,Full-Stack Engineer,completed,23,REST APIs,2025-06-28
+p_00610,u_0133,Project 610,Backend Engineer,completed,46,TypeScript,2024-10-20
+p_00611,u_0133,Project 611,Backend Engineer,completed,109,REST APIs,2025-10-12
+p_00612,u_0133,Project 612,Backend Engineer,completed,24,Kubernetes,2025-02-06
+p_00613,u_0133,Project 613,Backend Engineer,completed,70,FastAPI,2025-09-28
+p_00614,u_0133,Project 614,Backend Engineer,completed,34,SQL,2024-06-21
+p_00615,u_0133,Project 615,Backend Engineer,completed,36,System Design,2024-10-08
+p_00616,u_0134,Project 616,Backend Engineer,completed,15,GraphQL,2024-11-07
+p_00617,u_0134,Project 617,Backend Engineer,completed,36,AWS,2024-07-08
+p_00618,u_0134,Project 618,Backend Engineer,in_progress,82,AWS,2025-08-29
+p_00619,u_0134,Project 619,Backend Engineer,completed,95,Redis,2026-03-21
+p_00620,u_0134,Project 620,Backend Engineer,completed,98,TypeScript,2025-07-07
+p_00621,u_0134,Project 621,Backend Engineer,completed,70,React,2026-02-05
+p_00622,u_0135,Project 622,Frontend Engineer,in_progress,61,Git,2024-12-24
+p_00623,u_0135,Project 623,Frontend Engineer,completed,67,Python,2024-06-17
+p_00624,u_0135,Project 624,Frontend Engineer,completed,38,Docker,2025-01-14
+p_00625,u_0136,Project 625,Backend Engineer,completed,27,PostgreSQL,2025-04-29
+p_00626,u_0136,Project 626,Backend Engineer,completed,38,MongoDB,2025-01-01
+p_00627,u_0136,Project 627,Backend Engineer,in_progress,64,HTML/CSS,2024-10-04
+p_00628,u_0136,Project 628,Backend Engineer,completed,27,CI/CD,2025-04-30
+p_00629,u_0137,Project 629,Backend Engineer,completed,41,REST APIs,2025-01-14
+p_00630,u_0137,Project 630,Backend Engineer,completed,118,GraphQL,2026-03-30
+p_00631,u_0137,Project 631,Backend Engineer,completed,19,Docker,2025-01-12
+p_00632,u_0137,Project 632,Backend Engineer,completed,112,MongoDB,2025-10-27
+p_00633,u_0137,Project 633,Backend Engineer,cancelled,27,Kubernetes,2026-01-06
+p_00634,u_0137,Project 634,Backend Engineer,completed,26,MongoDB,2025-05-01
+p_00635,u_0137,Project 635,Backend Engineer,cancelled,103,Unit Testing,2024-10-17
+p_00636,u_0137,Project 636,Backend Engineer,completed,95,PostgreSQL,2025-10-09
+p_00637,u_0138,Project 637,Full-Stack Engineer,in_progress,71,Unit Testing,2025-11-08
+p_00638,u_0138,Project 638,Full-Stack Engineer,completed,43,Redis,2026-01-25
+p_00639,u_0138,Project 639,Full-Stack Engineer,completed,15,Git,2024-06-24
+p_00640,u_0138,Project 640,Full-Stack Engineer,completed,29,System Design,2025-01-31
+p_00641,u_0138,Project 641,Full-Stack Engineer,completed,110,Git,2026-02-27
+p_00642,u_0139,Project 642,ML Engineer,completed,39,FastAPI,2025-06-22
+p_00643,u_0139,Project 643,ML Engineer,completed,18,Git,2026-02-05
+p_00644,u_0139,Project 644,ML Engineer,cancelled,70,PostgreSQL,2024-10-18
+p_00645,u_0140,Project 645,ML Engineer,completed,67,System Design,2024-06-27
+p_00646,u_0140,Project 646,ML Engineer,completed,107,PostgreSQL,2025-05-19
+p_00647,u_0141,Project 647,Full-Stack Engineer,in_progress,99,Git,2025-01-16
+p_00648,u_0141,Project 648,Full-Stack Engineer,completed,62,Redis,2025-04-28
+p_00649,u_0141,Project 649,Full-Stack Engineer,completed,94,Python,2024-08-08
+p_00650,u_0141,Project 650,Full-Stack Engineer,in_progress,22,AWS,2024-07-26
+p_00651,u_0142,Project 651,Full-Stack Engineer,completed,89,Kubernetes,2024-12-29
+p_00652,u_0142,Project 652,Full-Stack Engineer,completed,24,HTML/CSS,2025-09-24
+p_00653,u_0142,Project 653,Full-Stack Engineer,completed,106,AWS,2025-02-08
+p_00654,u_0142,Project 654,Full-Stack Engineer,completed,91,Git,2025-04-09
+p_00655,u_0143,Project 655,ML Engineer,in_progress,75,Docker,2025-06-06
+p_00656,u_0143,Project 656,ML Engineer,completed,35,Microservices,2025-08-28
+p_00657,u_0143,Project 657,ML Engineer,completed,92,HTML/CSS,2024-11-09
+p_00658,u_0143,Project 658,ML Engineer,completed,115,Microservices,2024-06-23
+p_00659,u_0143,Project 659,ML Engineer,completed,68,Docker,2025-04-06
+p_00660,u_0143,Project 660,ML Engineer,completed,33,Kubernetes,2024-11-29
+p_00661,u_0144,Project 661,ML Engineer,completed,62,Kubernetes,2026-02-13
+p_00662,u_0144,Project 662,ML Engineer,completed,56,FastAPI,2025-09-26
+p_00663,u_0144,Project 663,ML Engineer,completed,38,Python,2024-06-16
+p_00664,u_0144,Project 664,ML Engineer,in_progress,107,CI/CD,2025-10-19
+p_00665,u_0144,Project 665,ML Engineer,completed,67,Unit Testing,2025-06-20
+p_00666,u_0144,Project 666,ML Engineer,completed,53,Node.js,2024-08-14
+p_00667,u_0144,Project 667,ML Engineer,completed,18,TypeScript,2025-07-02
+p_00668,u_0144,Project 668,ML Engineer,in_progress,34,AWS,2025-08-23
+p_00669,u_0145,Project 669,ML Engineer,completed,61,React,2026-03-31
+p_00670,u_0145,Project 670,ML Engineer,completed,68,Git,2025-02-06
+p_00671,u_0146,Project 671,Full-Stack Engineer,completed,96,FastAPI,2025-02-25
+p_00672,u_0146,Project 672,Full-Stack Engineer,completed,101,FastAPI,2025-02-18
+p_00673,u_0146,Project 673,Full-Stack Engineer,completed,88,SQL,2024-06-15
+p_00674,u_0147,Project 674,Backend Engineer,completed,24,Redis,2024-12-13
+p_00675,u_0147,Project 675,Backend Engineer,in_progress,35,HTML/CSS,2025-02-16
+p_00676,u_0147,Project 676,Backend Engineer,completed,78,Kubernetes,2025-06-29
+p_00677,u_0148,Project 677,Frontend Engineer,completed,87,CI/CD,2024-10-27
+p_00678,u_0148,Project 678,Frontend Engineer,completed,40,Unit Testing,2025-04-14
+p_00679,u_0148,Project 679,Frontend Engineer,completed,35,Microservices,2024-06-04
+p_00680,u_0148,Project 680,Frontend Engineer,completed,113,HTML/CSS,2025-11-22
+p_00681,u_0148,Project 681,Frontend Engineer,completed,50,HTML/CSS,2024-11-24
+p_00682,u_0148,Project 682,Frontend Engineer,completed,37,FastAPI,2024-12-22
+p_00683,u_0148,Project 683,Frontend Engineer,completed,78,TypeScript,2025-09-07
+p_00684,u_0148,Project 684,Frontend Engineer,completed,41,SQL,2024-12-25
+p_00685,u_0149,Project 685,Backend Engineer,cancelled,66,REST APIs,2026-03-06
+p_00686,u_0149,Project 686,Backend Engineer,in_progress,27,SQL,2024-08-23
+p_00687,u_0149,Project 687,Backend Engineer,completed,62,TypeScript,2025-03-13
+p_00688,u_0149,Project 688,Backend Engineer,completed,17,Node.js,2025-01-29
+p_00689,u_0150,Project 689,Frontend Engineer,completed,110,Python,2026-01-20
+p_00690,u_0150,Project 690,Frontend Engineer,completed,19,TypeScript,2025-01-05
+p_00691,u_0151,Project 691,DevOps Engineer,completed,111,GraphQL,2025-10-13
+p_00692,u_0151,Project 692,DevOps Engineer,completed,57,MongoDB,2025-08-16
+p_00693,u_0151,Project 693,DevOps Engineer,completed,101,PostgreSQL,2025-04-21
+p_00694,u_0152,Project 694,Full-Stack Engineer,completed,59,PostgreSQL,2024-09-13
+p_00695,u_0152,Project 695,Full-Stack Engineer,completed,103,Unit Testing,2024-10-23
+p_00696,u_0152,Project 696,Full-Stack Engineer,completed,29,Redis,2025-03-16
+p_00697,u_0152,Project 697,Full-Stack Engineer,in_progress,110,Git,2025-06-15
+p_00698,u_0152,Project 698,Full-Stack Engineer,completed,101,Microservices,2025-11-12
+p_00699,u_0153,Project 699,Full-Stack Engineer,completed,60,React,2025-05-02
+p_00700,u_0153,Project 700,Full-Stack Engineer,completed,43,MongoDB,2025-10-12
+p_00701,u_0153,Project 701,Full-Stack Engineer,completed,92,Docker,2025-05-25
+p_00702,u_0153,Project 702,Full-Stack Engineer,completed,74,TypeScript,2025-07-02
+p_00703,u_0153,Project 703,Full-Stack Engineer,completed,38,FastAPI,2025-11-17
+p_00704,u_0154,Project 704,Backend Engineer,completed,52,Kubernetes,2025-09-24
+p_00705,u_0154,Project 705,Backend Engineer,completed,71,TypeScript,2025-10-09
+p_00706,u_0154,Project 706,Backend Engineer,completed,44,Git,2025-01-05
+p_00707,u_0155,Project 707,Full-Stack Engineer,cancelled,17,SQL,2025-05-03
+p_00708,u_0156,Project 708,Frontend Engineer,completed,99,TypeScript,2024-10-20
+p_00709,u_0156,Project 709,Frontend Engineer,in_progress,95,Microservices,2024-09-03
+p_00710,u_0156,Project 710,Frontend Engineer,completed,56,Git,2026-01-13
+p_00711,u_0156,Project 711,Frontend Engineer,completed,90,Docker,2026-03-24
+p_00712,u_0156,Project 712,Frontend Engineer,completed,105,Unit Testing,2026-04-03
+p_00713,u_0156,Project 713,Frontend Engineer,completed,85,HTML/CSS,2025-01-27
+p_00714,u_0156,Project 714,Frontend Engineer,completed,28,System Design,2024-08-31
+p_00715,u_0156,Project 715,Frontend Engineer,completed,57,Node.js,2024-12-12
+p_00716,u_0157,Project 716,DevOps Engineer,completed,54,Unit Testing,2026-01-14
+p_00717,u_0157,Project 717,DevOps Engineer,completed,53,React,2026-01-28
+p_00718,u_0157,Project 718,DevOps Engineer,completed,63,HTML/CSS,2025-04-26
+p_00719,u_0158,Project 719,Full-Stack Engineer,completed,27,Unit Testing,2024-06-12
+p_00720,u_0158,Project 720,Full-Stack Engineer,completed,72,PostgreSQL,2024-10-29
+p_00721,u_0159,Project 721,Backend Engineer,completed,50,FastAPI,2024-07-08
+p_00722,u_0159,Project 722,Backend Engineer,completed,53,Redis,2024-10-07
+p_00723,u_0159,Project 723,Backend Engineer,completed,104,Node.js,2025-10-05
+p_00724,u_0159,Project 724,Backend Engineer,completed,41,Microservices,2025-03-28
+p_00725,u_0160,Project 725,Frontend Engineer,completed,105,AWS,2025-01-19
+p_00726,u_0160,Project 726,Frontend Engineer,completed,20,SQL,2025-10-15
+p_00727,u_0160,Project 727,Frontend Engineer,completed,52,SQL,2024-06-25
+p_00728,u_0160,Project 728,Frontend Engineer,completed,57,HTML/CSS,2025-09-30
+p_00729,u_0160,Project 729,Frontend Engineer,cancelled,110,Unit Testing,2025-07-08
+p_00730,u_0160,Project 730,Frontend Engineer,completed,107,System Design,2025-03-19
+p_00731,u_0161,Project 731,Backend Engineer,completed,55,Node.js,2024-07-28
+p_00732,u_0161,Project 732,Backend Engineer,in_progress,104,System Design,2025-09-14
+p_00733,u_0161,Project 733,Backend Engineer,completed,87,FastAPI,2025-08-29
+p_00734,u_0162,Project 734,Backend Engineer,completed,116,AWS,2026-03-31
+p_00735,u_0162,Project 735,Backend Engineer,completed,106,Node.js,2024-09-15
+p_00736,u_0162,Project 736,Backend Engineer,completed,32,Unit Testing,2025-08-14
+p_00737,u_0162,Project 737,Backend Engineer,completed,35,React,2024-09-09
+p_00738,u_0162,Project 738,Backend Engineer,completed,74,SQL,2024-07-26
+p_00739,u_0162,Project 739,Backend Engineer,completed,79,PostgreSQL,2026-01-31
+p_00740,u_0163,Project 740,Backend Engineer,completed,44,Unit Testing,2025-10-16
+p_00741,u_0163,Project 741,Backend Engineer,completed,90,SQL,2026-04-02
+p_00742,u_0164,Project 742,DevOps Engineer,in_progress,97,Unit Testing,2025-03-11
+p_00743,u_0164,Project 743,DevOps Engineer,completed,70,CI/CD,2024-06-14
+p_00744,u_0164,Project 744,DevOps Engineer,completed,24,TypeScript,2025-10-16
+p_00745,u_0165,Project 745,ML Engineer,completed,87,Microservices,2025-03-10
+p_00746,u_0165,Project 746,ML Engineer,completed,26,Node.js,2024-12-05
+p_00747,u_0165,Project 747,ML Engineer,completed,96,HTML/CSS,2025-04-04
+p_00748,u_0165,Project 748,ML Engineer,completed,26,PostgreSQL,2024-08-07
+p_00749,u_0165,Project 749,ML Engineer,completed,115,Kubernetes,2024-12-09
+p_00750,u_0166,Project 750,DevOps Engineer,completed,114,Redis,2025-10-16
+p_00751,u_0166,Project 751,DevOps Engineer,completed,88,Kubernetes,2026-04-01
+p_00752,u_0166,Project 752,DevOps Engineer,completed,110,AWS,2024-10-01
+p_00753,u_0166,Project 753,DevOps Engineer,completed,90,SQL,2024-06-08
+p_00754,u_0166,Project 754,DevOps Engineer,completed,116,PostgreSQL,2024-10-06
+p_00755,u_0166,Project 755,DevOps Engineer,completed,87,AWS,2026-04-02
+p_00756,u_0166,Project 756,DevOps Engineer,completed,85,GraphQL,2024-07-08
+p_00757,u_0166,Project 757,DevOps Engineer,completed,29,Redis,2025-04-04
+p_00758,u_0167,Project 758,Frontend Engineer,completed,19,Redis,2025-03-30
+p_00759,u_0167,Project 759,Frontend Engineer,completed,70,FastAPI,2026-01-14
+p_00760,u_0167,Project 760,Frontend Engineer,completed,54,Redis,2025-05-29
+p_00761,u_0167,Project 761,Frontend Engineer,completed,79,AWS,2024-09-12
+p_00762,u_0168,Project 762,Frontend Engineer,completed,52,AWS,2024-10-18
+p_00763,u_0168,Project 763,Frontend Engineer,completed,41,Node.js,2025-06-05
+p_00764,u_0168,Project 764,Frontend Engineer,completed,107,MongoDB,2025-08-09
+p_00765,u_0169,Project 765,ML Engineer,completed,34,Unit Testing,2025-09-13
+p_00766,u_0169,Project 766,ML Engineer,completed,46,HTML/CSS,2024-10-27
+p_00767,u_0169,Project 767,ML Engineer,completed,23,GraphQL,2026-03-13
+p_00768,u_0169,Project 768,ML Engineer,completed,38,CI/CD,2026-01-01
+p_00769,u_0169,Project 769,ML Engineer,completed,119,Redis,2026-02-12
+p_00770,u_0170,Project 770,Backend Engineer,cancelled,69,Unit Testing,2024-06-29
+p_00771,u_0170,Project 771,Backend Engineer,in_progress,45,Docker,2025-03-06
+p_00772,u_0170,Project 772,Backend Engineer,completed,28,Kubernetes,2025-07-24
+p_00773,u_0170,Project 773,Backend Engineer,completed,95,Docker,2025-06-09
+p_00774,u_0170,Project 774,Backend Engineer,in_progress,113,GraphQL,2024-10-30
+p_00775,u_0170,Project 775,Backend Engineer,in_progress,42,GraphQL,2024-06-13
+p_00776,u_0171,Project 776,ML Engineer,in_progress,114,TypeScript,2024-11-29
+p_00777,u_0172,Project 777,DevOps Engineer,completed,58,Node.js,2025-03-18
+p_00778,u_0172,Project 778,DevOps Engineer,completed,91,TypeScript,2024-07-22
+p_00779,u_0172,Project 779,DevOps Engineer,completed,110,Unit Testing,2024-12-05
+p_00780,u_0172,Project 780,DevOps Engineer,completed,108,Kubernetes,2025-12-19
+p_00781,u_0172,Project 781,DevOps Engineer,completed,65,Microservices,2026-01-30
+p_00782,u_0173,Project 782,Frontend Engineer,completed,98,FastAPI,2024-10-27
+p_00783,u_0173,Project 783,Frontend Engineer,completed,108,GraphQL,2024-07-27
+p_00784,u_0173,Project 784,Frontend Engineer,in_progress,95,CI/CD,2025-02-13
+p_00785,u_0173,Project 785,Frontend Engineer,completed,67,REST APIs,2024-12-07
+p_00786,u_0173,Project 786,Frontend Engineer,completed,59,REST APIs,2025-10-30
+p_00787,u_0174,Project 787,Frontend Engineer,in_progress,118,Git,2025-04-11
+p_00788,u_0174,Project 788,Frontend Engineer,completed,25,System Design,2025-07-24
+p_00789,u_0174,Project 789,Frontend Engineer,completed,25,Docker,2024-08-20
+p_00790,u_0174,Project 790,Frontend Engineer,completed,25,SQL,2026-01-13
+p_00791,u_0174,Project 791,Frontend Engineer,completed,109,System Design,2025-12-22
+p_00792,u_0174,Project 792,Frontend Engineer,in_progress,117,Python,2025-08-11
+p_00793,u_0174,Project 793,Frontend Engineer,completed,107,FastAPI,2025-10-07
+p_00794,u_0174,Project 794,Frontend Engineer,completed,101,Kubernetes,2024-10-08
+p_00795,u_0175,Project 795,Full-Stack Engineer,in_progress,109,Python,2025-08-12
+p_00796,u_0175,Project 796,Full-Stack Engineer,completed,109,CI/CD,2025-02-08
+p_00797,u_0175,Project 797,Full-Stack Engineer,cancelled,98,Redis,2026-02-16
+p_00798,u_0176,Project 798,ML Engineer,in_progress,36,Docker,2025-06-13
+p_00799,u_0177,Project 799,Backend Engineer,completed,35,CI/CD,2024-09-26
+p_00800,u_0177,Project 800,Backend Engineer,completed,100,Git,2025-12-07
+p_00801,u_0177,Project 801,Backend Engineer,in_progress,29,System Design,2025-04-05
+p_00802,u_0177,Project 802,Backend Engineer,completed,47,AWS,2024-06-05
+p_00803,u_0177,Project 803,Backend Engineer,completed,86,Unit Testing,2025-01-11
+p_00804,u_0178,Project 804,DevOps Engineer,in_progress,21,CI/CD,2024-06-09
+p_00805,u_0178,Project 805,DevOps Engineer,completed,56,System Design,2025-05-31
+p_00806,u_0178,Project 806,DevOps Engineer,completed,58,SQL,2025-07-19
+p_00807,u_0178,Project 807,DevOps Engineer,completed,26,HTML/CSS,2025-10-19
+p_00808,u_0178,Project 808,DevOps Engineer,completed,81,Redis,2024-11-07
+p_00809,u_0178,Project 809,DevOps Engineer,completed,76,Python,2024-11-09
+p_00810,u_0178,Project 810,DevOps Engineer,completed,46,Git,2025-09-27
+p_00811,u_0178,Project 811,DevOps Engineer,completed,52,CI/CD,2025-08-15
+p_00812,u_0179,Project 812,DevOps Engineer,completed,70,SQL,2024-10-24
+p_00813,u_0180,Project 813,Full-Stack Engineer,in_progress,104,AWS,2024-09-24
+p_00814,u_0180,Project 814,Full-Stack Engineer,completed,19,FastAPI,2025-07-12
+p_00815,u_0180,Project 815,Full-Stack Engineer,completed,56,React,2024-11-14
+p_00816,u_0180,Project 816,Full-Stack Engineer,completed,75,GraphQL,2024-10-02
+p_00817,u_0180,Project 817,Full-Stack Engineer,completed,84,Microservices,2024-10-11
+p_00818,u_0180,Project 818,Full-Stack Engineer,completed,111,Unit Testing,2025-10-29
+p_00819,u_0180,Project 819,Full-Stack Engineer,completed,108,Unit Testing,2024-10-15
+p_00820,u_0180,Project 820,Full-Stack Engineer,completed,27,Python,2024-10-10
+p_00821,u_0181,Project 821,DevOps Engineer,completed,44,React,2025-05-19
+p_00822,u_0181,Project 822,DevOps Engineer,completed,90,Python,2025-08-21
+p_00823,u_0181,Project 823,DevOps Engineer,completed,50,Microservices,2024-08-26
+p_00824,u_0181,Project 824,DevOps Engineer,completed,45,MongoDB,2024-11-06
+p_00825,u_0181,Project 825,DevOps Engineer,completed,37,Git,2025-03-17
+p_00826,u_0181,Project 826,DevOps Engineer,completed,47,Git,2025-08-16
+p_00827,u_0181,Project 827,DevOps Engineer,completed,104,TypeScript,2025-10-30
+p_00828,u_0181,Project 828,DevOps Engineer,completed,38,Node.js,2026-03-09
+p_00829,u_0181,Project 829,DevOps Engineer,completed,43,TypeScript,2024-10-16
+p_00830,u_0182,Project 830,ML Engineer,in_progress,68,Python,2026-02-24
+p_00831,u_0182,Project 831,ML Engineer,completed,20,Unit Testing,2025-07-25
+p_00832,u_0182,Project 832,ML Engineer,completed,103,Git,2025-01-16
+p_00833,u_0182,Project 833,ML Engineer,completed,75,React,2025-11-07
+p_00834,u_0182,Project 834,ML Engineer,completed,20,System Design,2024-09-23
+p_00835,u_0182,Project 835,ML Engineer,completed,49,CI/CD,2025-08-05
+p_00836,u_0182,Project 836,ML Engineer,completed,20,SQL,2024-07-14
+p_00837,u_0183,Project 837,ML Engineer,completed,49,MongoDB,2024-09-14
+p_00838,u_0183,Project 838,ML Engineer,completed,46,Microservices,2025-06-10
+p_00839,u_0183,Project 839,ML Engineer,completed,28,TypeScript,2024-06-16
+p_00840,u_0183,Project 840,ML Engineer,completed,112,FastAPI,2025-05-08
+p_00841,u_0183,Project 841,ML Engineer,completed,117,CI/CD,2026-01-27
+p_00842,u_0183,Project 842,ML Engineer,completed,61,Git,2026-03-30
+p_00843,u_0183,Project 843,ML Engineer,completed,88,Unit Testing,2024-08-31
+p_00844,u_0184,Project 844,Frontend Engineer,completed,97,AWS,2024-12-17
+p_00845,u_0184,Project 845,Frontend Engineer,completed,26,Docker,2025-12-14
+p_00846,u_0184,Project 846,Frontend Engineer,completed,52,Microservices,2024-12-26
+p_00847,u_0184,Project 847,Frontend Engineer,completed,33,React,2024-10-11
+p_00848,u_0185,Project 848,ML Engineer,in_progress,111,Kubernetes,2025-05-24
+p_00849,u_0185,Project 849,ML Engineer,in_progress,71,TypeScript,2025-08-23
+p_00850,u_0185,Project 850,ML Engineer,completed,67,Redis,2025-10-31
+p_00851,u_0185,Project 851,ML Engineer,completed,35,MongoDB,2025-03-10
+p_00852,u_0185,Project 852,ML Engineer,completed,30,System Design,2024-07-19
+p_00853,u_0185,Project 853,ML Engineer,in_progress,21,AWS,2025-07-15
+p_00854,u_0186,Project 854,Full-Stack Engineer,completed,63,Kubernetes,2025-07-07
+p_00855,u_0186,Project 855,Full-Stack Engineer,completed,48,AWS,2024-12-08
+p_00856,u_0186,Project 856,Full-Stack Engineer,completed,87,AWS,2026-01-30
+p_00857,u_0187,Project 857,DevOps Engineer,completed,106,Redis,2025-02-23
+p_00858,u_0187,Project 858,DevOps Engineer,completed,42,System Design,2025-03-04
+p_00859,u_0187,Project 859,DevOps Engineer,completed,35,Git,2024-07-19
+p_00860,u_0187,Project 860,DevOps Engineer,completed,51,React,2026-03-19
+p_00861,u_0187,Project 861,DevOps Engineer,completed,49,FastAPI,2025-03-06
+p_00862,u_0187,Project 862,DevOps Engineer,in_progress,20,Git,2025-01-04
+p_00863,u_0187,Project 863,DevOps Engineer,completed,14,CI/CD,2026-03-12
+p_00864,u_0187,Project 864,DevOps Engineer,completed,61,PostgreSQL,2024-08-27
+p_00865,u_0187,Project 865,DevOps Engineer,in_progress,84,GraphQL,2024-10-17
+p_00866,u_0188,Project 866,ML Engineer,completed,15,CI/CD,2025-01-13
+p_00867,u_0188,Project 867,ML Engineer,completed,49,SQL,2025-02-20
+p_00868,u_0188,Project 868,ML Engineer,in_progress,82,Node.js,2024-09-19
+p_00869,u_0188,Project 869,ML Engineer,completed,102,Unit Testing,2026-04-03
+p_00870,u_0188,Project 870,ML Engineer,completed,94,MongoDB,2025-12-19
+p_00871,u_0189,Project 871,ML Engineer,completed,88,Unit Testing,2024-11-09
+p_00872,u_0190,Project 872,DevOps Engineer,completed,75,Docker,2025-10-23
+p_00873,u_0190,Project 873,DevOps Engineer,completed,37,SQL,2024-12-13
+p_00874,u_0190,Project 874,DevOps Engineer,completed,107,SQL,2026-03-28
+p_00875,u_0190,Project 875,DevOps Engineer,completed,53,SQL,2024-12-01
+p_00876,u_0190,Project 876,DevOps Engineer,completed,101,MongoDB,2024-12-12
+p_00877,u_0190,Project 877,DevOps Engineer,completed,23,HTML/CSS,2025-02-09
+p_00878,u_0190,Project 878,DevOps Engineer,completed,96,Unit Testing,2024-09-13
+p_00879,u_0190,Project 879,DevOps Engineer,completed,31,Python,2026-02-10
+p_00880,u_0191,Project 880,ML Engineer,completed,15,React,2024-10-16
+p_00881,u_0191,Project 881,ML Engineer,completed,24,GraphQL,2024-10-27
+p_00882,u_0191,Project 882,ML Engineer,in_progress,90,Python,2024-06-12
+p_00883,u_0191,Project 883,ML Engineer,in_progress,27,Kubernetes,2025-05-15
+p_00884,u_0191,Project 884,ML Engineer,in_progress,24,AWS,2024-10-23
+p_00885,u_0191,Project 885,ML Engineer,completed,86,REST APIs,2024-11-17
+p_00886,u_0192,Project 886,Frontend Engineer,completed,83,GraphQL,2026-03-07
+p_00887,u_0192,Project 887,Frontend Engineer,completed,16,React,2024-09-16
+p_00888,u_0193,Project 888,ML Engineer,in_progress,67,FastAPI,2024-06-04
+p_00889,u_0193,Project 889,ML Engineer,in_progress,17,Git,2025-08-14
+p_00890,u_0193,Project 890,ML Engineer,completed,59,System Design,2025-01-20
+p_00891,u_0193,Project 891,ML Engineer,in_progress,101,Unit Testing,2024-09-26
+p_00892,u_0193,Project 892,ML Engineer,completed,28,Git,2024-09-15
+p_00893,u_0194,Project 893,Backend Engineer,completed,60,Docker,2024-07-17
+p_00894,u_0194,Project 894,Backend Engineer,completed,36,HTML/CSS,2025-11-28
+p_00895,u_0195,Project 895,DevOps Engineer,in_progress,101,System Design,2026-03-04
+p_00896,u_0195,Project 896,DevOps Engineer,completed,58,TypeScript,2025-03-07
+p_00897,u_0195,Project 897,DevOps Engineer,in_progress,98,CI/CD,2025-03-01
+p_00898,u_0195,Project 898,DevOps Engineer,completed,105,Docker,2024-06-05
+p_00899,u_0196,Project 899,Frontend Engineer,completed,106,Microservices,2024-08-10
+p_00900,u_0196,Project 900,Frontend Engineer,completed,68,GraphQL,2024-10-29
+p_00901,u_0196,Project 901,Frontend Engineer,completed,30,SQL,2025-07-02
+p_00902,u_0196,Project 902,Frontend Engineer,completed,77,HTML/CSS,2025-10-08
+p_00903,u_0197,Project 903,DevOps Engineer,completed,97,Git,2025-06-30
+p_00904,u_0197,Project 904,DevOps Engineer,completed,77,Kubernetes,2025-12-01
+p_00905,u_0197,Project 905,DevOps Engineer,completed,82,Git,2025-07-01
+p_00906,u_0197,Project 906,DevOps Engineer,completed,105,HTML/CSS,2025-11-24
+p_00907,u_0197,Project 907,DevOps Engineer,completed,102,Git,2024-08-31
+p_00908,u_0197,Project 908,DevOps Engineer,completed,14,AWS,2024-06-20
+p_00909,u_0198,Project 909,ML Engineer,completed,58,CI/CD,2024-10-23
+p_00910,u_0198,Project 910,ML Engineer,completed,32,Kubernetes,2025-08-08
+p_00911,u_0198,Project 911,ML Engineer,completed,119,Git,2024-07-30
+p_00912,u_0198,Project 912,ML Engineer,completed,29,FastAPI,2025-06-24
+p_00913,u_0198,Project 913,ML Engineer,completed,103,HTML/CSS,2025-06-18
+p_00914,u_0198,Project 914,ML Engineer,completed,27,Node.js,2024-08-17
+p_00915,u_0199,Project 915,Backend Engineer,completed,24,Git,2024-08-20
+p_00916,u_0199,Project 916,Backend Engineer,completed,120,HTML/CSS,2024-11-03
+p_00917,u_0199,Project 917,Backend Engineer,completed,74,FastAPI,2025-11-25
+p_00918,u_0199,Project 918,Backend Engineer,completed,52,Microservices,2025-07-29
+p_00919,u_0199,Project 919,Backend Engineer,completed,70,Python,2025-03-23
+p_00920,u_0199,Project 920,Backend Engineer,completed,21,React,2026-02-11
+p_00921,u_0199,Project 921,Backend Engineer,completed,78,SQL,2024-06-14
+p_00922,u_0200,Project 922,ML Engineer,completed,47,Node.js,2025-10-29
+p_00923,u_0200,Project 923,ML Engineer,completed,43,HTML/CSS,2024-11-10
+p_00924,u_0200,Project 924,ML Engineer,completed,25,Redis,2025-06-24
+p_00925,u_0200,Project 925,ML Engineer,cancelled,30,AWS,2025-07-18
+p_00926,u_0200,Project 926,ML Engineer,completed,42,Unit Testing,2024-12-08
+p_00927,u_0200,Project 927,ML Engineer,completed,85,MongoDB,2024-08-21
+p_00928,u_0200,Project 928,ML Engineer,completed,73,Microservices,2025-04-19
+p_00929,u_0200,Project 929,ML Engineer,completed,65,Unit Testing,2024-11-18

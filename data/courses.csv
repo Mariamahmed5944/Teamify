@@ -1,0 +1,16 @@
+course_id,title,platform,skills_covered,rating,market_demand,duration_hrs,level
+c_001,System Design for Developers,Coursera,System Design|Microservices,4.8,0.95,24,Beginner
+c_002,AWS Certified Developer,A Cloud Guru,AWS|CI/CD,4.7,0.9,40,Beginner
+c_003,Docker & Kubernetes Mastery,Udemy,Docker|Kubernetes|CI/CD,4.6,0.88,20,Beginner
+c_004,React Advanced Patterns,Pluralsight,React|TypeScript,4.5,0.87,16,Beginner
+c_005,GraphQL with FastAPI,Udemy,GraphQL|FastAPI|Python,4.4,0.8,12,Advanced
+c_006,PostgreSQL Deep Dive,LinkedIn Learning,PostgreSQL|SQL,4.3,0.75,10,Beginner
+c_007,Python for Backend Engineers,Coursera,Python|FastAPI|REST APIs,4.7,0.92,30,Beginner
+c_008,Advanced Code Review,Pluralsight,Unit Testing|CI/CD,4.2,0.7,8,Advanced
+c_009,Redis & Caching Strategies,Udemy,Redis|System Design,4.4,0.78,10,Intermediate
+c_010,TypeScript Fundamentals,LinkedIn Learning,TypeScript|Node.js,4.5,0.85,14,Advanced
+c_011,Microservices Architecture,Coursera,Microservices|Docker|AWS,4.8,0.93,35,Advanced
+c_012,MongoDB for Developers,Udemy,MongoDB|Node.js,4.1,0.72,12,Advanced
+c_013,CI/CD with GitHub Actions,A Cloud Guru,CI/CD|Git|Docker,4.6,0.88,15,Advanced
+c_014,HTML/CSS & Web Fundamentals,LinkedIn Learning,HTML/CSS|REST APIs,4.0,0.65,18,Beginner
+c_015,Git & Version Control Pro,Udemy,Git|CI/CD,4.3,0.7,8,Beginner
