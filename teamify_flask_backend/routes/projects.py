@@ -603,8 +603,23 @@ def delete_project(project_id):
         user_id=user_id,
     )
     db.session.add(log)
-    db.session.delete(project)
-    db.session.commit()
+    try:
+        db.session.delete(project)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        # Nullify FK references (disputes, files, tasks) then retry
+        from sqlalchemy import text
+        db.session.execute(
+            text("UPDATE disputes SET project_id = NULL WHERE project_id = :pid"),
+            {"pid": project_id}
+        )
+        db.session.execute(
+            text("UPDATE file_metadata SET project_id = NULL WHERE project_id = :pid"),
+            {"pid": project_id}
+        )
+        db.session.delete(project)
+        db.session.commit()
 
     return jsonify({"message": "Project deleted successfully"}), 200
 

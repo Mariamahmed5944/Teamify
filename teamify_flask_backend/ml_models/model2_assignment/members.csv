@@ -1,0 +1,81 @@
+member_id,member_name,member_primary_domain,member_skills,skill_level,current_tasks,workload_score,availability,availability_encoded,rating
+MEM1001,Ahmed Hassan,security,"['Kali Linux', 'JWT', 'OWASP', 'Burp Suite']",2.1,1,0.875,Free,1,2.79
+MEM1002,Sara Mohamed,backend,"['Node.js', 'Flask', 'MySQL', 'Microservices', 'Python', 'Django', 'Spring Boot', 'PostgreSQL']",1.3,0,1.0,Free,1,3.23
+MEM1003,Omar Ali,ai_ml,"['LangChain', 'MongoDB', 'CNN', 'Hugging Face', 'MLflow', 'MySQL']",2.1,0,1.0,Free,1,2.62
+MEM1004,Nour Ibrahim,ui_ux,"['Miro', 'Adobe XD', 'Accessibility', 'Zeplin', 'Figma', 'Prototyping', 'Design Systems', 'Wireframing']",2.4,0,1.0,Free,1,3.22
+MEM1005,Khaled Youssef,frontend,"['JavaScript', 'Webpack', 'Tailwind CSS', 'TypeScript', 'Angular', 'HTML']",4.8,3,0.625,Free,1,4.28
+MEM1006,Amira Sayed,security,"['OAuth', 'VPN', 'Cryptography', 'Kali Linux', 'IDS/IPS']",3.4,2,0.75,Free,1,3.93
+MEM1007,Yusuf Kamal,data_science,"['Excel', 'Burp Suite', 'Power BI', 'Tableau', 'SQL', 'Zero Trust']",3.8,1,0.875,Free,1,3.68
+MEM1008,Dina Ramzy,cloud,"['Kubernetes', 'VPC', 'CloudFormation', 'CDN', 'Terraform']",1.7,3,0.625,Free,1,2.69
+MEM1009,Mostafa Adel,database,"['Cassandra', 'SQL', 'XGBoost', 'Pandas', 'InfluxDB', 'Firebase', 'PostgreSQL']",4.1,1,0.875,Free,1,5.0
+MEM1010,Layla Farouk,database,"['MariaDB', 'Elasticsearch', 'Neo4j', 'Snowflake', 'SQL', 'Firebase', 'Mocha', 'Redis', 'PostgreSQL', 'Jest']",3.1,5,0.375,Busy,0,4.3
+MEM1011,James Smith,backend,"['Java', 'Go', 'Docker', 'Redis', 'Spring Boot']",4.8,2,0.75,Free,1,4.97
+MEM1012,Emma Johnson,data_science,"['R', 'Seaborn', 'Tableau', 'SQL', 'Jupyter', 'Python', 'NumPy']",2.1,0,1.0,Free,1,3.28
+MEM1013,Oliver Brown,frontend,"['JavaScript', 'Webpack', 'Tailwind CSS', 'Redux', 'Angular', 'Bootstrap', 'Figma', 'Next.js']",1.7,0,1.0,Free,1,3.77
+MEM1014,Sophia Davis,mobile,"['SQLite', 'Android', 'Play Store', 'Dart', 'REST API']",2.8,5,0.375,Busy,0,4.1
+MEM1015,Noah Wilson,ui_ux,"['Miro', 'Adobe XD', 'Kafka', 'UX Writing', 'Zeplin', 'Figma', 'REST API', 'Prototyping', 'Design Systems', 'InVision']",2.9,1,0.875,Free,1,3.77
+MEM1016,Ava Martinez,frontend,"['Tailwind CSS', 'TypeScript', 'Redux', 'GraphQL', 'SASS']",2.9,4,0.5,Busy,0,3.67
+MEM1017,William Taylor,database,"['SQLite', 'MariaDB', 'Cassandra', 'Neo4j', 'SQL', 'InfluxDB', 'PostgreSQL']",1.1,3,0.625,Free,1,2.96
+MEM1018,Isabella Anderson,cloud,"['Kubernetes', 'Azure', 'IAM', 'GCP', 'CloudWatch', 'S3', 'Terraform']",3.7,1,0.875,Free,1,4.19
+MEM1019,Liam Thomas,ui_ux,"['Usability Testing', 'Sketch', 'HTML', 'CSS', 'Prototyping']",2.0,0,1.0,Free,1,3.76
+MEM1020,Mia Jackson,backend,"['Node.js', 'MongoDB', 'Bash', 'MySQL', 'Docker', 'Redis', 'Spring Boot', 'PostgreSQL']",1.0,3,0.625,Free,1,2.84
+MEM1021,Carlos Garcia,project_management,"['Agile', 'Sprint Planning', 'Budgeting', 'Scrum', 'Stakeholder Management', 'Roadmapping', 'JIRA']",3.6,1,0.875,Free,1,3.54
+MEM1022,Maria Rodriguez,frontend,"['Vue.js', 'Tailwind CSS', 'TypeScript', 'SASS', 'React', 'Bootstrap', 'HTML', 'CSS']",3.5,2,0.75,Free,1,3.82
+MEM1023,Juan Lopez,data_science,"['Excel', 'R', 'Tableau', 'Spark', 'Jupyter', 'Python']",3.0,3,0.625,Free,1,3.82
+MEM1024,Ana Gonzalez,mobile,"['iOS', 'Kotlin', 'React Native', 'Play Store', 'TestNG', 'App Store', 'Gatling']",3.6,1,0.875,Free,1,4.51
+MEM1025,Luis Hernandez,project_management,"['SQLite', 'Kotlin', 'Sprint Planning', 'Confluence', 'Scrum', 'OKRs', 'PMP', 'Roadmapping', 'JIRA', 'Lean']",4.0,5,0.375,Busy,0,3.51
+MEM1026,Wei Zhang,cloud,"['Serverless', 'AWS', 'Azure', 'Fargate', 'CloudWatch', 'S3']",2.0,2,0.75,Free,1,3.16
+MEM1027,Li Wang,backend,"['MongoDB', 'Java', 'Flask', 'Docker', 'Python', 'Microservices', 'PostgreSQL']",2.2,2,0.75,Free,1,2.71
+MEM1028,Xiao Chen,project_management,"['Agile', 'Risk Management', 'R', 'Sprint Planning', 'Seaborn', 'Confluence', 'Kanban', 'OKRs', 'PMP', 'JIRA']",4.3,6,0.25,Busy,0,4.37
+MEM1029,Jing Liu,cloud,"['Oracle', 'Kubernetes', 'InfluxDB', 'CDN', 'GCP', 'CloudWatch', 'S3']",4.8,3,0.625,Free,1,4.97
+MEM1030,Fang Yang,security,"['OAuth', 'Penetration Testing', 'Postman', 'JUnit', 'IDS/IPS', 'Metasploit']",4.7,2,0.75,Free,1,4.16
+MEM1031,Alex Kim,data_science,"['Seaborn', 'Tableau', 'Excel', 'SQL']",2.0,3,0.625,Free,1,2.93
+MEM1032,Jordan Lee,security,"['VPN', 'Cryptography', 'Penetration Testing', 'SSL/TLS', 'OWASP', 'Metasploit']",4.3,0,1.0,Free,1,4.12
+MEM1033,Taylor Park,project_management,"['Agile', 'Risk Management', 'Trello', 'Sprint Planning', 'Confluence', 'OKRs', 'Stakeholder Management', 'Roadmapping']",4.2,4,0.5,Busy,0,4.12
+MEM1034,Morgan Choi,frontend,"['JavaScript', 'GraphQL', 'Next.js', 'Tailwind CSS']",4.9,4,0.5,Busy,0,4.31
+MEM1035,Riley Ng,cloud,"['VPC', 'Serverless', 'EKS', 'GCP', 'Fargate', 'S3', 'Terraform']",2.9,2,0.75,Free,1,3.65
+MEM1036,Priya Sharma,backend,"['Kafka', 'MySQL', 'Go', 'Docker', 'Microservices', 'Django']",2.8,5,0.375,Busy,0,3.99
+MEM1037,Raj Patel,project_management,"['Trello', 'Confluence', 'Spark', 'Matplotlib', 'Roadmapping', 'JIRA', 'Lean']",1.1,2,0.75,Free,1,2.62
+MEM1038,Anita Singh,frontend,"['Vue.js', 'Webpack', 'TypeScript', 'Redux', 'Angular', 'React', 'CSS']",3.8,5,0.375,Busy,0,3.66
+MEM1039,Vikram Gupta,data_science,"['R', 'SAS', 'Pandas', 'Spark', 'Jupyter']",2.4,3,0.625,Free,1,2.57
+MEM1040,Meera Nair,security,"['JWT', 'OAuth', 'Nmap', 'Burp Suite', 'SSL/TLS', 'IDS/IPS', 'Metasploit']",3.3,3,0.625,Free,1,4.26
+MEM1041,Lucas Müller,project_management,"['JavaScript', 'Sprint Planning', 'MS Project', 'Trello', 'GraphQL', 'Stakeholder Management', 'Roadmapping', 'Lean']",4.2,6,0.25,Busy,0,4.25
+MEM1042,Anna Schmidt,data_science,"['Statistics', 'SAS', 'Power BI', 'TestNG', 'Pandas', 'Postman', 'NumPy']",1.5,0,1.0,Free,1,2.68
+MEM1043,Felix Weber,testing,"['Robot Framework', 'MariaDB', 'Selenium', 'Snowflake', 'SoapUI', 'Postman', 'Mocha', 'K6', 'JMeter', 'Gatling']",2.8,4,0.5,Busy,0,3.81
+MEM1044,Hannah Koch,database,"['Cassandra', 'MongoDB', 'Elasticsearch', 'Oracle', 'SQL', 'InfluxDB', 'Redis']",3.6,5,0.375,Busy,0,4.22
+MEM1045,Elias Bauer,database,"['MariaDB', 'Neo4j', 'Oracle', 'Sketch', 'Snowflake', 'SQL', 'DynamoDB', 'InfluxDB', 'Figma', 'PostgreSQL']",4.8,1,0.875,Free,1,4.98
+MEM1046,Ahmed Hassan 2,devops,"['Nginx', 'Kubernetes', 'Azure', 'CI/CD', 'Docker', 'Ansible', 'GCP']",2.8,3,0.625,Free,1,3.77
+MEM1047,Sara Mohamed 2,backend,"['Redis', 'Django', 'Microservices', 'Python']",4.0,5,0.375,Busy,0,4.07
+MEM1048,Omar Ali 2,mobile,"['SQLite', 'iOS', 'Android', 'Swift', 'Firebase']",1.2,0,1.0,Free,1,3.23
+MEM1049,Nour Ibrahim 2,project_management,"['Sprint Planning', 'Agile', 'Confluence', 'PMP']",4.7,1,0.875,Free,1,4.96
+MEM1050,Khaled Youssef 2,database,"['SQLite', 'Neo4j', 'InfluxDB', 'Redis', 'PostgreSQL']",3.6,1,0.875,Free,1,3.97
+MEM1051,Amira Sayed 2,frontend,"['HTML', 'Vue.js', 'Webpack', 'Tailwind CSS', 'React', 'Figma', 'Next.js']",4.3,0,1.0,Free,1,4.35
+MEM1052,Yusuf Kamal 2,testing,"['Robot Framework', 'Appium', 'SoapUI', 'TestNG', 'K6', 'JUnit', 'Jest']",2.4,3,0.625,Free,1,3.42
+MEM1053,Dina Ramzy 2,testing,"['pytest', 'Mocha', 'Cypress', 'JUnit', 'Gatling']",3.6,3,0.625,Free,1,3.76
+MEM1054,Mostafa Adel 2,mobile,"['SQLite', 'iOS', 'Kotlin', 'Burp Suite', 'Android', 'VPN', 'Swift', 'Firebase']",3.1,1,0.875,Free,1,3.9
+MEM1055,Layla Farouk 2,ui_ux,"['Usability Testing', 'Miro', 'Accessibility', 'HTML', 'Prototyping', 'Zeplin', 'InVision']",2.4,0,1.0,Free,1,2.81
+MEM1056,James Smith 2,frontend,"['HTML', 'Webpack', 'Redux', 'GraphQL', 'Bootstrap', 'Figma', 'CSS', 'Next.js']",1.6,1,0.875,Free,1,2.9
+MEM1057,Emma Johnson 2,testing,"['pytest', 'User Research', 'TestNG', 'UX Writing', 'K6', 'Cypress', 'Gatling', 'Jest']",1.4,0,1.0,Free,1,3.44
+MEM1058,Oliver Brown 2,mobile,"['iOS', 'Kotlin', 'User Research', 'Sketch', 'Android', 'Play Store', 'Swift']",4.3,2,0.75,Free,1,4.98
+MEM1059,Sophia Davis 2,backend,"['Java', 'MongoDB', 'Flask', 'Kafka', 'MySQL', 'Python', 'Spring Boot']",4.3,5,0.375,Busy,0,4.94
+MEM1060,Noah Wilson 2,ai_ml,"['YOLO', 'TensorFlow', 'OpenCV', 'MLflow']",3.9,6,0.25,Busy,0,4.48
+MEM1061,Ava Martinez 2,backend,"['Flask', 'Docker', 'Java', 'Redis', 'PostgreSQL']",2.2,2,0.75,Free,1,2.61
+MEM1062,William Taylor 2,mobile,"['Android Studio', 'TypeScript', 'Android', 'Play Store', 'App Store', 'Bootstrap', 'Dart', 'REST API']",1.8,3,0.625,Free,1,3.68
+MEM1063,Isabella Anderson 2,security,"['OAuth', 'VPN', 'Cryptography', 'Penetration Testing', 'SSL/TLS', 'Helm', 'Kali Linux', 'IDS/IPS', 'Ansible', 'OWASP']",2.0,1,0.875,Free,1,2.81
+MEM1064,Liam Thomas 2,project_management,"['Risk Management', 'Trello', 'Budgeting', 'Scrum', 'Stakeholder Management', 'Roadmapping', 'JIRA', 'Lean']",3.6,1,0.875,Free,1,4.92
+MEM1065,Mia Jackson 2,ai_ml,"['LangChain', 'TensorFlow', 'OpenCV', 'CNN', 'MLflow', 'XGBoost', 'BERT', 'YOLO']",1.2,2,0.75,Free,1,3.27
+MEM1066,Carlos Garcia 2,testing,"['Robot Framework', 'pytest', 'Appium', 'Selenium', 'Cypress', 'JUnit', 'BDD', 'Gatling']",3.4,4,0.5,Busy,0,4.09
+MEM1067,Maria Rodriguez 2,ai_ml,"['TensorFlow', 'OpenCV', 'CNN', 'Hugging Face', 'MLflow', 'XGBoost', 'Pandas', 'YOLO']",3.5,3,0.625,Free,1,3.65
+MEM1068,Juan Lopez 2,frontend,"['Vue.js', 'Tailwind CSS', 'OpenCV', 'Redux', 'XGBoost', 'React', 'Bootstrap', 'HTML', 'Next.js']",4.0,5,0.375,Busy,0,4.5
+MEM1069,Ana Gonzalez 2,ui_ux,"['HTML', 'Miro', 'Wireframing', 'Figma', 'Prototyping', 'Zeplin', 'InVision']",3.5,6,0.25,Busy,0,4.54
+MEM1070,Luis Hernandez 2,data_science,"['R', 'Matplotlib', 'Seaborn', 'SQL', 'Pandas', 'Python', 'NumPy']",1.2,2,0.75,Free,1,3.07
+MEM1071,Wei Zhang 2,ui_ux,"['Sketch', 'Design Systems', 'Miro', 'HTML']",2.8,1,0.875,Free,1,3.87
+MEM1072,Li Wang 2,devops,"['Jenkins', 'Prometheus', 'Azure', 'CI/CD', 'Terraform']",2.9,4,0.5,Busy,0,4.28
+MEM1073,Xiao Chen 2,ui_ux,"['Usability Testing', 'User Research', 'Wireframing', 'UX Writing', 'Figma', 'Zeplin', 'InVision']",3.7,0,1.0,Free,1,4.28
+MEM1074,Jing Liu 2,mobile,"['iOS', 'Push Notifications', 'Play Store', 'Xcode', 'App Store', 'Firebase', 'Dart']",4.2,1,0.875,Free,1,4.45
+MEM1075,Fang Yang 2,project_management,"['Risk Management', 'MS Project', 'Budgeting', 'OKRs', 'Roadmapping', 'JIRA', 'Lean']",1.6,3,0.625,Free,1,2.56
+MEM1076,Alex Kim 2,ai_ml,"['TensorFlow', 'OpenCV', 'PyTorch', 'Pandas', 'Keras', 'Lambda', 'Scikit-learn', 'EKS', 'YOLO']",3.4,1,0.875,Free,1,4.2
+MEM1077,Jordan Lee 2,project_management,"['Agile', 'Risk Management', 'MS Project', 'VPN', 'Kanban', 'OKRs', 'Scrum', 'Zero Trust', 'Stakeholder Management', 'Lean']",2.6,3,0.625,Free,1,4.18
+MEM1078,Taylor Park 2,data_science,"['Spark', 'SQL', 'Statistics', 'Pandas']",4.2,0,1.0,Free,1,4.76
+MEM1079,Morgan Choi 2,backend,"['Flask', 'Go', 'Docker', 'Django', 'PostgreSQL']",2.6,3,0.625,Free,1,3.8
+MEM1080,Riley Ng 2,ai_ml,"['NLP', 'CNN', 'MLflow', 'Scikit-learn', 'YOLO']",1.9,3,0.625,Free,1,3.31

@@ -25,7 +25,7 @@ def admin_token(app):
             password="AdminPassword123",
             role="admin",
             account_status="approved",
-            user_type="employee"
+            user_type="admin"
         )
         db.session.add(admin_user)
         db.session.commit()

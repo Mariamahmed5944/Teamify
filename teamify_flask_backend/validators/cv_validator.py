@@ -185,5 +185,25 @@ class CVCreateSchema(Schema):
             raise ValidationError("A CV may contain at most 30 project entries.")
 
 
+# ─── AI CV-Build Schema ───────────────────────────────────────────────────────
+
+class CVBuildSchema(Schema):
+    """
+    Input schema for POST /api/ai/cv/build.
+
+    All fields are optional — when omitted the endpoint generates a CV for
+    the calling user by reading their live ORM data.
+
+    target_user_id  Admin-only override: generate a CV for a different user.
+    include_pdf     Reserved for future use (PDF download endpoint).
+    """
+    target_user_id = fields.Int(
+        load_default=None,
+        validate=validate.Range(min=1),
+    )
+    include_pdf = fields.Bool(load_default=False)
+
+
 # Schema singletons (re-used across requests)
-cv_create_schema = CVCreateSchema()
+cv_create_schema  = CVCreateSchema()
+cv_build_schema   = CVBuildSchema()

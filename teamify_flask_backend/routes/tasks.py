@@ -325,6 +325,18 @@ def create_task():
         project_id=project_id,
         assigned_to=assigned_to,
     )
+
+    # Auto-classify and predict delay in background
+    try:
+        from services.task_pipeline_service import classify_task
+        ai_result = classify_task(task.title + " " + (task.description or ""))
+        task.ai_category = ai_result.get("category")
+        task.ai_difficulty = ai_result.get("difficulty")
+        task.ai_skills = ai_result.get("required_skills")
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+
     db.session.add(task)
     db.session.flush()
 

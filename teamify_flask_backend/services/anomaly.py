@@ -2,6 +2,12 @@
 
 `check_login_anomalies(ip)` is called inline from the login route after every
 failed attempt. It is also safe to call from a periodic scheduler job.
+
+ML augmentation: when anomaly_service_ml is available, every call also
+scores the current login against the IsolationForest model. An anomalous
+ML score escalates the alert description but does NOT replace the existing
+threshold-based logic, so the service degrades gracefully if the model file
+is missing.
 """
 from __future__ import annotations
 
@@ -23,9 +29,16 @@ def check_login_anomalies(
     *,
     window_minutes: int = WINDOW_MINUTES,
     threshold: int = FAIL_THRESHOLD,
+    user_id: Optional[int] = None,
+    device: str = "",
+    browser: str = "",
+    failed_attempts: int = 0,
 ) -> Optional[Alert]:
     """If *ip_address* has >= threshold failed logins in the last *window_minutes*,
     create (and return) a brute_force_login Alert. Idempotent within the window.
+
+    When user_id is provided the ML IsolationForest model is also consulted;
+    a positive anomaly flag is appended to the alert description.
     """
     if not ip_address:
         return None
@@ -44,7 +57,27 @@ def check_login_anomalies(
         .count()
     )
 
-    if fail_count < threshold:
+    # ── ML anomaly augmentation ───────────────────────────────────────────────
+    ml_anomaly_note = ""
+    if user_id is not None:
+        try:
+            from services.anomaly_service_ml import score_login_from_context
+            ml_result = score_login_from_context(
+                user_id,
+                ip_address,
+                device=device,
+                browser=browser,
+                failed_attempts=failed_attempts,
+            )
+            if ml_result.get("model_available") and ml_result.get("is_anomaly"):
+                score = ml_result.get("anomaly_score", 0)
+                ml_anomaly_note = (
+                    f" ML anomaly detector flagged this login (score={score})."
+                )
+        except Exception:
+            pass  # ML scoring is non-critical; never block the auth flow
+
+    if fail_count < threshold and not ml_anomaly_note:
         return None
 
     # Dedupe: don't create another alert if an unresolved one for this IP
@@ -62,12 +95,13 @@ def check_login_anomalies(
     if existing:
         return existing
 
+    description = (
+        f"{fail_count} failed login attempts from {ip_address} "
+        f"in the last {window_minutes} minutes.{ml_anomaly_note}"
+    )
     alert = Alert(
         type=ALERT_TYPE_BRUTE_FORCE,
-        description=(
-            f"{fail_count} failed login attempts from {ip_address} "
-            f"in the last {window_minutes} minutes."
-        ),
+        description=description,
     )
     db.session.add(alert)
     try:

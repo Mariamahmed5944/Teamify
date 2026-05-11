@@ -203,7 +203,7 @@ def register():
     hashed_password = bcrypt.generate_password_hash(password).decode("utf-8")
 
     # Freelancers and students require admin approval before they can use the platform.
-    # All other roles (employee, business, guest) are auto-approved on registration.
+    # user_type=admin is auto-approved on registration.
     _requires_approval = {"freelancer", "student"}
     initial_status = "pending" if user_type in _requires_approval else "approved"
 
@@ -883,7 +883,7 @@ def google_login():
     if not user:
         # First-time Google login: create a new account
         is_new = True
-        VALID_USER_TYPES = {"freelancer", "student", "guest"}
+        VALID_USER_TYPES = {"freelancer", "student", "admin"}
         raw_user_type = data.get("user_type", "").strip().lower()
         user_type = raw_user_type if raw_user_type in VALID_USER_TYPES else None
 

@@ -2,16 +2,24 @@
 AI helper functions for task assignment, priority suggestion,
 deadline suggestion and delay prediction.
 
-These use heuristic / rule-based logic that can later be swapped
-for real ML models without changing the API contract.
+Each function first attempts ML-model inference; if the model artifact is
+unavailable or inference fails, the original heuristic logic is used as a
+transparent fallback so the API contract is never broken.
 """
 
+import logging
+import os
 from datetime import date, timedelta
 from models import db
 from models.task import Task
 from models.user import User
 from models.project import Project
 from models.project_member import ProjectMember
+
+logger = logging.getLogger(__name__)
+
+# Feature flag: set AI_ENABLE_LOCAL_MODELS=false to bypass all .pkl inference
+_ML_ENABLED = os.getenv("AI_ENABLE_LOCAL_MODELS", "true").lower() not in ("false", "0", "no")
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -27,9 +35,66 @@ def get_user_workload(user_id):
     )
 
 
+def _ml_score_candidate(user, project) -> float:
+    """
+    Score a single candidate using the assignment features model.
+    Higher score = better fit. Returns a float; falls back to 0 on error.
+    """
+    if not _ML_ENABLED:
+        return 0.0
+    try:
+        import joblib
+        import pandas as pd
+        import numpy as np
+
+        model_path = os.path.join(
+            os.path.dirname(__file__), "..", "ml_models",
+            "model2_assignment", "features.pkl"
+        )
+        model_path = os.path.abspath(model_path)
+        if not os.path.exists(model_path):
+            return 0.0
+
+        transformer = joblib.load(model_path)
+
+        active_tasks = get_user_workload(user.id)
+        max_allowed = user.max_allowed_tasks or 5
+        workload_score = 1.0 - min(active_tasks / max(max_allowed, 1), 1.0)
+        availability_enc = 1 if active_tasks < max_allowed else 0
+
+        skill_level = getattr(user, "member_experience_years", 2) or 2
+        rating = (user.member_on_time_rate or 0.75) * 5
+
+        row = {
+            "skill_level": skill_level,
+            "current_tasks": active_tasks,
+            "workload_score": workload_score,
+            "availability_encoded": availability_enc,
+            "rating": rating,
+        }
+
+        df = pd.DataFrame([row])
+
+        if hasattr(transformer, "transform"):
+            transformed = transformer.transform(df)
+            return float(np.mean(transformed))
+        elif hasattr(transformer, "predict"):
+            return float(transformer.predict(df)[0])
+        return workload_score
+
+    except Exception as exc:
+        logger.debug("ML assignment scoring failed for user %s: %s", user.id, exc)
+        return 0.0
+
+
 def auto_assign(project_id, priority="medium"):
     """
-    Pick the project member with the lightest current workload.
+    Pick the best project member for a task.
+
+    Strategy:
+      1. Try ML scoring via model2_assignment/features.pkl (when enabled).
+      2. Fall back to minimum-workload heuristic if ML is off or fails.
+
     Returns (user_id, reason) or (None, reason).
     """
     project = Project.query.get(project_id)
@@ -46,23 +111,44 @@ def auto_assign(project_id, priority="medium"):
     if not member_ids:
         return None, "No members in this project"
 
-    # Calculate workload for each member
     candidates = []
     for uid in member_ids:
         user = User.query.get(uid)
         if not user:
             continue
         workload = get_user_workload(uid)
-        candidates.append({"user_id": uid, "display_name": user.display_name, "workload": workload})
+        candidates.append({
+            "user_id": uid,
+            "display_name": user.display_name,
+            "workload": workload,
+            "user_obj": user,
+        })
 
     if not candidates:
         return None, "No valid users found"
 
-    # Sort by workload ascending (least busy first)
-    candidates.sort(key=lambda c: c["workload"])
-    best = candidates[0]
+    # Attempt ML-based ranking
+    ml_used = False
+    if _ML_ENABLED:
+        try:
+            for c in candidates:
+                c["ml_score"] = _ml_score_candidate(c["user_obj"], project)
+            if any(c["ml_score"] > 0 for c in candidates):
+                candidates.sort(key=lambda c: c["ml_score"], reverse=True)
+                ml_used = True
+        except Exception as exc:
+            logger.warning("ML auto-assign ranking failed, using heuristic: %s", exc)
 
-    return best["user_id"], f"Assigned to '{best['display_name']}' (current workload: {best['workload']} tasks)"
+    if not ml_used:
+        candidates.sort(key=lambda c: c["workload"])
+
+    best = candidates[0]
+    method = "ML model" if ml_used else "workload heuristic"
+    reason = (
+        f"Assigned to '{best['display_name']}' via {method} "
+        f"(current workload: {best['workload']} tasks)"
+    )
+    return best["user_id"], reason
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -200,6 +286,10 @@ def suggest_deadline(project_id, priority="medium", title="", description=""):
 def predict_delay(project_id=None, task_id=None):
     """
     Predict delay risk for a project or a specific task.
+
+    For task-level prediction: tries ML model first, then heuristic.
+    For project-level prediction: aggregates per-task results.
+
     Returns a dict with risk_level, delay_probability, and reasons.
     """
     if task_id:
@@ -214,12 +304,47 @@ def _predict_task_delay(task_id):
     if not task:
         return {"error": "Task not found"}
 
+    # ── Attempt ML prediction first ───────────────────────────────────────────
+    if _ML_ENABLED:
+        try:
+            from services.delay_predictor_service import (
+                build_task_features_from_orm,
+                predict_delay_probability,
+            )
+            assignee = User.query.get(task.assigned_to) if task.assigned_to else None
+            features = build_task_features_from_orm(task, assignee)
+            ml_result = predict_delay_probability(features)
+
+            if ml_result.get("source") == "ml_model":
+                prob = ml_result["delay_probability"]
+                if prob >= 70:
+                    risk = "high"
+                elif prob >= 40:
+                    risk = "medium"
+                else:
+                    risk = "low"
+                return {
+                    "task_id": str(task_id),
+                    "risk_level": risk,
+                    "delay_probability": prob,
+                    "reasons": ["Predicted by ML delay model"],
+                    "ml_source": "ml_model",
+                }
+        except Exception as exc:
+            logger.warning("ML task delay prediction failed, using heuristic: %s", exc)
+
+    # ── Heuristic fallback ────────────────────────────────────────────────────
     score = 0
     reasons = []
 
     if not task.due_date:
         reasons.append("No due date set — cannot predict delay")
-        return {"task_id": str(task_id), "risk_level": "unknown", "delay_probability": 0, "reasons": reasons}
+        return {
+            "task_id": str(task_id),
+            "risk_level": "unknown",
+            "delay_probability": 0,
+            "reasons": reasons,
+        }
 
     days_left = (task.due_date - date.today()).days
 
@@ -269,6 +394,7 @@ def _predict_task_delay(task_id):
         "risk_level": risk,
         "delay_probability": probability,
         "reasons": reasons,
+        "ml_source": "heuristic",
     }
 
 

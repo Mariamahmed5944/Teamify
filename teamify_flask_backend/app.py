@@ -7,11 +7,15 @@ from flask_migrate import Migrate
 from flasgger import Swagger
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from flask_socketio import SocketIO
 from config import Config
 from models import db
 
 # Module-level limiter so routes can import it without circular deps
 limiter = Limiter(key_func=get_remote_address, storage_uri="memory://")
+
+# Module-level SocketIO so sockets/ modules can import it
+socketio = SocketIO()
 
 
 def create_app(test_config=None):
@@ -25,14 +29,19 @@ def create_app(test_config=None):
     # --- Initialize Extensions ---
     db.init_app(app)
     Migrate(app, db)          # enables: flask db init / migrate / upgrade
-    CORS(app, resources={r"/api/*": {
+    cors_settings = {
         "origins": os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:8080").split(","),
         "methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization"],
-    }})
+    }
+    CORS(app, resources={
+        r"/api/*": cors_settings,
+        r"/admin/*": cors_settings,
+    })
     jwt = JWTManager(app)
     Bcrypt(app)
     limiter.init_app(app)
+    socketio.init_app(app, cors_allowed_origins="*", async_mode="threading")
 
     # --- JWT Token Blacklist ---
     BLACKLISTED_TOKENS: set = set()
@@ -129,6 +138,7 @@ def create_app(test_config=None):
     from routes.ratings import ratings_bp
     from routes.cv import cv_bp
     from routes.disputes import disputes_bp
+    from routes.chat import chat_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(users_bp)
@@ -148,6 +158,7 @@ def create_app(test_config=None):
     app.register_blueprint(ratings_bp)
     app.register_blueprint(cv_bp)
     app.register_blueprint(disputes_bp)
+    app.register_blueprint(chat_bp)
 
     # ─── Health Check ─────────────────────────────────────────────────────────
     @app.route("/api/health", methods=["GET"])
@@ -200,12 +211,17 @@ def create_app(test_config=None):
         from models.cv_download_token import CVDownloadToken
         from models.audit_log import AuditLog
         from models.dispute import Dispute
+        from models.chat import ChatRoom, ChatRoomMember, Message
 
         db.create_all()  # ← مهم: بينشئ الجداول في PostgreSQL لو مش موجودة
 
     # --- Start reminders scheduler ---
     from services.scheduler import init_scheduler
     init_scheduler(app)
+
+    # --- Register SocketIO events ---
+    from sockets.chat_sockets import register_chat_events
+    register_chat_events(socketio)
 
     return app
 
@@ -219,10 +235,15 @@ if __name__ == "__main__":
     print(f"[OK] Server running on http://localhost:{port}")
     print(f"[OK] Debug mode: {debug}")
     print(f"[OK] Swagger UI: http://localhost:{port}/swagger/")
+    print(f"[OK] WebSocket:  ws://localhost:{port}  (Socket.IO)")
     print(f"[OK] Endpoints:")
     print(f"    POST /api/auth/register")
     print(f"    POST /api/auth/login")
-    print(f"    GET  /api/users/profile        (protected)")
-    print(f"    GET  /api/users/admin-dashboard (admin only)")
+    print(f"    GET  /api/chat/rooms            (chat)")
+    print(f"    GET  /api/users/profile          (protected)")
+    print(f"    GET  /api/users/admin-dashboard   (admin only)")
 
-    app.run(host=host, port=port, debug=debug)
+    # Use socketio.run() instead of app.run() to enable WebSocket support.
+    # Disable auto-reloader: it triggers on transformers/__pycache__ updates
+    # which cause spurious server restarts during development.
+    socketio.run(app, host=host, port=port, debug=debug, use_reloader=False)

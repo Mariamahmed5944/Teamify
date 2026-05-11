@@ -1,0 +1,802 @@
+{
+  "summary": {
+    "total": 98,
+    "passed": 96,
+    "failed": 2
+  },
+  "user_ids": {
+    "admin_master": 30,
+    "ahmed_free": 27,
+    "sara_edu": 28,
+    "omar_lead": 31,
+    "nour_uni": 29
+  },
+  "project_id": 16,
+  "task_id": 15,
+  "results": [
+    {
+      "group": "Health",
+      "method": "GET",
+      "path": "/api/health",
+      "status": 200,
+      "ok": true,
+      "note": "['database', 'status']"
+    },
+    {
+      "group": "Auth",
+      "method": "POST",
+      "path": "/api/auth/login",
+      "status": 200,
+      "ok": true,
+      "note": "admin_master"
+    },
+    {
+      "group": "Auth",
+      "method": "POST",
+      "path": "/api/auth/register",
+      "status": 409,
+      "ok": true,
+      "note": "ahmed_free"
+    },
+    {
+      "group": "Auth",
+      "method": "POST",
+      "path": "/api/auth/register",
+      "status": 409,
+      "ok": true,
+      "note": "sara_edu"
+    },
+    {
+      "group": "Auth",
+      "method": "POST",
+      "path": "/api/auth/register",
+      "status": 409,
+      "ok": true,
+      "note": "omar_lead"
+    },
+    {
+      "group": "Auth",
+      "method": "POST",
+      "path": "/api/auth/register",
+      "status": 409,
+      "ok": true,
+      "note": "nour_uni"
+    },
+    {
+      "group": "Auth",
+      "method": "POST",
+      "path": "/api/auth/login",
+      "status": 200,
+      "ok": true,
+      "note": "ahmed_free"
+    },
+    {
+      "group": "Auth",
+      "method": "POST",
+      "path": "/api/auth/login",
+      "status": 200,
+      "ok": true,
+      "note": "sara_edu"
+    },
+    {
+      "group": "Auth",
+      "method": "POST",
+      "path": "/api/auth/login",
+      "status": 200,
+      "ok": true,
+      "note": "omar_lead"
+    },
+    {
+      "group": "Auth",
+      "method": "POST",
+      "path": "/api/auth/login",
+      "status": 200,
+      "ok": true,
+      "note": "nour_uni"
+    },
+    {
+      "group": "Auth",
+      "method": "GET",
+      "path": "/api/auth/me",
+      "status": 200,
+      "ok": true,
+      "note": "['user']"
+    },
+    {
+      "group": "Auth",
+      "method": "POST",
+      "path": "/api/auth/refresh",
+      "status": 200,
+      "ok": true,
+      "note": "['access_token']"
+    },
+    {
+      "group": "Auth",
+      "method": "POST",
+      "path": "/api/auth/forgot-password",
+      "status": 200,
+      "ok": true,
+      "note": "['message']"
+    },
+    {
+      "group": "Auth",
+      "method": "POST",
+      "path": "/api/auth/logout",
+      "status": 200,
+      "ok": true,
+      "note": "['message']"
+    },
+    {
+      "group": "Users",
+      "method": "GET",
+      "path": "/api/users/profile",
+      "status": 200,
+      "ok": true,
+      "note": "['user']"
+    },
+    {
+      "group": "Users",
+      "method": "PUT",
+      "path": "/api/users/profile",
+      "status": 200,
+      "ok": true,
+      "note": "['message', 'user']"
+    },
+    {
+      "group": "Users",
+      "method": "GET",
+      "path": "/api/users/27/profile",
+      "status": 200,
+      "ok": true,
+      "note": "['profile']"
+    },
+    {
+      "group": "Users",
+      "method": "GET",
+      "path": "/api/users/27/stats",
+      "status": 200,
+      "ok": true,
+      "note": "['feedback', 'performance', 'ratings', 'tasks']"
+    },
+    {
+      "group": "Users",
+      "method": "GET",
+      "path": "/api/users/admin-dashboard",
+      "status": 200,
+      "ok": true,
+      "note": "['page', 'pages', 'per_page', 'total']"
+    },
+    {
+      "group": "Users",
+      "method": "GET",
+      "path": "/api/users/admin-dashboard",
+      "status": 403,
+      "ok": true,
+      "note": "['error', 'message']"
+    },
+    {
+      "group": "Admin",
+      "method": "GET",
+      "path": "/admin/users",
+      "status": 200,
+      "ok": true,
+      "note": "['items', 'page', 'pages', 'total']"
+    },
+    {
+      "group": "Admin",
+      "method": "GET",
+      "path": "/admin/users/pending",
+      "status": 200,
+      "ok": true,
+      "note": "['items', 'page', 'pages', 'total']"
+    },
+    {
+      "group": "Admin",
+      "method": "GET",
+      "path": "/admin/reports/summary",
+      "status": 200,
+      "ok": true,
+      "note": "['projects', 'tasks', 'users']"
+    },
+    {
+      "group": "Admin",
+      "method": "GET",
+      "path": "/admin/analytics/overview",
+      "status": 200,
+      "ok": true,
+      "note": "['projects', 'tasks', 'users']"
+    },
+    {
+      "group": "Admin",
+      "method": "GET",
+      "path": "/admin/analytics/users/growth",
+      "status": 200,
+      "ok": true,
+      "note": "['growth']"
+    },
+    {
+      "group": "Admin",
+      "method": "GET",
+      "path": "/admin/logs",
+      "status": 200,
+      "ok": true,
+      "note": "['items', 'page', 'pages', 'per_page']"
+    },
+    {
+      "group": "Admin",
+      "method": "GET",
+      "path": "/admin/activity",
+      "status": 200,
+      "ok": true,
+      "note": "['items', 'page', 'pages', 'per_page']"
+    },
+    {
+      "group": "Admin",
+      "method": "GET",
+      "path": "/admin/audit-logs",
+      "status": 200,
+      "ok": true,
+      "note": "['items', 'page', 'pages', 'per_page']"
+    },
+    {
+      "group": "Admin",
+      "method": "GET",
+      "path": "/admin/alerts",
+      "status": 200,
+      "ok": true,
+      "note": "['items', 'page', 'pages', 'per_page']"
+    },
+    {
+      "group": "Admin",
+      "method": "GET",
+      "path": "/admin/export/users",
+      "status": 200,
+      "ok": true,
+      "note": "id,display_name,full_name,email,role,user_type,account_statu"
+    },
+    {
+      "group": "Projects",
+      "method": "POST",
+      "path": "/api/projects",
+      "status": 201,
+      "ok": true,
+      "note": "['message', 'project']"
+    },
+    {
+      "group": "Projects",
+      "method": "POST",
+      "path": "/api/projects/16/members",
+      "status": 201,
+      "ok": true,
+      "note": "['member', 'message']"
+    },
+    {
+      "group": "Projects",
+      "method": "POST",
+      "path": "/api/projects/16/members",
+      "status": 201,
+      "ok": true,
+      "note": "['member', 'message']"
+    },
+    {
+      "group": "Projects",
+      "method": "GET",
+      "path": "/api/projects/16",
+      "status": 200,
+      "ok": true,
+      "note": "['project']"
+    },
+    {
+      "group": "Projects",
+      "method": "PUT",
+      "path": "/api/projects/16",
+      "status": 200,
+      "ok": true,
+      "note": "['message', 'project']"
+    },
+    {
+      "group": "Projects",
+      "method": "GET",
+      "path": "/api/projects/16/members",
+      "status": 200,
+      "ok": true,
+      "note": "['members', 'total']"
+    },
+    {
+      "group": "Projects",
+      "method": "GET",
+      "path": "/api/projects",
+      "status": 200,
+      "ok": true,
+      "note": "['page', 'pages', 'per_page', 'projects']"
+    },
+    {
+      "group": "Projects",
+      "method": "GET",
+      "path": "/api/projects/completed",
+      "status": 200,
+      "ok": true,
+      "note": "['page', 'pages', 'per_page', 'projects']"
+    },
+    {
+      "group": "Tasks",
+      "method": "POST",
+      "path": "/api/tasks",
+      "status": 201,
+      "ok": true,
+      "note": "['message', 'task']"
+    },
+    {
+      "group": "Tasks",
+      "method": "GET",
+      "path": "/api/tasks",
+      "status": 200,
+      "ok": true,
+      "note": "['page', 'pages', 'per_page', 'tasks']"
+    },
+    {
+      "group": "Tasks",
+      "method": "GET",
+      "path": "/api/tasks/15",
+      "status": 200,
+      "ok": true,
+      "note": "['task']"
+    },
+    {
+      "group": "Tasks",
+      "method": "PUT",
+      "path": "/api/tasks/15",
+      "status": 200,
+      "ok": true,
+      "note": "['message', 'task']"
+    },
+    {
+      "group": "Tasks",
+      "method": "PATCH",
+      "path": "/api/tasks/15/status",
+      "status": 200,
+      "ok": true,
+      "note": "['message', 'task']"
+    },
+    {
+      "group": "Tasks",
+      "method": "POST",
+      "path": "/api/tasks/15/comments",
+      "status": 201,
+      "ok": true,
+      "note": "['comment', 'message']"
+    },
+    {
+      "group": "Tasks",
+      "method": "GET",
+      "path": "/api/tasks/15/comments",
+      "status": 200,
+      "ok": true,
+      "note": "['items']"
+    },
+    {
+      "group": "AI",
+      "method": "POST",
+      "path": "/api/ai/classify-task",
+      "status": 200,
+      "ok": true,
+      "note": "['category', 'difficulty', 'required_skills', 'source']"
+    },
+    {
+      "group": "AI",
+      "method": "POST",
+      "path": "/api/ai/assign-members",
+      "status": 200,
+      "ok": true,
+      "note": "['assignments']"
+    },
+    {
+      "group": "AI",
+      "method": "POST",
+      "path": "/api/ai/summarize-chat",
+      "status": 200,
+      "ok": true,
+      "note": "['action_items', 'key_points', 'participants', 'source']"
+    },
+    {
+      "group": "AI",
+      "method": "POST",
+      "path": "/api/ai/chat/summarize",
+      "status": 200,
+      "ok": true,
+      "note": "['action_items', 'key_points', 'participants', 'source']"
+    },
+    {
+      "group": "AI",
+      "method": "POST",
+      "path": "/api/ai/detect-anomaly",
+      "status": 200,
+      "ok": true,
+      "note": "['anomaly_score', 'is_anomaly', 'model_available', 'source']"
+    },
+    {
+      "group": "AI",
+      "method": "POST",
+      "path": "/api/ai/recommend-teammates",
+      "status": 200,
+      "ok": true,
+      "note": "['recommendations']"
+    },
+    {
+      "group": "AI",
+      "method": "GET",
+      "path": "/api/ai/predict-delay/15",
+      "status": 200,
+      "ok": true,
+      "note": "['delay_predicted', 'delay_probability', 'risk_level', 'source']"
+    },
+    {
+      "group": "AI",
+      "method": "GET",
+      "path": "/api/ai/predict-rating/27",
+      "status": 500,
+      "ok": false,
+      "note": "<!doctype html>\n<html lang=en>\n  <head>\n    <title>TypeError"
+    },
+    {
+      "group": "AI",
+      "method": "GET",
+      "path": "/api/ai/mentor-report/27",
+      "status": 200,
+      "ok": true,
+      "note": "['career_level', 'career_progress', 'feedback_nlp', 'generated_at']"
+    },
+    {
+      "group": "AI",
+      "method": "GET",
+      "path": "/api/ai/mentor/analyse/27",
+      "status": 200,
+      "ok": true,
+      "note": "['career_level', 'career_progress', 'feedback_nlp', 'generated_at']"
+    },
+    {
+      "group": "AI",
+      "method": "GET",
+      "path": "/api/ai/mentor/analyse/27",
+      "status": 200,
+      "ok": true,
+      "note": "['career_level', 'career_progress', 'feedback_nlp', 'generated_at']"
+    },
+    {
+      "group": "AI",
+      "method": "POST",
+      "path": "/api/ai/cv/build",
+      "status": 200,
+      "ok": true,
+      "note": "['achievements', 'generated_at', 'metadata', 'projects']"
+    },
+    {
+      "group": "AI",
+      "method": "POST",
+      "path": "/api/ai/cv/build",
+      "status": 200,
+      "ok": true,
+      "note": "['achievements', 'generated_at', 'metadata', 'projects']"
+    },
+    {
+      "group": "AI",
+      "method": "POST",
+      "path": "/api/ai/transcribe",
+      "status": 400,
+      "ok": true,
+      "note": "['error']"
+    },
+    {
+      "group": "Stats",
+      "method": "GET",
+      "path": "/api/stats/global",
+      "status": 200,
+      "ok": true,
+      "note": "['completion_rate', 'overdue_tasks', 'status_breakdown', 'total_projects']"
+    },
+    {
+      "group": "Stats",
+      "method": "GET",
+      "path": "/api/stats/workload-overview",
+      "status": 200,
+      "ok": true,
+      "note": "['total_users', 'workloads']"
+    },
+    {
+      "group": "Stats",
+      "method": "GET",
+      "path": "/api/stats/project/16",
+      "status": 200,
+      "ok": true,
+      "note": "['completion_rate', 'member_workloads', 'overdue_tasks', 'priority_breakdown']"
+    },
+    {
+      "group": "Dashboard",
+      "method": "GET",
+      "path": "/api/dashboard",
+      "status": 200,
+      "ok": true,
+      "note": "['active_projects', 'at_risk_tasks', 'recent_activity', 'stats']"
+    },
+    {
+      "group": "Dashboard",
+      "method": "GET",
+      "path": "/api/dashboard",
+      "status": 200,
+      "ok": true,
+      "note": "['active_projects', 'at_risk_tasks', 'recent_activity', 'stats']"
+    },
+    {
+      "group": "Notifications",
+      "method": "GET",
+      "path": "/api/notifications",
+      "status": 200,
+      "ok": true,
+      "note": "['notifications', 'total', 'unread_count']"
+    },
+    {
+      "group": "Notifications",
+      "method": "GET",
+      "path": "/api/notifications/unread-count",
+      "status": 200,
+      "ok": true,
+      "note": "['unread_count']"
+    },
+    {
+      "group": "Notifications",
+      "method": "POST",
+      "path": "/api/notifications/mark-all-read",
+      "status": 200,
+      "ok": true,
+      "note": "['message']"
+    },
+    {
+      "group": "Notifications",
+      "method": "PATCH",
+      "path": "/api/notifications/23/read",
+      "status": 200,
+      "ok": true,
+      "note": "['message', 'notification']"
+    },
+    {
+      "group": "Logs",
+      "method": "GET",
+      "path": "/api/logs/my",
+      "status": 200,
+      "ok": true,
+      "note": "['logs', 'total']"
+    },
+    {
+      "group": "Logs",
+      "method": "GET",
+      "path": "/api/logs/all",
+      "status": 200,
+      "ok": true,
+      "note": "['logs', 'total']"
+    },
+    {
+      "group": "Search",
+      "method": "GET",
+      "path": "/api/search/users",
+      "status": 200,
+      "ok": true,
+      "note": "['page', 'pages', 'per_page', 'total']"
+    },
+    {
+      "group": "Search",
+      "method": "GET",
+      "path": "/api/search/projects",
+      "status": 200,
+      "ok": true,
+      "note": "['page', 'pages', 'per_page', 'projects']"
+    },
+    {
+      "group": "Reminders",
+      "method": "GET",
+      "path": "/api/reminders",
+      "status": 200,
+      "ok": true,
+      "note": "['reminders', 'total']"
+    },
+    {
+      "group": "Feedback",
+      "method": "POST",
+      "path": "/api/feedback",
+      "status": 201,
+      "ok": true,
+      "note": "['feedback', 'message']"
+    },
+    {
+      "group": "Feedback",
+      "method": "GET",
+      "path": "/api/feedback/user/27",
+      "status": 200,
+      "ok": true,
+      "note": "['avg_quality', 'avg_teamwork', 'feedback', 'page']"
+    },
+    {
+      "group": "Feedback",
+      "method": "GET",
+      "path": "/api/feedback/project/16",
+      "status": 200,
+      "ok": true,
+      "note": "['feedback', 'page', 'pages', 'per_page']"
+    },
+    {
+      "group": "Feedback",
+      "method": "GET",
+      "path": "/api/feedback/2",
+      "status": 200,
+      "ok": true,
+      "note": "['feedback']"
+    },
+    {
+      "group": "Feedback",
+      "method": "PUT",
+      "path": "/api/feedback/2",
+      "status": 200,
+      "ok": true,
+      "note": "['feedback', 'message']"
+    },
+    {
+      "group": "Feedback",
+      "method": "DELETE",
+      "path": "/api/feedback/2",
+      "status": 200,
+      "ok": true,
+      "note": "['message']"
+    },
+    {
+      "group": "Ratings",
+      "method": "POST",
+      "path": "/api/ratings",
+      "status": 201,
+      "ok": true,
+      "note": "['message', 'rating']"
+    },
+    {
+      "group": "Ratings",
+      "method": "GET",
+      "path": "/api/ratings/user/27",
+      "status": 200,
+      "ok": true,
+      "note": "['page', 'pages', 'per_page', 'ratings']"
+    },
+    {
+      "group": "Ratings",
+      "method": "GET",
+      "path": "/api/ratings/user/27/avg",
+      "status": 200,
+      "ok": true,
+      "note": "['average_score', 'distribution', 'total_ratings', 'user_id']"
+    },
+    {
+      "group": "Ratings",
+      "method": "PUT",
+      "path": "/api/ratings/3",
+      "status": 200,
+      "ok": true,
+      "note": "['message', 'rating']"
+    },
+    {
+      "group": "Ratings",
+      "method": "DELETE",
+      "path": "/api/ratings/3",
+      "status": 200,
+      "ok": true,
+      "note": "['message']"
+    },
+    {
+      "group": "CV",
+      "method": "POST",
+      "path": "/api/cv",
+      "status": 200,
+      "ok": true,
+      "note": "['cv', 'message']"
+    },
+    {
+      "group": "CV",
+      "method": "GET",
+      "path": "/api/cv/1",
+      "status": 200,
+      "ok": true,
+      "note": "['certifications', 'created_at', 'education', 'experience']"
+    },
+    {
+      "group": "CV",
+      "method": "PATCH",
+      "path": "/api/cv/1",
+      "status": 200,
+      "ok": true,
+      "note": "['cv', 'message']"
+    },
+    {
+      "group": "CV",
+      "method": "POST",
+      "path": "/api/cv/1/export",
+      "status": 201,
+      "ok": true,
+      "note": "['download_url', 'expires_in', 'message']"
+    },
+    {
+      "group": "Disputes",
+      "method": "POST",
+      "path": "/api/disputes",
+      "status": 201,
+      "ok": true,
+      "note": "['dispute', 'message']"
+    },
+    {
+      "group": "Disputes",
+      "method": "GET",
+      "path": "/api/disputes",
+      "status": 200,
+      "ok": true,
+      "note": "['items', 'page', 'pages', 'per_page']"
+    },
+    {
+      "group": "Disputes",
+      "method": "GET",
+      "path": "/api/disputes/my",
+      "status": 200,
+      "ok": true,
+      "note": "['filed', 'received']"
+    },
+    {
+      "group": "Disputes",
+      "method": "GET",
+      "path": "/api/disputes/2",
+      "status": 200,
+      "ok": true,
+      "note": "['dispute']"
+    },
+    {
+      "group": "Disputes",
+      "method": "PATCH",
+      "path": "/api/disputes/2/status",
+      "status": 200,
+      "ok": true,
+      "note": "['dispute', 'message']"
+    },
+    {
+      "group": "Files",
+      "method": "POST",
+      "path": "/api/files",
+      "status": 201,
+      "ok": true,
+      "note": "['file', 'message']"
+    },
+    {
+      "group": "Files",
+      "method": "GET",
+      "path": "/api/files/3",
+      "status": 200,
+      "ok": true,
+      "note": "Teamify file upload test"
+    },
+    {
+      "group": "Cleanup",
+      "method": "DELETE",
+      "path": "/api/tasks/15",
+      "status": 200,
+      "ok": true,
+      "note": "['message']"
+    },
+    {
+      "group": "Cleanup",
+      "method": "DELETE",
+      "path": "/api/disputes/2",
+      "status": 405,
+      "ok": true,
+      "note": "['error']"
+    },
+    {
+      "group": "Cleanup",
+      "method": "DELETE",
+      "path": "/api/projects/16",
+      "status": 500,
+      "ok": false,
+      "note": "<!doctype html>\n<html lang=en>\n  <head>\n    <title>sqlalchem"
+    }
+  ]
+}

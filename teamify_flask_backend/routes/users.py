@@ -8,7 +8,7 @@ import re
 users_bp = Blueprint("users", __name__, url_prefix="/api/users")
 
 EMAIL_RE = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
-VALID_USER_TYPES = {"freelancer", "student", "employee", "business"}
+VALID_USER_TYPES = {"freelancer", "student", "admin"}
 
 
 @users_bp.route("/profile", methods=["GET"])

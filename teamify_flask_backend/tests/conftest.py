@@ -14,7 +14,7 @@ Usage:
 
 Convention:
     role  ∈ {admin, member, guest}   — dictates RBAC permissions
-    user_type ∈ {freelancer, student, guest, ...} — descriptive only, no impact on access
+    user_type ∈ {freelancer, student, admin} — descriptive only, no impact on access
 """
 
 from datetime import datetime, timezone, timedelta
@@ -378,7 +378,7 @@ def member_user():
 @pytest.fixture
 def guest_user():
     """Return a mock guest user."""
-    return _make_user(GUEST_USER_ID, role="guest", user_type="guest",
+    return _make_user(GUEST_USER_ID, role="guest", user_type="freelancer",
                       display_name="guest_user")
 
 

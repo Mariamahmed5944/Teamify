@@ -1,0 +1,782 @@
+import 'package:flutter/material.dart';
+import '../../core/theme.dart';
+import '../../core/routes.dart';
+import '../../data/dummy_data.dart';
+import '../../widgets/widgets.dart';
+
+// ── Admin Home ────────────────────────────────────────────────────────────────
+class AdminHomeScreen extends StatelessWidget {
+  const AdminHomeScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          children: [
+            // Header
+            const Text('Admin', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+            const Text('System overview and insights', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+            const SizedBox(height: 20),
+            // Big stat cards
+            _bigStat(context, Icons.people_outline, const Color(0xFFEEF2FF), '2,847', 'Active Users', '+12%', true),
+            const SizedBox(height: 12),
+            _bigStat(context, Icons.warning_amber_outlined, const Color(0xFFFFF8EE), '12', 'Active Alerts', '-8%', false, iconColor: AppColors.warning),
+            const SizedBox(height: 12),
+            _healthStat(),
+            const SizedBox(height: 24),
+            // AI Insights
+            const Text('AI Insights', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+            const SizedBox(height: 12),
+            GestureDetector(
+              onTap: () => Navigator.pushNamed(context, R.securityAlerts),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(color: const Color(0xFFEEF2FF), borderRadius: BorderRadius.circular(16)),
+                child: Row(children: [
+                  Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: AppColors.primaryDark, borderRadius: BorderRadius.circular(12)), child: const Icon(Icons.shield_outlined, color: Colors.white, size: 22)),
+                  const SizedBox(width: 12),
+                  const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('High Risk Detected', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 15)),
+                    Text('Project Alpha · 3 unusual access patterns', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                    SizedBox(height: 6),
+                    Text('Review now →', style: TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w600)),
+                  ])),
+                ]),
+              ),
+            ),
+            const SizedBox(height: 24),
+            // User Activity
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+              const Text('User Activity', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              GestureDetector(onTap: () => Navigator.pushNamed(context, R.analyst), child: const Text('View all', style: TextStyle(fontSize: 13, color: AppColors.primary))),
+            ]),
+            const SizedBox(height: 12),
+            TCard(
+              padding: const EdgeInsets.all(16),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('Last 7 days', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                const SizedBox(height: 60),
+                Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: ['M','T','W','T','F','S','S'].map((d) => Text(d, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary))).toList()),
+              ]),
+            ),
+            const SizedBox(height: 24),
+            // Quick Actions
+            const Text('Quick Actions', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+            const SizedBox(height: 12),
+            Row(children: [
+              Expanded(child: GestureDetector(
+                onTap: () => Navigator.pushNamed(context, R.adminUsers),
+                child: TCard(padding: const EdgeInsets.all(16), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Manage Users', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                  SizedBox(height: 4),
+                  Text('View all users', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                ])),
+              )),
+              const SizedBox(width: 12),
+              Expanded(child: GestureDetector(
+                onTap: () => Navigator.pushNamed(context, R.loginLogs),
+                child: TCard(padding: const EdgeInsets.all(16), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('View Logs', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                  SizedBox(height: 4),
+                  Text('System activity', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                ])),
+              )),
+            ]),
+            const SizedBox(height: 20),
+                _adminTile(context, Icons.folder_special_outlined, 'Secure Files', 'File management', R.securityFiles, AppColors.primary),
+              ],
+            ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 16, offset: const Offset(0, -4))]),
+        child: SafeArea(
+          child: SizedBox(
+            height: 60,
+            child: Row(
+              children: [
+                _navItem(context, Icons.dashboard_outlined, Icons.dashboard, 'Dashboard', true, () {}),
+                _navItem(context, Icons.people_outline, Icons.people, 'Users', false, () => Navigator.pushNamed(context, R.adminUsers)),
+                _navItem(context, Icons.security_outlined, Icons.security, 'Security', false, () => Navigator.pushNamed(context, R.securityAlerts)),
+                _navItem(context, Icons.settings_outlined, Icons.settings, 'Settings', false, () {}),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _adminTile(BuildContext ctx, IconData icon, String title, String sub, String route, Color color) {
+    return GestureDetector(
+      onTap: () => Navigator.pushNamed(ctx, route),
+      child: TCard(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                child: Icon(icon, color: color, size: 18)),
+            const SizedBox(height: 6),
+            Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 12)),
+            Text(sub, style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _navItem(BuildContext ctx, IconData icon, IconData active, String label, bool sel, VoidCallback onTap) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Icon(sel ? active : icon, color: sel ? AppColors.primary : AppColors.textSecondary, size: 24),
+          const SizedBox(height: 2),
+          Text(label, style: TextStyle(fontSize: 11, color: sel ? AppColors.primary : AppColors.textSecondary, fontWeight: sel ? FontWeight.w600 : FontWeight.normal)),
+        ]),
+      ),
+    );
+  }
+}
+
+// ── Admin Users ───────────────────────────────────────────────────────────────
+class AdminUsersScreen extends StatelessWidget {
+  const AdminUsersScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        leading: IconButton(icon: const Icon(Icons.arrow_back_ios, size: 18), onPressed: () => Navigator.pop(context)),
+        title: const Text('Users Management', style: TextStyle(fontWeight: FontWeight.bold)),
+        actions: [IconButton(icon: const Icon(Icons.person_add_outlined, color: AppColors.primary), onPressed: () {})],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.border)),
+            child: const TextField(decoration: InputDecoration(hintText: 'Search users...', border: InputBorder.none, prefixIcon: Icon(Icons.search, color: AppColors.textSecondary))),
+          ),
+          const SizedBox(height: 12),
+          ...DummyData.users.map((u) => TCard(
+                margin: const EdgeInsets.only(bottom: 10),
+                child: Row(children: [
+                  TAvatar(initials: u.initials, radius: 22),
+                  const SizedBox(width: 12),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(u.name, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                    Text(u.email, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                  ])),
+                  TChip(label: u.role,
+                      bg: u.role == 'Admin' ? AppColors.error.withOpacity(0.1) : u.role == 'Freelancer' ? AppColors.primary.withOpacity(0.1) : AppColors.success.withOpacity(0.1),
+                      textColor: u.role == 'Admin' ? AppColors.error : u.role == 'Freelancer' ? AppColors.primary : AppColors.success),
+                  const SizedBox(width: 8),
+                  PopupMenuButton(icon: const Icon(Icons.more_vert, size: 18, color: AppColors.textSecondary), itemBuilder: (_) => [
+                    const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                    const PopupMenuItem(value: 'disable', child: Text('Disable')),
+                    const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: Colors.red))),
+                  ]),
+                ]),
+              )),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Admin Roles ───────────────────────────────────────────────────────────────
+class AdminRolesScreen extends StatelessWidget {
+  const AdminRolesScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    final List<Map<String, dynamic>> roles = [
+      {'name': 'Admin', 'count': 1, 'perms': ['All Access', 'Manage Users', 'Security'], 'color': AppColors.error},
+      {'name': 'Freelancer', 'count': 2, 'perms': ['Projects', 'Tasks', 'Chat', 'AI Tools'], 'color': AppColors.primary},
+      {'name': 'Student', 'count': 2, 'perms': ['View Projects', 'Tasks', 'Chat'], 'color': AppColors.success},
+    ];
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(leading: IconButton(icon: const Icon(Icons.arrow_back_ios, size: 18), onPressed: () => Navigator.pop(context)), title: const Text('Role-Based Access', style: TextStyle(fontWeight: FontWeight.bold))),
+      body: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: roles.length,
+        itemBuilder: (_, i) {
+          final r = roles[i];
+          return TCard(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: (r['color'] as Color).withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+                    child: Icon(Icons.shield_outlined, color: r['color'] as Color, size: 22)),
+                const SizedBox(width: 12),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(r['name'] as String, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 16)),
+                  Text('${r['count']} members', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                ])),
+                IconButton(icon: const Icon(Icons.edit_outlined, size: 18, color: AppColors.primary), onPressed: () {}),
+              ]),
+              const SizedBox(height: 10),
+              const Text('Permissions:', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 6),
+              Wrap(spacing: 6, runSpacing: 6, children: (r['perms'] as List<String>).map((p) => TChip(label: p, bg: (r['color'] as Color).withOpacity(0.1), textColor: r['color'] as Color)).toList()),
+            ]),
+          );
+        },
+      ),
+    );
+  }
+}
+
+// ── Security Checklist ────────────────────────────────────────────────────────
+class SecurityChecklistScreen extends StatefulWidget {
+  const SecurityChecklistScreen({super.key});
+  @override
+  State<SecurityChecklistScreen> createState() => _SecurityChecklistScreenState();
+}
+
+class _SecurityChecklistScreenState extends State<SecurityChecklistScreen> {
+  final List<Map<String, dynamic>> _items = [
+    {'label': 'Enable Two-Factor Authentication', 'done': true, 'priority': 'High'},
+    {'label': 'Review Security Alerts', 'done': false, 'priority': 'High'},
+    {'label': 'Update Password Policy', 'done': true, 'priority': 'Medium'},
+    {'label': 'Audit User Permissions', 'done': false, 'priority': 'Medium'},
+    {'label': 'Enable Login Monitoring', 'done': true, 'priority': 'High'},
+    {'label': 'Configure Rate Limiting', 'done': false, 'priority': 'Low'},
+    {'label': 'Backup Encryption Keys', 'done': true, 'priority': 'High'},
+  ];
+  @override
+  Widget build(BuildContext context) {
+    final done = _items.where((i) => i['done'] == true).length;
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(leading: IconButton(icon: const Icon(Icons.arrow_back_ios, size: 18), onPressed: () => Navigator.pop(context)), title: const Text('Security Checklist', style: TextStyle(fontWeight: FontWeight.bold))),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          TCard(child: Column(children: [
+            TBar(value: done / _items.length, color: AppColors.success, height: 10),
+            const SizedBox(height: 8),
+            Text('$done / ${_items.length} completed', style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+          ])),
+          const SizedBox(height: 12),
+          ..._items.asMap().entries.map((e) {
+            final i = e.value;
+            final isDone = i['done'] as bool;
+            final pri = i['priority'] as String;
+            return TCard(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: Row(children: [
+                GestureDetector(
+                  onTap: () => setState(() => _items[e.key]['done'] = !isDone),
+                  child: Icon(isDone ? Icons.check_circle : Icons.radio_button_unchecked,
+                      color: isDone ? AppColors.success : AppColors.border, size: 24),
+                ),
+                const SizedBox(width: 12),
+                Expanded(child: Text(i['label'] as String, style: TextStyle(color: isDone ? AppColors.textSecondary : AppColors.textPrimary, fontWeight: FontWeight.w600, decoration: isDone ? TextDecoration.lineThrough : null))),
+                TChip(label: pri,
+                    bg: pri == 'High' ? AppColors.error.withOpacity(0.1) : pri == 'Medium' ? AppColors.warning.withOpacity(0.1) : AppColors.border,
+                    textColor: pri == 'High' ? AppColors.error : pri == 'Medium' ? AppColors.warning : AppColors.textSecondary),
+              ]),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Login Logs ────────────────────────────────────────────────────────────────
+class LoginLogsScreen extends StatelessWidget {
+  const LoginLogsScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(leading: IconButton(icon: const Icon(Icons.arrow_back_ios, size: 18), onPressed: () => Navigator.pop(context)), title: const Text('Login Logs', style: TextStyle(fontWeight: FontWeight.bold)),
+          actions: [IconButton(icon: const Icon(Icons.filter_list), onPressed: () {})]),
+      body: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: DummyData.loginLogs.length,
+        itemBuilder: (_, i) {
+          final l = DummyData.loginLogs[i];
+          return TCard(
+            margin: const EdgeInsets.only(bottom: 10),
+            child: Row(children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: l.isSuccess ? AppColors.success.withOpacity(0.1) : AppColors.error.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(l.isSuccess ? Icons.check_circle_outline : Icons.cancel_outlined, color: l.isSuccess ? AppColors.success : AppColors.error, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(l.userName, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                Text('${l.device} • ${l.ip}', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                Text(l.date, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+              ])),
+              Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                TChip(label: l.status, bg: l.isSuccess ? AppColors.success.withOpacity(0.1) : AppColors.error.withOpacity(0.1), textColor: l.isSuccess ? AppColors.success : AppColors.error),
+                const SizedBox(height: 4),
+                Text(l.time, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+              ]),
+            ]),
+          );
+        },
+      ),
+    );
+  }
+}
+
+// ── Security Alerts ───────────────────────────────────────────────────────────
+class SecurityAlertsScreen extends StatelessWidget {
+  const SecurityAlertsScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        leading: IconButton(icon: const Icon(Icons.arrow_back_ios, size: 18), onPressed: () => Navigator.pop(context)),
+        title: const Text('Security Alerts', style: TextStyle(fontWeight: FontWeight.bold)),
+        actions: [
+          Stack(children: [
+            IconButton(icon: const Icon(Icons.notifications_outlined), onPressed: () {}),
+            Positioned(top: 8, right: 8, child: Container(width: 16, height: 16, decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle), child: const Center(child: Text('2', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold))))),
+          ]),
+        ],
+      ),
+      body: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: DummyData.securityAlerts.length,
+        itemBuilder: (_, i) {
+          final a = DummyData.securityAlerts[i];
+          Color riskColor = a.risk.contains('HIGH') ? AppColors.error : a.risk.contains('MEDIUM') ? AppColors.warning : AppColors.success;
+          IconData alertIcon = a.risk.contains('HIGH') ? Icons.warning_amber_outlined : Icons.shield_outlined;
+          return GestureDetector(
+            onTap: () => Navigator.pushNamed(context, R.alertDetails, arguments: a),
+            child: TCard(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: riskColor.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+                    child: Icon(alertIcon, color: riskColor, size: 22)),
+                const SizedBox(width: 12),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    Expanded(child: Text(a.title, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary))),
+                    const Icon(Icons.arrow_forward_ios, size: 12, color: AppColors.textSecondary),
+                  ]),
+                  Row(children: [const Icon(Icons.person_outline, size: 12, color: AppColors.textSecondary), const SizedBox(width: 4), Text(a.user, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary))]),
+                  const SizedBox(height: 4),
+                  Text(a.description, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                  const SizedBox(height: 8),
+                  Row(children: [
+                    TChip(label: a.risk, bg: riskColor.withOpacity(0.1), textColor: riskColor),
+                    const SizedBox(width: 8),
+                    TChip(label: a.status, bg: a.isResolved ? AppColors.border : AppColors.accent.withOpacity(0.1), textColor: a.isResolved ? AppColors.textSecondary : AppColors.accent),
+                    const SizedBox(width: 8),
+                    Row(children: [const Icon(Icons.access_time, size: 12, color: AppColors.textSecondary), const SizedBox(width: 2), Text(a.time, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary))]),
+                  ]),
+                ])),
+              ]),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+// ── Alert Details ─────────────────────────────────────────────────────────────
+class AlertDetailsScreen extends StatelessWidget {
+  const AlertDetailsScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    final a = ModalRoute.of(context)?.settings.arguments as dynamic ?? DummyData.securityAlerts.first;
+    final String risk = a.risk as String;
+    Color riskColor = risk.contains('HIGH') ? AppColors.error : risk.contains('MEDIUM') ? AppColors.warning : AppColors.success;
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(leading: IconButton(icon: const Icon(Icons.arrow_back_ios, size: 18), onPressed: () => Navigator.pop(context)), title: const Text('Alert Details', style: TextStyle(fontWeight: FontWeight.bold))),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          TCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: riskColor.withOpacity(0.1), borderRadius: BorderRadius.circular(10)), child: Icon(Icons.warning_amber_outlined, color: riskColor, size: 22)),
+              const SizedBox(width: 12),
+              Expanded(child: Text(a.title as String, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 18))),
+            ]),
+            const SizedBox(height: 16),
+            _row('User', a.user as String),
+            _row('Risk Level', risk, color: riskColor),
+            _row('Status', a.status as String),
+            _row('Time', a.time as String),
+            const SizedBox(height: 10),
+            const Text('Description', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textSecondary, fontSize: 12)),
+            const SizedBox(height: 4),
+            Text(a.description as String, style: const TextStyle(color: AppColors.textPrimary, fontSize: 13)),
+          ])),
+          const SizedBox(height: 12),
+          TCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('Recommended Actions', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 15)),
+            const SizedBox(height: 10),
+            ...[
+              'Block the IP address immediately',
+              'Notify the user via email',
+              'Reset user session tokens',
+              'Review recent account activity',
+            ].map((action) => Padding(padding: const EdgeInsets.only(bottom: 8), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Icon(Icons.arrow_right, color: AppColors.primary, size: 20),
+              const SizedBox(width: 6),
+              Expanded(child: Text(action, style: const TextStyle(fontSize: 13, color: AppColors.textPrimary))),
+            ]))),
+          ])),
+          const SizedBox(height: 16),
+          TButton(label: 'Resolve Alert', onTap: () => Navigator.pop(context)),
+          const SizedBox(height: 8),
+          TButton(label: 'Dismiss', outline: true, onTap: () => Navigator.pop(context)),
+        ],
+      ),
+    );
+  }
+
+  Widget _row(String k, String v, {Color? color}) => Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: Row(children: [
+          SizedBox(width: 100, child: Text(k, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary))),
+          Text(v, style: TextStyle(fontWeight: FontWeight.w600, color: color ?? AppColors.textPrimary)),
+        ]),
+      );
+}
+
+// ── Security Monitor ──────────────────────────────────────────────────────────
+class SecurityMonitorScreen extends StatelessWidget {
+  const SecurityMonitorScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(leading: IconButton(icon: const Icon(Icons.arrow_back_ios, size: 18), onPressed: () => Navigator.pop(context)), title: const Text('Security Monitor', style: TextStyle(fontWeight: FontWeight.bold))),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          TCard(
+            color: AppColors.success.withOpacity(0.05),
+            child: Row(children: [
+              Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: AppColors.success.withOpacity(0.1), borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.verified_user, color: AppColors.success, size: 24)),
+              const SizedBox(width: 14),
+              const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('System Status: Secure', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 16)),
+                Text('Last scan: 2 minutes ago', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+              ])),
+            ]),
+          ),
+          const SizedBox(height: 16),
+          ...<Map<String, dynamic>>[
+            {'label': 'Failed Login Attempts (24h)', 'value': '3', 'color': AppColors.error},
+            {'label': 'Suspicious IPs Blocked', 'value': '7', 'color': AppColors.warning},
+            {'label': 'Active Sessions', 'value': '12', 'color': AppColors.primary},
+            {'label': 'Encrypted Files', 'value': '156', 'color': AppColors.success},
+          ].map((m) => TCard(
+                margin: const EdgeInsets.only(bottom: 10),
+                child: Row(children: [
+                  Expanded(child: Text(m['label'] as String, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600))),
+                  Text(m['value'] as String, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: m['color'] as Color)),
+                ]),
+              )),
+          const SizedBox(height: 8),
+          TButton(label: 'Run Full Security Scan', onTap: () {}),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Rate Limiting ─────────────────────────────────────────────────────────────
+class RateLimitingScreen extends StatefulWidget {
+  const RateLimitingScreen({super.key});
+  @override
+  State<RateLimitingScreen> createState() => _RateLimitingScreenState();
+}
+
+class _RateLimitingScreenState extends State<RateLimitingScreen> {
+  double _loginLimit = 5;
+  double _apiLimit = 100;
+  bool _enabled = true;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(leading: IconButton(icon: const Icon(Icons.arrow_back_ios, size: 18), onPressed: () => Navigator.pop(context)), title: const Text('Rate Limiting', style: TextStyle(fontWeight: FontWeight.bold))),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          TCard(child: Row(children: [
+            const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Rate Limiting', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              Text('Protect against brute-force attacks', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+            ])),
+            Switch(value: _enabled, onChanged: (v) => setState(() => _enabled = v), activeColor: AppColors.primary),
+          ])),
+          const SizedBox(height: 12),
+          TCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Max login attempts: ${_loginLimit.toInt()}', style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+            Slider(value: _loginLimit, min: 1, max: 20, divisions: 19, activeColor: AppColors.primary, onChanged: (v) => setState(() => _loginLimit = v)),
+          ])),
+          const SizedBox(height: 10),
+          TCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('API rate limit: ${_apiLimit.toInt()} req/min', style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+            Slider(value: _apiLimit, min: 10, max: 1000, divisions: 99, activeColor: AppColors.primary, onChanged: (v) => setState(() => _apiLimit = v)),
+          ])),
+          const SizedBox(height: 16),
+          TButton(label: 'Save Settings', onTap: () { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Rate limiting settings saved!'))); Navigator.pop(context); }),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Encryption Status ─────────────────────────────────────────────────────────
+class EncryptionStatusScreen extends StatelessWidget {
+  const EncryptionStatusScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(leading: IconButton(icon: const Icon(Icons.arrow_back_ios, size: 18), onPressed: () => Navigator.pop(context)), title: const Text('Encryption Status', style: TextStyle(fontWeight: FontWeight.bold))),
+      body: ListView(padding: const EdgeInsets.all(16), children: [
+        TCard(color: AppColors.success.withOpacity(0.05), child: Row(children: [
+          Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: AppColors.success.withOpacity(0.1), borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.lock, color: AppColors.success, size: 24)),
+          const SizedBox(width: 14),
+          const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('All Data Encrypted', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 16)),
+            Text('AES-256 encryption active', style: TextStyle(fontSize: 12, color: AppColors.success)),
+          ])),
+        ])),
+        const SizedBox(height: 16),
+        ...<Map<String, String>>[
+          {'label': 'Database Encryption', 'alg': 'AES-256', 'status': 'Active'},
+          {'label': 'File Storage Encryption', 'alg': 'RSA-2048', 'status': 'Active'},
+          {'label': 'API Communication', 'alg': 'TLS 1.3', 'status': 'Active'},
+          {'label': 'Backup Encryption', 'alg': 'AES-256', 'status': 'Active'},
+        ].map((e) => TCard(
+              margin: const EdgeInsets.only(bottom: 10),
+              child: Row(children: [
+                const Icon(Icons.lock_outline, color: AppColors.success, size: 20),
+                const SizedBox(width: 12),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(e['label']!, style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                  Text(e['alg']!, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                ])),
+                TChip(label: e['status']!, bg: AppColors.success.withOpacity(0.1), textColor: AppColors.success),
+              ]),
+            )),
+      ]),
+    );
+  }
+}
+
+// ── 2FA Status ────────────────────────────────────────────────────────────────
+class TwoFAStatusScreen extends StatefulWidget {
+  const TwoFAStatusScreen({super.key});
+  @override
+  State<TwoFAStatusScreen> createState() => _TwoFAStatusScreenState();
+}
+
+class _TwoFAStatusScreenState extends State<TwoFAStatusScreen> {
+  bool _required = true;
+  bool _sms = true;
+  bool _app = true;
+  bool _email = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(leading: IconButton(icon: const Icon(Icons.arrow_back_ios, size: 18), onPressed: () => Navigator.pop(context)), title: const Text('2FA Settings', style: TextStyle(fontWeight: FontWeight.bold))),
+      body: ListView(padding: const EdgeInsets.all(16), children: [
+        TCard(child: Row(children: [
+          const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Require 2FA', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+            Text('Force all users to enable 2FA', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          ])),
+          Switch(value: _required, onChanged: (v) => setState(() => _required = v), activeColor: AppColors.primary),
+        ])),
+        const SizedBox(height: 12),
+        TCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('2FA Methods', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 15)),
+          const SizedBox(height: 8),
+          _toggle('SMS Authentication', _sms, (v) => setState(() => _sms = v)),
+          _toggle('Authenticator App (TOTP)', _app, (v) => setState(() => _app = v)),
+          _toggle('Email OTP', _email, (v) => setState(() => _email = v)),
+        ])),
+        const SizedBox(height: 12),
+        TCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('Adoption Stats', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 15)),
+          const SizedBox(height: 12),
+          Row(children: [
+            const Text('Users with 2FA enabled', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+            const Spacer(),
+            const Text('18/24', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
+          ]),
+          const SizedBox(height: 6),
+          TBar(value: 18 / 24, color: AppColors.success),
+          const SizedBox(height: 4),
+          const Text('75% adoption rate', style: TextStyle(fontSize: 12, color: AppColors.success, fontWeight: FontWeight.w600)),
+        ])),
+        const SizedBox(height: 16),
+        TButton(label: 'Save Settings', onTap: () => Navigator.pop(context)),
+      ]),
+    );
+  }
+
+  Widget _toggle(String label, bool val, ValueChanged<bool> onChange) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(children: [
+          Expanded(child: Text(label, style: const TextStyle(color: AppColors.textPrimary))),
+          Switch(value: val, onChanged: onChange, activeColor: AppColors.primary),
+        ]),
+      );
+}
+
+// ── Analyst / Analytics ───────────────────────────────────────────────────────
+class AnalystScreen extends StatelessWidget {
+  const AnalystScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(leading: IconButton(icon: const Icon(Icons.arrow_back_ios, size: 18), onPressed: () => Navigator.pop(context)), title: const Text('Analytics', style: TextStyle(fontWeight: FontWeight.bold))),
+      body: ListView(padding: const EdgeInsets.all(16), children: [
+        Row(children: [
+          StatBox(value: '24', label: 'Total Users', icon: Icons.people_outline, iconBg: AppColors.primary),
+          const SizedBox(width: 12),
+          StatBox(value: '3', label: 'Projects', icon: Icons.folder_outlined, iconBg: AppColors.accent),
+        ]),
+        const SizedBox(height: 12),
+        Row(children: [
+          StatBox(value: '98%', label: 'Uptime', icon: Icons.health_and_safety_outlined, iconBg: AppColors.success),
+          const SizedBox(width: 12),
+          StatBox(value: '2', label: 'Alerts', icon: Icons.warning_amber_outlined, iconBg: AppColors.error),
+        ]),
+        const SizedBox(height: 16),
+        TCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('User Growth', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 15)),
+          const SizedBox(height: 16),
+          SizedBox(height: 100, child: CustomPaint(painter: _GrowthPainter(), child: const SizedBox.expand())),
+        ])),
+        const SizedBox(height: 12),
+        TCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('Activity by Role', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 15)),
+          const SizedBox(height: 12),
+          ...[('Admin', 1, 0.04), ('Freelancers', 2, 0.08), ('Students', 2, 0.08)].map((r) => Padding(padding: const EdgeInsets.only(bottom: 10), child: Row(children: [
+            SizedBox(width: 90, child: Text(r.$1, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary))),
+            Expanded(child: TBar(value: r.$3 * 12)),
+            const SizedBox(width: 8),
+            Text('${r.$2}', style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+          ]))),
+        ])),
+      ]),
+    );
+  }
+}
+
+class _GrowthPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+    final vals = [10.0, 14.0, 16.0, 18.0, 22.0, 24.0];
+    final pts = List.generate(vals.length, (i) => Offset(i * size.width / (vals.length - 1), size.height * 0.85 - (vals[i] / 24) * size.height * 0.75));
+    final paint = Paint()..color = AppColors.primary..strokeWidth = 2.5..style = PaintingStyle.stroke;
+    final path = Path()..moveTo(pts[0].dx, pts[0].dy);
+    for (final p in pts.skip(1)) path.lineTo(p.dx, p.dy);
+    canvas.drawPath(path, paint);
+    for (final p in pts) canvas.drawCircle(p, 4, Paint()..color = AppColors.primary);
+    final tp = TextPainter(textDirection: TextDirection.ltr);
+    for (int i = 0; i < months.length; i++) {
+      tp.text = TextSpan(text: months[i], style: const TextStyle(fontSize: 10, color: AppColors.textSecondary));
+      tp.layout();
+      tp.paint(canvas, Offset(pts[i].dx - tp.width / 2, size.height - 14));
+    }
+  }
+  @override
+  bool shouldRepaint(covariant CustomPainter o) => false;
+}
+
+// ── Security Files ────────────────────────────────────────────────────────────
+class SecurityFilesScreen extends StatelessWidget {
+  const SecurityFilesScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        leading: IconButton(icon: const Icon(Icons.arrow_back_ios, size: 18), onPressed: () => Navigator.pop(context)),
+        title: const Text('Secure Files', style: TextStyle(fontWeight: FontWeight.bold)),
+        actions: [
+          Stack(children: [
+            IconButton(icon: const Icon(Icons.notifications_outlined), onPressed: () {}),
+            Positioned(top: 8, right: 8, child: Container(width: 16, height: 16, decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle), child: const Center(child: Text('2', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold))))),
+          ]),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          TCard(
+            child: Column(children: [
+              Container(width: 56, height: 56, decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.upload_outlined, color: AppColors.primary, size: 28)),
+              const SizedBox(height: 8),
+              const Text('Upload Files', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              const Text('Drag and drop or click to browse', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: () {},
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24))),
+                child: const Text('Select Files', style: TextStyle(color: Colors.white)),
+              ),
+            ]),
+          ),
+          const SizedBox(height: 16),
+          const TSectionHeader(title: 'Uploaded Files'),
+          const SizedBox(height: 12),
+          ...DummyData.secureFiles.map((f) => TCard(
+                margin: const EdgeInsets.only(bottom: 10),
+                child: Column(children: [
+                  Row(children: [
+                    Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.insert_drive_file_outlined, color: AppColors.primary, size: 22)),
+                    const SizedBox(width: 12),
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(f.name, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                      Text(f.size, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                    ])),
+                    IconButton(icon: const Icon(Icons.close, size: 16, color: AppColors.textSecondary), onPressed: () {}),
+                  ]),
+                  const SizedBox(height: 6),
+                  Row(children: [
+                    TChip(label: '🔒 Encrypted', bg: AppColors.success.withOpacity(0.1), textColor: AppColors.success),
+                    const SizedBox(width: 8),
+                    TChip(label: '✓ Verified', bg: AppColors.success.withOpacity(0.1), textColor: AppColors.success),
+                    const Spacer(),
+                    Text(f.date, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                    const SizedBox(width: 8),
+                    GestureDetector(onTap: () {}, child: Row(children: [const Icon(Icons.download_outlined, color: AppColors.primary, size: 16), const SizedBox(width: 4), const Text('Download', style: TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.w600))])),
+                  ]),
+                ]),
+              )),
+        ],
+      ),
+    );
+  }
+}

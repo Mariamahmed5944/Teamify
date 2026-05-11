@@ -68,3 +68,21 @@ class Config:
     # GitHub OAuth
     GITHUB_CLIENT_ID     = os.getenv('GITHUB_CLIENT_ID', '')
     GITHUB_CLIENT_SECRET = os.getenv('GITHUB_CLIENT_SECRET', '')
+
+    # ── AI / ML Model Settings ────────────────────────────────────────────────
+    # Base directory where all .pkl model artifacts live.
+    # Defaults to the ml_models/ sub-folder inside the backend package.
+    AI_MODELS_DIR = os.getenv(
+        "AI_MODELS_DIR",
+        os.path.join(os.path.dirname(__file__), "ml_models"),
+    )
+
+    # Set to "false" / "0" / "no" to bypass all .pkl inference and use only
+    # heuristic fallbacks. Useful for lightweight test environments.
+    AI_ENABLE_LOCAL_MODELS = os.getenv("AI_ENABLE_LOCAL_MODELS", "true")
+
+    # Optional: Speech-to-Text microservice URL (FastAPI / Whisper)
+    STT_SERVICE_URL = os.getenv("STT_SERVICE_URL", "http://localhost:8000")
+
+    # Optional: Anthropic Claude API key for mentor report generation
+    ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")

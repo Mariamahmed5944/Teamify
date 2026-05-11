@@ -15,7 +15,7 @@ class User(db.Model):
     password = db.Column(db.String(255), nullable=False)
     # role: system permission level — member | admin | guest
     role = db.Column(db.String(20), nullable=False, default="member")
-    # user_type: how the user describes themselves — freelancer | student | employee | business
+    # user_type: how the user describes themselves — freelancer | student | admin
     user_type = db.Column(db.String(30), nullable=True)
     # account_status: approval gate — pending | approved | rejected
     # Freelancers and students start as 'pending' until an admin approves them.

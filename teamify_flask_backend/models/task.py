@@ -33,6 +33,10 @@ class Task(db.Model):
     completed_date = db.Column(db.DateTime, nullable=True)
     review_score = db.Column(db.Float, nullable=True)
     deadline_days = db.Column(db.Integer, nullable=True)                    # user-specified days until deadline
+    ai_category   = db.Column(db.String(50), nullable=True)
+    ai_difficulty = db.Column(db.String(20), nullable=True)
+    ai_delay_risk = db.Column(db.String(20), nullable=True)
+    ai_skills     = db.Column(db.JSON, nullable=True)
 
     __table_args__ = (
         # Fast lookups by project (most common query pattern)
@@ -98,6 +102,10 @@ class Task(db.Model):
             "days_remaining": self.days_remaining,
             "expected_progress_percent": self.expected_progress_percent,
             "progress_gap": self.progress_gap,
+            "ai_category": self.ai_category,
+            "ai_difficulty": self.ai_difficulty,
+            "ai_delay_risk": self.ai_delay_risk,
+            "ai_skills": self.ai_skills,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
