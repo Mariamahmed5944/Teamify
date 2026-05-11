@@ -63,6 +63,21 @@ def _can_read_cv(caller_id: int, caller_role: str, cv: CV) -> bool:
     return False
 
 
+# ─── GET /api/cv  — List caller's own CV(s) ───────────────────────────────────
+
+@cv_bp.route("", methods=["GET"])
+@jwt_required()
+def list_my_cvs():
+    """Return the authenticated member's CV rows (0 or 1 in normal use)."""
+    try:
+        caller_id, _caller_role = _resolve_caller()
+    except ValueError as exc:
+        return jsonify({"error": "Unauthorized", "message": str(exc)}), 401
+
+    rows = CV.query.filter_by(user_id=caller_id).order_by(CV.id.desc()).all()
+    return jsonify({"cvs": [c.to_dict(public_only=False) for c in rows]}), 200
+
+
 # ─── POST /api/cv  — Create or replace own CV ─────────────────────────────────
 
 @cv_bp.route("", methods=["POST"])

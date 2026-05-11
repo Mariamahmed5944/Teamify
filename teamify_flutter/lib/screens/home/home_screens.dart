@@ -3,9 +3,41 @@ import 'package:provider/provider.dart';
 import '../../core/theme.dart';
 import '../../core/routes.dart';
 import '../../data/repositories/app_repositories.dart';
-import '../../data/dummy_data.dart';
 import '../../data/models/models.dart' as api;
+import '../../models/models.dart';
 import '../../widgets/widgets.dart';
+
+class _FreelancerHomeData {
+  final List<api.ApiProject> projects;
+  final List<api.ApiNotification> notifications;
+  final List<api.ApiTask> tasks;
+  const _FreelancerHomeData({
+    required this.projects,
+    required this.notifications,
+    required this.tasks,
+  });
+}
+
+Future<_FreelancerHomeData> _loadFreelancerHome(AppRepositories r) async {
+  final projects = await r.projects.listProjects();
+  final notifications = await r.notifications.listNotifications();
+  final tasks = <api.ApiTask>[];
+  for (final p in projects.take(15)) {
+    try {
+      tasks.addAll(await r.tasks.listTasks(projectId: p.id));
+    } catch (_) {}
+  }
+  return _FreelancerHomeData(
+    projects: projects,
+    notifications: notifications,
+    tasks: tasks,
+  );
+}
+
+bool _isTaskDone(api.ApiTask t) {
+  final s = t.status.toLowerCase();
+  return s == 'done' || s == 'complete' || s == 'completed';
+}
 
 class FreelancerHomeScreen extends StatelessWidget {
   const FreelancerHomeScreen({super.key});
@@ -15,130 +47,170 @@ class FreelancerHomeScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(10),
-          children: [
-            // Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Welcome Back',
-                        style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textPrimary)),
-                    SizedBox(height: 2),
-                    Text("Here's your overview for today",
-                        style: TextStyle(
-                            color: AppColors.textSecondary, fontSize: 13)),
-                  ],
+        child: RepositoryLoader<_FreelancerHomeData>(
+          load: () => _loadFreelancerHome(context.read<AppRepositories>()),
+          builder: (context, d) {
+            final activeProjects = d.projects
+                .where(
+                    (p) => p.status.toLowerCase() != 'completed')
+                .length;
+            final doneTasks = d.tasks.where(_isTaskDone).length;
+            final pending = d.tasks.length - doneTasks;
+
+            Widget recentSection;
+            if (d.notifications.isEmpty) {
+              recentSection = Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: Center(
+                  child: Text(
+                    'No recent activity yet',
+                    style: TextStyle(
+                        color: AppColors.textSecondary.withOpacity(0.9),
+                        fontSize: 13),
+                  ),
                 ),
-                Stack(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.notifications_outlined,
-                          color: AppColors.textPrimary, size: 26),
-                      onPressed: () =>
-                          Navigator.pushNamed(context, R.notifications),
-                    ),
-                    Positioned(
-                        top: 8,
-                        right: 8,
-                        child: Container(
-                            width: 8,
-                            height: 8,
-                            decoration: const BoxDecoration(
-                                color: Colors.red, shape: BoxShape.circle))),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            // Stats Row
-            Row(
-              children: [
-                _miniStat(Icons.access_time_outlined, '3', 'Active Projects',
-                    AppColors.primary),
-                const SizedBox(width: 12),
-                _miniStat(Icons.check_circle_outline, '24', 'Tasks Done',
-                    AppColors.success),
-                const SizedBox(width: 12),
-                _miniStat(Icons.warning_amber_outlined, '8', 'Pending',
-                    AppColors.warning),
-              ],
-            ),
-            const SizedBox(height: 6),
-            // AI Insight
-            AIBanner(
-              title: 'Daily AI Insight',
-              subtitle:
-                  "You're performing 15% better this week. Keep up the great work on Project Alpha!",
-              badge: '↗ +15% improvement',
-              onTap: () => Navigator.pushNamed(context, R.aiInsights),
-            ),
-            const SizedBox(height: 10),
-            const TSectionHeader(title: 'Quick Actions'),
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 100,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  _quickAction(context, 'New Task', 'Create quickly',
-                      Icons.add_task, AppColors.primary, R.addTask,
-                      isDark: true),
-                  const SizedBox(width: 12),
-                  _quickAction(context, 'Teams', 'Manage groups',
-                      Icons.groups_outlined, Colors.white, R.teamsList),
-                  const SizedBox(width: 12),
-                  _quickAction(
-                      context,
-                      'Members',
-                      'Find experts',
-                      Icons.person_search_outlined,
-                      Colors.white,
-                      R.membersList),
-                  const SizedBox(width: 12),
-                  _quickAction(context, 'Meetings', 'AI Smart Sync',
-                      Icons.videocam_outlined, Colors.white, R.meeting),
-                ],
-              ),
-            ),
-            const SizedBox(height: 10),
-            // Recent Activity
-            const TSectionHeader(title: 'Recent Activity'),
-            const SizedBox(height: 12),
-            ...DummyData.recentActivity.map((a) => TCard(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(a['title']!,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.textPrimary,
-                                    fontSize: 13)),
-                            const SizedBox(height: 2),
-                            Text(a['project']!,
+              );
+            } else {
+              recentSection = Column(
+                children: d.notifications.take(12).map((n) {
+                  return TCard(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(n.title,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.textPrimary,
+                                      fontSize: 13)),
+                              const SizedBox(height: 2),
+                              Text(
+                                n.body.isNotEmpty
+                                    ? n.body
+                                    : 'Notification',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
                                     fontSize: 12,
-                                    color: AppColors.textSecondary)),
-                          ],
+                                    color: AppColors.textSecondary),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      Text(a['time']!,
+                        Text(
+                          n.createdAt.isNotEmpty ? n.createdAt : ' ',
                           style: const TextStyle(
-                              fontSize: 11, color: AppColors.textSecondary)),
+                              fontSize: 11,
+                              color: AppColors.textSecondary),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              );
+            }
+
+            return ListView(
+              padding: const EdgeInsets.all(10),
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Welcome Back',
+                            style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textPrimary)),
+                        SizedBox(height: 2),
+                        Text("Here's your overview for today",
+                            style: TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 13)),
+                      ],
+                    ),
+                    Stack(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.notifications_outlined,
+                              color: AppColors.textPrimary, size: 26),
+                          onPressed: () =>
+                              Navigator.pushNamed(context, R.notifications),
+                        ),
+                        Positioned(
+                            top: 8,
+                            right: 8,
+                            child: Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle))),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    _miniStat(Icons.access_time_outlined,
+                        '$activeProjects', 'Active Projects', AppColors.primary),
+                    const SizedBox(width: 12),
+                    _miniStat(Icons.check_circle_outline, '$doneTasks',
+                        'Tasks Done', AppColors.success),
+                    const SizedBox(width: 12),
+                    _miniStat(Icons.warning_amber_outlined, '$pending',
+                        'Pending', AppColors.warning),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                AIBanner(
+                  title: 'Daily AI Insight',
+                  subtitle:
+                      "You're performing 15% better this week. Keep up the great work on Project Alpha!",
+                  badge: '↗ +15% improvement',
+                  onTap: () => Navigator.pushNamed(context, R.aiInsights),
+                ),
+                const SizedBox(height: 10),
+                const TSectionHeader(title: 'Quick Actions'),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 100,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    children: [
+                      _quickAction(context, 'New Task', 'Create quickly',
+                          Icons.add_task, AppColors.primary, R.addTask,
+                          isDark: true),
+                      const SizedBox(width: 12),
+                      _quickAction(context, 'Teams', 'Manage groups',
+                          Icons.groups_outlined, Colors.white, R.teamsList),
+                      const SizedBox(width: 12),
+                      _quickAction(
+                          context,
+                          'Members',
+                          'Find experts',
+                          Icons.person_search_outlined,
+                          Colors.white,
+                          R.membersList),
+                      const SizedBox(width: 12),
+                      _quickAction(context, 'Meetings', 'AI Smart Sync',
+                          Icons.videocam_outlined, Colors.white, R.meeting),
                     ],
                   ),
-                )),
-          ],
+                ),
+                const SizedBox(height: 10),
+                const TSectionHeader(title: 'Recent Activity'),
+                const SizedBox(height: 12),
+                recentSection,
+              ],
+            );
+          },
         ),
       ),
       bottomNavigationBar:
@@ -217,6 +289,34 @@ class FreelancerHomeScreen extends StatelessWidget {
 }
 
 // ── Search Screen ─────────────────────────────────────────────────────────────
+
+class _SearchIndex {
+  final List<api.ApiProject> projects;
+  final List<api.ApiUser> users;
+  final List<(String, String)> tasks;
+
+  const _SearchIndex({
+    required this.projects,
+    required this.users,
+    required this.tasks,
+  });
+}
+
+Future<_SearchIndex> _fetchSearchIndex(AppRepositories r) async {
+  final projects = await r.projects.listProjects();
+  final users = await r.search.users('');
+  final taskRows = <(String, String)>[];
+  for (final p in projects.take(24)) {
+    try {
+      final tl = await r.tasks.listTasks(projectId: p.id);
+      for (final t in tl) {
+        taskRows.add((t.title, p.name));
+      }
+    } catch (_) {}
+  }
+  return _SearchIndex(projects: projects, users: users, tasks: taskRows);
+}
+
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
   @override
@@ -226,47 +326,33 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   final _ctrl = TextEditingController();
   String _query = '', _tab = 'All';
-  List<api.ApiProject> _remoteProjects = const [];
-  List<api.ApiUser> _remoteUsers = const [];
+
+  Future<_SearchIndex>? _indexFuture;
 
   @override
-  void initState() {
-    super.initState();
-    _loadSuggestions();
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
   }
 
-  Future<void> _loadSuggestions() async {
-    try {
-      final repos = context.read<AppRepositories>();
-      final results = await Future.wait([
-        repos.search.projects(''),
-        repos.search.users(''),
-      ]);
-      if (!mounted) return;
-      setState(() {
-        _remoteProjects = results[0] as List<api.ApiProject>;
-        _remoteUsers = results[1] as List<api.ApiUser>;
-      });
-    } catch (_) {
-      // Keep local dummy suggestions when the backend is unavailable.
-    }
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _indexFuture ??= _fetchSearchIndex(context.read<AppRepositories>());
   }
 
-  List<Map<String, dynamic>> get _results {
+  void _retryIndex() {
+    setState(() {
+      _indexFuture = _fetchSearchIndex(context.read<AppRepositories>());
+    });
+  }
+
+  List<Map<String, dynamic>> _resultsFor(_SearchIndex idx) {
     if (_query.isEmpty) return [];
     final q = _query.toLowerCase();
     final r = <Map<String, dynamic>>[];
     if (_tab == 'All' || _tab == 'Projects') {
-      final projects = _remoteProjects.isNotEmpty
-          ? _remoteProjects
-          : DummyData.projects.map((p) => api.ApiProject(
-                id: p.id,
-                name: p.name,
-                description: p.description,
-                category: p.company,
-                progress: p.progress,
-              ));
-      for (final p in projects) {
+      for (final p in idx.projects) {
         if (p.name.toLowerCase().contains(q)) {
           r.add({
             'type': 'Project',
@@ -278,19 +364,7 @@ class _SearchScreenState extends State<SearchScreen> {
       }
     }
     if (_tab == 'All' || _tab == 'Teammates') {
-      final users = _remoteUsers.isNotEmpty
-          ? _remoteUsers
-          : DummyData.users.map((u) => api.ApiUser(
-                id: u.id,
-                displayName: u.name,
-                fullName: u.name,
-                email: u.email,
-                role: u.role,
-                userType: u.role.toLowerCase(),
-                accountStatus: 'approved',
-                skills: u.skills,
-              ));
-      for (final u in users) {
+      for (final u in idx.users) {
         final name = u.fullName.isNotEmpty ? u.fullName : u.displayName;
         if (name.toLowerCase().contains(q)) {
           r.add({
@@ -303,16 +377,16 @@ class _SearchScreenState extends State<SearchScreen> {
       }
     }
     if (_tab == 'All' || _tab == 'Tasks') {
-      for (final p in DummyData.projects) {
-        for (final t in p.tasks) {
-          if (t.title.toLowerCase().contains(q)) {
-            r.add({
-              'type': 'Task',
-              'title': t.title,
-              'sub': 'In ${p.name}',
-              'icon': Icons.check_circle_outline
-            });
-          }
+      for (final row in idx.tasks) {
+        final title = row.$1;
+        final pname = row.$2;
+        if (title.toLowerCase().contains(q)) {
+          r.add({
+            'type': 'Task',
+            'title': title,
+            'sub': 'In $pname',
+            'icon': Icons.check_circle_outline
+          });
         }
       }
     }
@@ -345,176 +419,250 @@ class _SearchScreenState extends State<SearchScreen> {
                 }),
         ],
       ),
-      body: Column(
-        children: [
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: ['All', 'Teammates', 'Projects', 'Tasks'].map((t) {
-                  final sel = _tab == t;
-                  return GestureDetector(
-                    onTap: () => setState(() => _tab = t),
-                    child: Container(
-                      margin: const EdgeInsets.only(right: 8),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: sel ? AppColors.primary : Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                            color: sel ? AppColors.primary : AppColors.border),
-                      ),
-                      child: Text(t,
-                          style: TextStyle(
-                              color:
-                                  sel ? Colors.white : AppColors.textSecondary,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13)),
+      body: FutureBuilder<_SearchIndex>(
+        future: _indexFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting &&
+              !snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError || !snapshot.hasData) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      snapshot.error?.toString() ??
+                          'Could not load suggestions.',
+                      textAlign: TextAlign.center,
+                      style:
+                          const TextStyle(color: AppColors.textSecondary),
                     ),
-                  );
-                }).toList(),
+                    const SizedBox(height: 16),
+                    TextButton(
+                        onPressed: _retryIndex, child: const Text('Retry')),
+                  ],
+                ),
               ),
-            ),
-          ),
-          Expanded(
-            child: _query.isEmpty
-                ? _buildSuggestions()
-                : _results.isEmpty
-                    ? Center(
-                        child: Text('No results for "$_query"',
-                            style: const TextStyle(
-                                color: AppColors.textSecondary)))
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _results.length,
-                        itemBuilder: (_, i) {
-                          final r = _results[i];
-                          final isPerson = r['type'] == 'Person';
-                          return TCard(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            padding: const EdgeInsets.all(14),
-                            child: Row(
-                              children: [
-                                isPerson
-                                    ? TAvatar(
-                                        initials: r['title'][0], radius: 22)
-                                    : Container(
-                                        padding: const EdgeInsets.all(10),
-                                        decoration: BoxDecoration(
-                                            color: AppColors.primary
-                                                .withOpacity(0.1),
-                                            shape: BoxShape.circle),
-                                        child: Icon(r['icon'] as IconData,
-                                            color: AppColors.primary, size: 20),
+            );
+          }
+
+          final idx = snapshot.data!;
+          final rows = _resultsFor(idx);
+
+          return Column(
+            children: [
+              Container(
+                color: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children:
+                        ['All', 'Teammates', 'Projects', 'Tasks'].map((t) {
+                      final sel = _tab == t;
+                      return GestureDetector(
+                        onTap: () => setState(() => _tab = t),
+                        child: Container(
+                          margin: const EdgeInsets.only(right: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: sel ? AppColors.primary : Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                                color:
+                                    sel ? AppColors.primary : AppColors.border),
+                          ),
+                          child: Text(t,
+                              style: TextStyle(
+                                  color: sel
+                                      ? Colors.white
+                                      : AppColors.textSecondary,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13)),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: _query.isEmpty
+                    ? _buildSuggestions(idx)
+                    : rows.isEmpty
+                        ? Center(
+                            child: Text('No results for "$_query"',
+                                style: const TextStyle(
+                                    color: AppColors.textSecondary)))
+                        : ListView.builder(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: rows.length,
+                            itemBuilder: (_, i) {
+                              final r = rows[i];
+                              final isPerson = r['type'] == 'Person';
+                              final title =
+                                  r['title']?.toString() ?? '';
+                              return TCard(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                padding: const EdgeInsets.all(14),
+                                child: Row(
+                                  children: [
+                                    isPerson
+                                        ? TAvatar(
+                                            initials: title.isEmpty
+                                                ? '?'
+                                                : title[0].toUpperCase(),
+                                            radius: 22)
+                                        : Container(
+                                            padding: const EdgeInsets.all(10),
+                                            decoration: BoxDecoration(
+                                                color: AppColors.primary
+                                                    .withOpacity(0.1),
+                                                shape: BoxShape.circle),
+                                            child: Icon(r['icon'] as IconData,
+                                                color: AppColors.primary,
+                                                size: 20),
+                                          ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(title,
+                                              style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  color: AppColors.textPrimary)),
+                                          Text(r['sub']?.toString() ?? '',
+                                              style: const TextStyle(
+                                                  fontSize: 12,
+                                                  color: AppColors
+                                                      .textSecondary)),
+                                        ],
                                       ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(r['title'],
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              color: AppColors.textPrimary)),
-                                      Text(r['sub'],
-                                          style: const TextStyle(
-                                              fontSize: 12,
-                                              color: AppColors.textSecondary)),
-                                    ],
-                                  ),
+                                    ),
+                                    if (isPerson)
+                                      Column(
+                                        children: [
+                                          Text('${75 + i * 3}%',
+                                              style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  color: AppColors.primary,
+                                                  fontSize: 16)),
+                                          const Text('match',
+                                              style: TextStyle(
+                                                  fontSize: 10,
+                                                  color: AppColors
+                                                      .textSecondary)),
+                                        ],
+                                      )
+                                    else
+                                      TChip(
+                                          label: r['type']?.toString() ?? ''),
+                                  ],
                                 ),
-                                if (isPerson)
-                                  Column(
-                                    children: [
-                                      Text('${80 + (i * 5)}%',
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              color: AppColors.primary,
-                                              fontSize: 16)),
-                                      const Text('match',
-                                          style: TextStyle(
-                                              fontSize: 10,
-                                              color: AppColors.textSecondary)),
-                                    ],
-                                  )
-                                else
-                                  TChip(label: r['type']),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-          ),
-        ],
+                              );
+                            },
+                          ),
+              ),
+            ],
+          );
+        },
       ),
       bottomNavigationBar:
           TBottomNav(current: 1, onTap: (i) => handleFreelancerNav(context, i)),
     );
   }
 
-  Widget _buildSuggestions() {
+  Widget _buildSuggestions(_SearchIndex idx) {
     if (_tab == 'Projects') {
-      final projects = _remoteProjects.isNotEmpty
-          ? _remoteProjects.map((p) => p.toDisplayModel()).toList()
-          : DummyData.projects;
+      if (idx.projects.isEmpty) {
+        return const Center(
+            child:
+                Text('No projects found', style: TextStyle(color: AppColors.textSecondary)));
+      }
       return ListView(
         padding: const EdgeInsets.all(16),
         children: [
           const TSectionHeader(title: 'Suggested Projects'),
           const SizedBox(height: 12),
-          ...projects.map((p) => _projectCard(p)),
+          ...idx.projects.map((p) => _projectCard(p.toDisplayModel())),
         ],
       );
-    } else if (_tab == 'Teammates') {
-      final users = _remoteUsers.isNotEmpty
-          ? _remoteUsers.map((u) => u.toDisplayModel()).toList()
-          : DummyData.users;
+    }
+    if (_tab == 'Teammates') {
+      if (idx.users.isEmpty) {
+        return const Center(
+            child: Text('No teammates found',
+                style: TextStyle(color: AppColors.textSecondary)));
+      }
       return ListView(
         padding: const EdgeInsets.all(16),
         children: [
           const TSectionHeader(title: 'Recommended Teammates'),
           const SizedBox(height: 12),
-          ...users.map((u) => _personCard(u)),
+          ...idx.users.map((u) => _personCard(u.toDisplayModel())),
         ],
       );
-    } else if (_tab == 'Tasks') {
-      final allTasks = DummyData.projects.expand((p) => p.tasks).toList();
+    }
+    if (_tab == 'Tasks') {
+      final models = idx.tasks.take(20).map((row) {
+        return TaskModel(
+          id: row.$1.hashCode.toString(),
+          title: row.$1,
+          assignee: '—',
+          assigneeInitials: '?',
+          status: '',
+          priority: '',
+          dueDate: '',
+        );
+      }).toList();
+      if (models.isEmpty) {
+        return const Center(
+            child: Text('No tasks found yet',
+                style: TextStyle(color: AppColors.textSecondary)));
+      }
       return ListView(
         padding: const EdgeInsets.all(16),
         children: [
           const TSectionHeader(title: 'Suggested Tasks'),
           const SizedBox(height: 12),
-          ...allTasks.take(10).map((t) => _taskCard(t)),
-        ],
-      );
-    } else {
-      // 'All' tab
-      final projects = _remoteProjects.isNotEmpty
-          ? _remoteProjects.map((p) => p.toDisplayModel()).toList()
-          : DummyData.projects;
-      final users = _remoteUsers.isNotEmpty
-          ? _remoteUsers.map((u) => u.toDisplayModel()).toList()
-          : DummyData.users;
-      return ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          const TSectionHeader(title: 'Suggested Projects'),
-          const SizedBox(height: 12),
-          ...projects.take(2).map((p) => _projectCard(p)),
-          const SizedBox(height: 24),
-          const TSectionHeader(title: 'Recommended People'),
-          const SizedBox(height: 12),
-          ...users.take(3).map((u) => _personCard(u)),
+          ...models.map((t) => _taskCard(t)),
         ],
       );
     }
+    final projectsDm = idx.projects.map((p) => p.toDisplayModel()).toList();
+    final usersDm = idx.users.map((u) => u.toDisplayModel()).toList();
+    final children = <Widget>[
+      const TSectionHeader(title: 'Suggested Projects'),
+      const SizedBox(height: 12),
+    ];
+    if (projectsDm.isEmpty) {
+      children.add(const Padding(
+        padding: EdgeInsets.only(bottom: 16),
+        child: Text('No projects found',
+            style: TextStyle(color: AppColors.textSecondary)),
+      ));
+    } else {
+      children.addAll(projectsDm.take(2).map(_projectCard));
+    }
+    children.add(const SizedBox(height: 24));
+    children.add(const TSectionHeader(title: 'Recommended People'));
+    children.add(const SizedBox(height: 12));
+    if (usersDm.isEmpty) {
+      children.add(const Text('No teammates found yet',
+          style: TextStyle(color: AppColors.textSecondary)));
+    } else {
+      children.addAll(usersDm.take(3).map(_personCard));
+    }
+    return ListView(padding: const EdgeInsets.all(16), children: children);
   }
 
-  Widget _projectCard(dynamic p) => TCard(
+  Widget _projectCard(ProjectModel p) => TCard(
         margin: const EdgeInsets.only(bottom: 10),
         onTap: () =>
             Navigator.pushNamed(context, R.projectDetails, arguments: p),
@@ -548,10 +696,10 @@ class _SearchScreenState extends State<SearchScreen> {
         ),
       );
 
-  Widget _personCard(dynamic u) => TCard(
+  Widget _personCard(UserModel u) => TCard(
         margin: const EdgeInsets.only(bottom: 10),
         child: Row(children: [
-          TAvatar(initials: u.name[0], radius: 20),
+          TAvatar(initials: u.initials, radius: 20),
           const SizedBox(width: 12),
           Expanded(
               child: Column(
@@ -570,7 +718,7 @@ class _SearchScreenState extends State<SearchScreen> {
         ]),
       );
 
-  Widget _taskCard(dynamic t) => TCard(
+  Widget _taskCard(TaskModel t) => TCard(
         margin: const EdgeInsets.only(bottom: 10),
         child: Row(children: [
           Container(
@@ -589,7 +737,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         color: AppColors.textPrimary)),
-                Text('Due: ${t.dueDate}',
+                Text('Project task',
                     style: const TextStyle(
                         fontSize: 12, color: AppColors.textSecondary)),
               ])),

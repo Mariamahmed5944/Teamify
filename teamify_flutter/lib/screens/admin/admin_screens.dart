@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme.dart';
 import '../../core/routes.dart';
-import '../../data/dummy_data.dart';
 import '../../data/repositories/app_repositories.dart';
+import '../../data/models/models.dart' as api;
+import '../../models/models.dart';
 import '../../widgets/widgets.dart';
 
 // ── Admin Bottom Nav ──────────────────────────────────────────────────────────
@@ -278,17 +279,23 @@ class AdminUsersScreen extends StatefulWidget {
 }
 
 class _AdminUsersScreenState extends State<AdminUsersScreen> {
-  late Future<List<dynamic>> _usersFuture;
+  Future<List<UserModel>>? _usersFuture;
 
   @override
-  void initState() {
-    super.initState();
-    _usersFuture = context
-        .read<AppRepositories>()
-        .admin
-        .listUsers()
-        .then((users) => users.map((user) => user.toDisplayModel()).toList())
-        .catchError((_) => DummyData.users);
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _usersFuture ??= context.read<AppRepositories>().admin.listUsers().then(
+          (users) => users.map((user) => user.toDisplayModel()).toList(),
+        );
+  }
+
+  void _reloadUsers() {
+    setState(() {
+      _usersFuture = context.read<AppRepositories>().admin.listUsers().then(
+            (users) =>
+                users.map((user) => user.toDisplayModel()).toList(),
+          );
+    });
   }
 
   @override
@@ -327,15 +334,42 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                         Icon(Icons.search, color: AppColors.textSecondary))),
           ),
           const SizedBox(height: 12),
-          FutureBuilder<List<dynamic>>(
+          FutureBuilder<List<UserModel>>(
             future: _usersFuture,
             builder: (context, snapshot) {
-              final users = snapshot.data ?? DummyData.users;
               if (snapshot.connectionState == ConnectionState.waiting &&
                   !snapshot.hasData) {
                 return const Padding(
                   padding: EdgeInsets.all(24),
                   child: Center(child: CircularProgressIndicator()),
+                );
+              }
+              if (snapshot.hasError || !snapshot.hasData) {
+                return Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      Text(
+                        snapshot.error?.toString() ??
+                            'Unable to load users.',
+                        style: const TextStyle(color: AppColors.textSecondary),
+                        textAlign: TextAlign.center,
+                      ),
+                      TextButton(
+                        onPressed: _reloadUsers,
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              final users = snapshot.data!;
+              if (users.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Center(
+                      child: Text('No users found',
+                          style: TextStyle(color: AppColors.textSecondary))),
                 );
               }
               return Column(
@@ -594,15 +628,24 @@ class LoginLogsScreen extends StatefulWidget {
 
 class _LoginLogsScreenState extends State<LoginLogsScreen> {
   String _filter = 'All';
+  Future<List<LoginLog>>? _logsFuture;
+
+  void _reloadLogs() {
+    _logsFuture = context.read<AppRepositories>().admin.listLoginLogs(
+          filter: _filter,
+        );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _logsFuture ??= context.read<AppRepositories>().admin.listLoginLogs(
+          filter: _filter,
+        );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final logs = DummyData.loginLogs.where((l) {
-      if (_filter == 'Success') return l.isSuccess;
-      if (_filter == 'Failed') return !l.isSuccess;
-      return true;
-    }).toList();
-
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5FA),
       appBar: AppBar(
@@ -663,7 +706,10 @@ class _LoginLogsScreenState extends State<LoginLogsScreen> {
               children: ['All', 'Success', 'Failed'].map((f) {
             final sel = _filter == f;
             return GestureDetector(
-              onTap: () => setState(() => _filter = f),
+              onTap: () => setState(() {
+                _filter = f;
+                _reloadLogs();
+              }),
               child: Container(
                 margin: const EdgeInsets.only(right: 8),
                 padding:
@@ -683,67 +729,101 @@ class _LoginLogsScreenState extends State<LoginLogsScreen> {
           }).toList()),
         ),
         Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            itemCount: logs.length,
-            itemBuilder: (_, i) {
-              final l = logs[i];
-              return Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16)),
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+          child: FutureBuilder<List<LoginLog>>(
+            future: _logsFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting &&
+                  !snapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError || !snapshot.hasData) {
+                return Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Row(children: [
-                        Expanded(
-                            child: Text(l.userName,
+                      Text(
+                        snapshot.error?.toString() ?? 'Failed to load logs',
+                        textAlign: TextAlign.center,
+                      ),
+                      TextButton(
+                          onPressed: () => setState(() => _reloadLogs()),
+                          child: const Text('Retry')),
+                    ],
+                  ),
+                );
+              }
+              final logs = snapshot.data!;
+              if (logs.isEmpty) {
+                return const Center(
+                    child: Text('No login logs found',
+                        style: TextStyle(color: AppColors.textSecondary)));
+              }
+              return ListView.builder(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                itemCount: logs.length,
+                itemBuilder: (_, i) {
+                  final l = logs[i];
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16)),
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(children: [
+                            Expanded(
+                                child: Text(l.userName,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.textPrimary,
+                                        fontSize: 15))),
+                            Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(l.time,
+                                      style: const TextStyle(
+                                          fontSize: 12,
+                                          color: AppColors.textSecondary)),
+                                  Text(l.date,
+                                      style: const TextStyle(
+                                          fontSize: 11,
+                                          color: AppColors.textSecondary)),
+                                ]),
+                          ]),
+                          const SizedBox(height: 8),
+                          TChip(
+                              label: l.isSuccess ? '✓ Success' : '✕ Failed',
+                              bg: l.isSuccess
+                                  ? AppColors.success.withOpacity(0.1)
+                                  : AppColors.error.withOpacity(0.1),
+                              textColor: l.isSuccess
+                                  ? AppColors.success
+                                  : AppColors.error),
+                          const SizedBox(height: 8),
+                          Row(children: [
+                            Icon(
+                                l.device.contains('Desktop')
+                                    ? Icons.desktop_windows_outlined
+                                    : Icons.phone_android_outlined,
+                                size: 14,
+                                color: AppColors.textSecondary),
+                            const SizedBox(width: 4),
+                            Text(l.device,
                                 style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.textPrimary,
-                                    fontSize: 15))),
-                        Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(l.time,
-                                  style: const TextStyle(
-                                      fontSize: 12,
-                                      color: AppColors.textSecondary)),
-                              Text(l.date,
-                                  style: const TextStyle(
-                                      fontSize: 11,
-                                      color: AppColors.textSecondary)),
-                            ]),
-                      ]),
-                      const SizedBox(height: 8),
-                      TChip(
-                          label: l.isSuccess ? '✓ Success' : '✕ Failed',
-                          bg: l.isSuccess
-                              ? AppColors.success.withOpacity(0.1)
-                              : AppColors.error.withOpacity(0.1),
-                          textColor: l.isSuccess
-                              ? AppColors.success
-                              : AppColors.error),
-                      const SizedBox(height: 8),
-                      Row(children: [
-                        Icon(
-                            l.device.contains('Desktop')
-                                ? Icons.desktop_windows_outlined
-                                : Icons.phone_android_outlined,
-                            size: 14,
-                            color: AppColors.textSecondary),
-                        const SizedBox(width: 4),
-                        Text(l.device,
-                            style: const TextStyle(
-                                fontSize: 12, color: AppColors.textSecondary)),
-                        const Spacer(),
-                        Text(l.ip,
-                            style: const TextStyle(
-                                fontSize: 12, color: AppColors.textSecondary)),
-                      ]),
-                    ]),
+                                    fontSize: 12,
+                                    color: AppColors.textSecondary)),
+                            const Spacer(),
+                            Text(l.ip,
+                                style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.textSecondary)),
+                          ]),
+                        ]),
+                  );
+                },
               );
             },
           ),
@@ -754,8 +834,29 @@ class _LoginLogsScreenState extends State<LoginLogsScreen> {
 }
 
 // ── Security Alerts ───────────────────────────────────────────────────────────
-class SecurityAlertsScreen extends StatelessWidget {
+class SecurityAlertsScreen extends StatefulWidget {
   const SecurityAlertsScreen({super.key});
+
+  @override
+  State<SecurityAlertsScreen> createState() => _SecurityAlertsScreenState();
+}
+
+class _SecurityAlertsScreenState extends State<SecurityAlertsScreen> {
+  Future<List<SecurityAlert>>? _alertsFuture;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _alertsFuture ??=
+        context.read<AppRepositories>().admin.listAlerts();
+  }
+
+  void _retry() {
+    setState(() {
+      _alertsFuture = context.read<AppRepositories>().admin.listAlerts();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -795,92 +896,124 @@ class SecurityAlertsScreen extends StatelessWidget {
           ]),
         ],
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: DummyData.securityAlerts.length,
-        itemBuilder: (_, i) {
-          final a = DummyData.securityAlerts[i];
-          final Color riskColor = a.risk.contains('HIGH')
-              ? AppColors.error
-              : a.risk.contains('MEDIUM')
-                  ? AppColors.warning
-                  : AppColors.success;
-          final IconData alertIcon = a.risk.contains('HIGH')
-              ? Icons.warning_amber_outlined
-              : Icons.shield_outlined;
-          return GestureDetector(
-            onTap: () =>
-                Navigator.pushNamed(context, R.alertDetails, arguments: a),
-            child: Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                  color: Colors.white, borderRadius: BorderRadius.circular(16)),
-              child:
-                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                        color: riskColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12)),
-                    child: Icon(alertIcon, color: riskColor, size: 22)),
-                const SizedBox(width: 12),
-                Expanded(
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                      Row(children: [
-                        Expanded(
-                            child: Text(a.title,
+      body: FutureBuilder<List<SecurityAlert>>(
+        future: _alertsFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting &&
+              !snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError || !snapshot.hasData) {
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(snapshot.error?.toString() ?? 'Failed to load alerts',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: AppColors.textSecondary)),
+                  TextButton(onPressed: _retry, child: const Text('Retry')),
+                ],
+              ),
+            );
+          }
+          final alerts = snapshot.data!;
+          if (alerts.isEmpty) {
+            return const Center(
+                child: Text('No security alerts',
+                    style: TextStyle(color: AppColors.textSecondary)));
+          }
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: alerts.length,
+            itemBuilder: (_, i) {
+              final a = alerts[i];
+              final Color riskColor = a.risk.contains('HIGH')
+                  ? AppColors.error
+                  : a.risk.contains('MEDIUM')
+                      ? AppColors.warning
+                      : AppColors.success;
+              final IconData alertIcon = a.risk.contains('HIGH')
+                  ? Icons.warning_amber_outlined
+                  : Icons.shield_outlined;
+              return GestureDetector(
+                onTap: () => Navigator.pushNamed(context, R.alertDetails,
+                    arguments: a),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16)),
+                  child:
+                      Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                            color: riskColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12)),
+                        child: Icon(alertIcon, color: riskColor, size: 22)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                        child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                          Row(children: [
+                            Expanded(
+                                child: Text(a.title,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.textPrimary,
+                                        fontSize: 15))),
+                            const Icon(Icons.arrow_forward_ios,
+                                size: 14, color: AppColors.textSecondary),
+                          ]),
+                          Row(children: [
+                            const Icon(Icons.person_outline,
+                                size: 12, color: AppColors.textSecondary),
+                            const SizedBox(width: 2),
+                            Text(a.user,
                                 style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.textPrimary,
-                                    fontSize: 15))),
-                        const Icon(Icons.arrow_forward_ios,
-                            size: 14, color: AppColors.textSecondary),
-                      ]),
-                      Row(children: [
-                        const Icon(Icons.person_outline,
-                            size: 12, color: AppColors.textSecondary),
-                        const SizedBox(width: 2),
-                        Text(a.user,
-                            style: const TextStyle(
-                                fontSize: 12, color: AppColors.textSecondary))
-                      ]),
-                      const SizedBox(height: 6),
-                      Text(a.description,
-                          style: const TextStyle(
-                              fontSize: 12, color: AppColors.textSecondary),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis),
-                      const SizedBox(height: 8),
-                      Row(children: [
-                        TChip(
-                            label: a.risk,
-                            bg: riskColor.withOpacity(0.1),
-                            textColor: riskColor,
-                            fontSize: 10),
-                        const SizedBox(width: 6),
-                        TChip(
-                            label: a.status,
-                            bg: a.status == 'New'
-                                ? AppColors.primary.withOpacity(0.1)
-                                : AppColors.border,
-                            textColor: a.status == 'New'
-                                ? AppColors.primary
-                                : AppColors.textSecondary,
-                            fontSize: 10),
-                        const Spacer(),
-                        const Icon(Icons.access_time,
-                            size: 12, color: AppColors.textSecondary),
-                        const SizedBox(width: 2),
-                        Text(a.time,
-                            style: const TextStyle(
-                                fontSize: 11, color: AppColors.textSecondary)),
-                      ]),
-                    ])),
-              ]),
-            ),
+                                    fontSize: 12,
+                                    color: AppColors.textSecondary))
+                          ]),
+                          const SizedBox(height: 6),
+                          Text(a.description,
+                              style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis),
+                          const SizedBox(height: 8),
+                          Row(children: [
+                            TChip(
+                                label: a.risk,
+                                bg: riskColor.withOpacity(0.1),
+                                textColor: riskColor,
+                                fontSize: 10),
+                            const SizedBox(width: 6),
+                            TChip(
+                                label: a.status,
+                                bg: a.status == 'New'
+                                    ? AppColors.primary.withOpacity(0.1)
+                                    : AppColors.border,
+                                textColor: a.status == 'New'
+                                    ? AppColors.primary
+                                    : AppColors.textSecondary,
+                                fontSize: 10),
+                            const Spacer(),
+                            const Icon(Icons.access_time,
+                                size: 12, color: AppColors.textSecondary),
+                            const SizedBox(width: 2),
+                            Text(a.time,
+                                style: const TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.textSecondary)),
+                          ]),
+                        ])),
+                  ]),
+                ),
+              );
+            },
           );
         },
       ),
@@ -893,8 +1026,22 @@ class AlertDetailsScreen extends StatelessWidget {
   const AlertDetailsScreen({super.key});
   @override
   Widget build(BuildContext context) {
-    final a = ModalRoute.of(context)?.settings.arguments as dynamic ??
-        DummyData.securityAlerts.first;
+    final dynamic raw = ModalRoute.of(context)?.settings.arguments;
+    if (raw is! SecurityAlert) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Alert Details'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios, size: 18),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+        body: const Center(
+            child:
+                Text('No alert selected', style: TextStyle(color: AppColors.textSecondary))),
+      );
+    }
+    final SecurityAlert a = raw;
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Stack(children: [
@@ -1686,6 +1833,7 @@ class AnalystScreen extends StatelessWidget {
 // ── Secure Files ──────────────────────────────────────────────────────────────
 class SecurityFilesScreen extends StatelessWidget {
   const SecurityFilesScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1723,109 +1871,149 @@ class SecurityFilesScreen extends StatelessWidget {
           ]),
         ],
       ),
-      body: ListView(padding: const EdgeInsets.all(16), children: [
-        Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-              color: Colors.white, borderRadius: BorderRadius.circular(16)),
-          child: Column(children: [
-            Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(12)),
-                child: const Icon(Icons.upload_outlined,
-                    color: AppColors.primary, size: 32)),
-            const SizedBox(height: 12),
-            const Text('Upload Files',
-                style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                    fontSize: 16)),
-            const Text('Drag and drop or click to browse',
-                style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-            const SizedBox(height: 16),
-            TButton(label: 'Select Files', onTap: () {}),
-          ]),
-        ),
-        const SizedBox(height: 20),
-        const Text('Uploaded Files',
-            style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary)),
-        const SizedBox(height: 12),
-        ...DummyData.secureFiles.map((f) => Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.all(14),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Container(
+              padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                  color: Colors.white, borderRadius: BorderRadius.circular(16)),
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(children: [
-                      Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                              color: AppColors.primary.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8)),
-                          child: const Icon(Icons.description_outlined,
-                              color: AppColors.primary, size: 22)),
-                      const SizedBox(width: 12),
-                      Expanded(
-                          child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                            Text(f.name,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.textPrimary)),
-                            Text(f.size,
-                                style: const TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.textSecondary)),
-                          ])),
-                      IconButton(
-                          icon: const Icon(Icons.close,
-                              size: 18, color: AppColors.textSecondary),
-                          onPressed: () {}),
-                    ]),
-                    const SizedBox(height: 8),
-                    Row(children: [
-                      TChip(
-                          label: '🔒 Encrypted',
-                          bg: AppColors.success.withOpacity(0.1),
-                          textColor: AppColors.success,
-                          fontSize: 11),
-                      const SizedBox(width: 6),
-                      TChip(
-                          label: '✓ Verified',
-                          bg: AppColors.success.withOpacity(0.1),
-                          textColor: AppColors.success,
-                          fontSize: 11),
-                    ]),
-                    const SizedBox(height: 8),
-                    Row(children: [
-                      Text(f.date,
-                          style: const TextStyle(
-                              fontSize: 11, color: AppColors.textSecondary)),
-                      const Spacer(),
-                      GestureDetector(
-                          onTap: () {},
-                          child: const Row(children: [
-                            Icon(Icons.download_outlined,
-                                size: 16, color: AppColors.primary),
-                            SizedBox(width: 4),
-                            Text('Download',
-                                style: TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.primary,
-                                    fontWeight: FontWeight.w600)),
-                          ])),
-                    ]),
-                  ]),
-            )),
-      ]),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16)),
+              child: Column(children: [
+                Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(12)),
+                    child: const Icon(Icons.upload_outlined,
+                        color: AppColors.primary, size: 32)),
+                const SizedBox(height: 12),
+                const Text('Upload Files',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                        fontSize: 16)),
+                const Text('Drag and drop or click to browse',
+                    style: TextStyle(
+                        fontSize: 12, color: AppColors.textSecondary)),
+                const SizedBox(height: 16),
+                TButton(label: 'Select Files', onTap: () {}),
+              ]),
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: Text('Uploaded Files',
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary)),
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: RepositoryLoader<List<api.ApiFile>>(
+              load: () =>
+                  context.read<AppRepositories>().files.listFiles(),
+              isEmpty: (f) => f.isEmpty,
+              emptyMessage: 'No uploaded files yet',
+              builder: (_, files) {
+                return ListView.builder(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                  itemCount: files.length,
+                  itemBuilder: (_, i) {
+                    final f = files[i];
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16)),
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(children: [
+                              Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                      color:
+                                          AppColors.primary.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(8)),
+                                  child: const Icon(Icons.description_outlined,
+                                      color: AppColors.primary, size: 22)),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                  child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                    Text(f.name,
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.textPrimary)),
+                                    Text(
+                                        f.size.isNotEmpty ? f.size : '—',
+                                        style: const TextStyle(
+                                            fontSize: 12,
+                                            color:
+                                                AppColors.textSecondary)),
+                                  ])),
+                              IconButton(
+                                  icon: const Icon(Icons.close,
+                                      size: 18,
+                                      color: AppColors.textSecondary),
+                                  onPressed: () {}),
+                            ]),
+                            const SizedBox(height: 8),
+                            Row(children: [
+                              TChip(
+                                  label: '🔒 Encrypted',
+                                  bg:
+                                      AppColors.success.withOpacity(0.1),
+                                  textColor: AppColors.success,
+                                  fontSize: 11),
+                              const SizedBox(width: 6),
+                              TChip(
+                                  label: '✓ Verified',
+                                  bg:
+                                      AppColors.success.withOpacity(0.1),
+                                  textColor: AppColors.success,
+                                  fontSize: 11),
+                            ]),
+                            const SizedBox(height: 8),
+                            Row(children: [
+                              Text(
+                                  f.createdAt.isNotEmpty ? f.createdAt : '—',
+                                  style: const TextStyle(
+                                      fontSize: 11,
+                                      color: AppColors.textSecondary)),
+                              const Spacer(),
+                              GestureDetector(
+                                  onTap: () {},
+                                  child: const Row(children: [
+                                    Icon(Icons.download_outlined,
+                                        size: 16,
+                                        color: AppColors.primary),
+                                    SizedBox(width: 4),
+                                    Text('Download',
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            color: AppColors.primary,
+                                            fontWeight:
+                                                FontWeight.w600)),
+                                  ])),
+                            ]),
+                          ]),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -3438,8 +3626,40 @@ class UserDetailsAdminScreen extends StatelessWidget {
   const UserDetailsAdminScreen({super.key});
   @override
   Widget build(BuildContext context) {
-    final u = ModalRoute.of(context)?.settings.arguments as dynamic ??
-        DummyData.users.first;
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is! UserModel) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          leading: IconButton(
+              icon: const Icon(Icons.arrow_back_ios, size: 18),
+              onPressed: () => Navigator.pop(context)),
+          title: const Text('User Management',
+              style: TextStyle(fontWeight: FontWeight.bold)),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'No user selected or data is invalid.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: AppColors.textSecondary),
+                ),
+                const SizedBox(height: 16),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Go back'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    final u = args;
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -3491,11 +3711,13 @@ class UserDetailsAdminScreen extends StatelessWidget {
           const SizedBox(height: 12),
           TCard(
               child: Column(children: [
-            _infoRow(Icons.email_outlined, 'Email Address',
-                '${u.name.toLowerCase().replaceAll(' ', '.')}@example.com'),
+            _infoRow(
+                Icons.email_outlined,
+                'Email Address',
+                u.email.isNotEmpty ? u.email : '—'),
             const Divider(height: 1, color: AppColors.border),
             _infoRow(
-                Icons.calendar_today_outlined, 'Joined Date', 'Jan 15, 2024'),
+                Icons.calendar_today_outlined, 'Joined Date', '—'),
             const Divider(height: 1, color: AppColors.border),
             _infoRow(Icons.history, 'Last Activity', '2 hours ago'),
           ])),
@@ -3504,11 +3726,15 @@ class UserDetailsAdminScreen extends StatelessWidget {
           const SizedBox(height: 12),
           Row(children: [
             Expanded(
-                child: _statCard(
-                    'Projects', '5', Icons.folder_outlined, AppColors.primary)),
+                child:             _statCard(
+                    'Projects',
+                    '${u.projectsCount}',
+                    Icons.folder_outlined,
+                    AppColors.primary)),
             const SizedBox(width: 12),
             Expanded(
-                child: _statCard('Tasks Done', '24', Icons.check_circle_outline,
+                child: _statCard('Tasks Done', '0',
+                    Icons.check_circle_outline,
                     AppColors.success)),
           ]),
           const SizedBox(height: 24),

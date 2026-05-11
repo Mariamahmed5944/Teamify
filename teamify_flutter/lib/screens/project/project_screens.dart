@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme.dart';
 import '../../core/routes.dart';
 import '../../data/repositories/app_repositories.dart';
-import '../../data/dummy_data.dart';
+import '../../data/models/models.dart' as api;
 import '../../models/models.dart';
 import '../../widgets/widgets.dart';
 
@@ -24,12 +24,34 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen>
     'Analytics'
   ];
 
+  Future<ProjectModel>? _projectFuture;
+
   @override
   void initState() {
     super.initState();
     _tabController =
         TabController(length: _tabLabels.length, vsync: this, initialIndex: 0);
     _tabController.addListener(() => setState(() {}));
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _projectFuture ??= _loadProject(context);
+  }
+
+  Future<ProjectModel> _loadProject(BuildContext context) async {
+    final arg = ModalRoute.of(context)?.settings.arguments;
+    if (arg is! ProjectModel) {
+      throw Exception('No project selected.');
+    }
+    final apiProj =
+        await context.read<AppRepositories>().projects.getProject(arg.id);
+    return apiProj.toDisplayModel();
+  }
+
+  void _retry() {
+    setState(() => _projectFuture = _loadProject(context));
   }
 
   @override
@@ -40,139 +62,189 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen>
 
   @override
   Widget build(BuildContext context) {
-    final p = ModalRoute.of(context)?.settings.arguments is ProjectModel
-        ? ModalRoute.of(context)!.settings.arguments as ProjectModel
-        : DummyData.projects.first;
-
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        toolbarHeight: 48,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios,
-              color: AppColors.primary, size: 24),
-          onPressed: () => Navigator.pop(context),
-        ),
-        centerTitle: true,
-      ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header Info
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(p.name,
-                    style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary)),
-                Text(p.company,
-                    style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500)),
-                const SizedBox(height: 6),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Overall Process',
-                        style: TextStyle(
-                            fontSize: 15,
-                            color: AppColors.textSecondary,
-                            fontWeight: FontWeight.w500)),
-                    Text('${p.progress}%',
-                        style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textPrimary)),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                TBar(
-                    value: p.progress / 100,
-                    height: 6,
-                    color: AppColors.primary),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    const Text('Delay Risk: ',
-                        style: TextStyle(
-                            fontSize: 15, color: AppColors.textSecondary)),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 6),
-                      decoration: BoxDecoration(
-                          color: const Color(0xFFDCFCE7),
-                          borderRadius: BorderRadius.circular(20)),
-                      child: const Text('Low Risk',
-                          style: TextStyle(
-                              color: Color(0xFF16A34A),
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold)),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-          // Capsule Tabs
-          Container(
-            height: 32,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: _tabLabels.length,
-              itemBuilder: (context, i) {
-                final sel = _tabController.index == i;
-                return GestureDetector(
-                  onTap: () => setState(() => _tabController.index = i),
-                  child: Container(
-                    margin: const EdgeInsets.only(right: 12),
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: sel ? AppColors.primary : const Color(0xFFF1F5F9),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Center(
-                        child: Text(_tabLabels[i],
-                            style: TextStyle(
-                                color: sel
-                                    ? Colors.white
-                                    : AppColors.textSecondary,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12))),
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 8),
-          // Tab Content
-          Expanded(
-            child: Container(
-              color: const Color(0xFFF8FAFC),
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _OverviewTab(project: p),
-                  _TasksTab(project: p),
-                  _FilesTab(),
-                  _ChatTab(project: p),
-                  _AnalyticsTab(project: p),
-                ],
+    return FutureBuilder<ProjectModel>(
+      future: _projectFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !snapshot.hasData) {
+          return Scaffold(
+            appBar: AppBar(
+              backgroundColor: Colors.white,
+              elevation: 0,
+              toolbarHeight: 48,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back_ios,
+                    color: AppColors.primary, size: 24),
+                onPressed: () => Navigator.pop(context),
               ),
             ),
+            body: const Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (snapshot.hasError || !snapshot.hasData) {
+          final msg = snapshot.error?.toString() ?? 'Failed to load project.';
+          return Scaffold(
+            backgroundColor: Colors.white,
+            appBar: AppBar(
+              backgroundColor: Colors.white,
+              elevation: 0,
+              toolbarHeight: 48,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back_ios,
+                    color: AppColors.primary, size: 24),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(msg,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: AppColors.textSecondary)),
+                    const SizedBox(height: 16),
+                    TextButton(onPressed: _retry, child: const Text('Retry')),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
+        final p = snapshot.data!;
+
+        return Scaffold(
+          backgroundColor: Colors.white,
+          appBar: AppBar(
+            backgroundColor: Colors.white,
+            elevation: 0,
+            toolbarHeight: 48,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_ios,
+                  color: AppColors.primary, size: 24),
+              onPressed: () => Navigator.pop(context),
+            ),
+            centerTitle: true,
           ),
-        ],
-      ),
-      bottomNavigationBar:
-          TBottomNav(current: 0, onTap: (i) => handleFreelancerNav(context, i)),
+          body: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(p.name,
+                        style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary)),
+                    Text(p.company,
+                        style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500)),
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Overall Process',
+                            style: TextStyle(
+                                fontSize: 15,
+                                color: AppColors.textSecondary,
+                                fontWeight: FontWeight.w500)),
+                        Text('${p.progress}%',
+                            style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textPrimary)),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    TBar(
+                        value: p.progress / 100,
+                        height: 6,
+                        color: AppColors.primary),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Text('Delay Risk: ',
+                            style: TextStyle(
+                                fontSize: 15,
+                                color: AppColors.textSecondary)),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 6),
+                          decoration: BoxDecoration(
+                              color: const Color(0xFFDCFCE7),
+                              borderRadius: BorderRadius.circular(20)),
+                          child: Text(p.delayRisk,
+                              style: const TextStyle(
+                                  color: Color(0xFF16A34A),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold)),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                height: 32,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _tabLabels.length,
+                  itemBuilder: (context, i) {
+                    final sel = _tabController.index == i;
+                    return GestureDetector(
+                      onTap: () => setState(() => _tabController.index = i),
+                      child: Container(
+                        margin: const EdgeInsets.only(right: 12),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color:
+                              sel ? AppColors.primary : const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Center(
+                            child: Text(_tabLabels[i],
+                                style: TextStyle(
+                                    color: sel
+                                        ? Colors.white
+                                        : AppColors.textSecondary,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12))),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: Container(
+                  color: const Color(0xFFF8FAFC),
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _OverviewTab(project: p),
+                      _TasksTab(project: p),
+                      _FilesTab(),
+                      _ChatTab(project: p),
+                      _AnalyticsTab(project: p),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          bottomNavigationBar: TBottomNav(
+              current: 0, onTap: (i) => handleFreelancerNav(context, i)),
+        );
+      },
     );
   }
 }
@@ -226,27 +298,41 @@ class _OverviewTab extends StatelessWidget {
         _buildCard(
             'Team Members',
             [
-              ...DummyData.users.take(3).map((u) => Padding(
-                    padding: const EdgeInsets.only(bottom: 14),
-                    child: Row(
-                      children: [
-                        TAvatar(initials: u.initials, radius: 20),
-                        const SizedBox(width: 14),
-                        Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(u.name,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14)),
-                              Text(u.role,
-                                  style: const TextStyle(
-                                      fontSize: 12,
-                                      color: AppColors.textSecondary)),
-                            ]),
-                      ],
-                    ),
-                  )),
+              if (project.members.isEmpty)
+                const Text('No members listed yet.',
+                    style: TextStyle(
+                        fontSize: 13, color: AppColors.textSecondary)),
+              ...project.members.take(12).map((name) {
+                final parts =
+                    name.trim().split(RegExp(r'\s+')).where((x) => x.isNotEmpty).toList();
+                final initials = parts.isEmpty
+                    ? '?'
+                    : parts.length >= 2
+                        ? '${parts[0][0]}${parts[1][0]}'.toUpperCase()
+                        : parts[0][0].toUpperCase();
+                final roleLabel = 'Contributor';
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 14),
+                  child: Row(
+                    children: [
+                      TAvatar(initials: initials, radius: 20),
+                      const SizedBox(width: 14),
+                      Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(name,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14)),
+                            Text(roleLabel,
+                                style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.textSecondary)),
+                          ]),
+                    ],
+                  ),
+                );
+              }),
             ],
             icon: Icons.people_outline),
       ],
@@ -484,29 +570,50 @@ class _FilesTabState extends State<_FilesTab> {
     'DOC'
   ];
 
+  Future<List<api.ApiFile>>? _filesFuture;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _filesFuture ??= context.read<AppRepositories>().files.listFiles();
+  }
+
+  void _reloadFiles() {
+    setState(() {
+      _filesFuture = context.read<AppRepositories>().files.listFiles();
+    });
+  }
+
+  List<api.ApiFile> _filterFiles(List<api.ApiFile> all) {
+    if (_selectedFilter == 'ALL') return all;
+    return all.where((f) {
+      final n = f.name.toLowerCase();
+      final m = f.type.toLowerCase();
+      final filter = _selectedFilter.toLowerCase();
+      if (filter == 'figma') {
+        return n.endsWith('.fig') || n.contains('figma');
+      }
+      if (filter == 'image') {
+        return n.endsWith('.png') ||
+            n.endsWith('.jpg') ||
+            n.contains('image') ||
+            m.startsWith('image');
+      }
+      if (filter == 'doc') {
+        return n.endsWith('.doc') ||
+            n.endsWith('.docx') ||
+            n.contains('doc') ||
+            m.contains('word');
+      }
+      if (filter == 'pdf') {
+        return n.endsWith('.pdf') || m.contains('pdf');
+      }
+      return n.contains(filter) || m.contains(filter);
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final filteredFiles = _selectedFilter == 'ALL'
-        ? DummyData.projectFiles
-        : DummyData.projectFiles.where((f) {
-            final n = f.name.toLowerCase();
-            final filter = _selectedFilter.toLowerCase();
-            if (filter == 'figma') {
-              return n.endsWith('.fig') || n.contains('figma');
-            }
-            if (filter == 'image') {
-              return n.endsWith('.png') ||
-                  n.endsWith('.jpg') ||
-                  n.contains('image');
-            }
-            if (filter == 'doc') {
-              return n.endsWith('.doc') ||
-                  n.endsWith('.docx') ||
-                  n.contains('doc');
-            }
-            return n.contains(filter);
-          }).toList();
-
     return Column(
       children: [
         Padding(
@@ -597,85 +704,127 @@ class _FilesTabState extends State<_FilesTab> {
         ),
         const SizedBox(height: 8),
         Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            itemCount: filteredFiles.length,
-            itemBuilder: (ctx, i) {
-              final f = filteredFiles[i];
-              final color = _getFileColor(f.name);
-              return Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE2E8F0))),
-                child: Column(
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+          child: FutureBuilder<List<api.ApiFile>>(
+            future: _filesFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting &&
+                  !snapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                                color: color.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(10)),
-                            child: Icon(_getFileIcon(f.name),
-                                color: color, size: 20)),
-                        const SizedBox(width: 12),
-                        Expanded(
-                            child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                              Text(f.name,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                      color: AppColors.textPrimary)),
-                              const SizedBox(height: 6),
-                              Text('${f.size} - Dec 18 - ${f.uploadedBy}',
-                                  style: const TextStyle(
-                                      fontSize: 11,
-                                      color: AppColors.textSecondary,
-                                      fontWeight: FontWeight.w500)),
-                            ])),
-                        PopupMenuButton<String>(
-                          icon: const Icon(Icons.more_vert,
-                              color: AppColors.textSecondary),
-                          onSelected: (val) {
-                            if (val == 'Delete') {
-                              _showDeleteConfirm(context, f.name);
-                            } else {
-                              _showEditDialog(context, val, f.name);
-                            }
-                          },
-                          itemBuilder: (ctx) => [
-                            const PopupMenuItem(
-                                value: 'Edit', child: Text('Edit')),
-                            const PopupMenuItem(
-                                value: 'Rename', child: Text('Rename')),
-                            const PopupMenuItem(
-                                value: 'Delete',
-                                child: Text('Delete',
-                                    style: TextStyle(color: Colors.red))),
+                        Text(snapshot.error?.toString() ?? 'Could not load files',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                                color: AppColors.textSecondary, fontSize: 13)),
+                        const SizedBox(height: 12),
+                        TextButton(
+                            onPressed: _reloadFiles, child: const Text('Retry')),
+                      ],
+                    ),
+                  ),
+                );
+              }
+              final allFiles = snapshot.data ?? const <api.ApiFile>[];
+              final filteredFiles = _filterFiles(allFiles);
+              if (filteredFiles.isEmpty) {
+                return const Center(
+                  child: Text(
+                    'No files found',
+                    style: TextStyle(color: AppColors.textSecondary),
+                  ),
+                );
+              }
+              return ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                itemCount: filteredFiles.length,
+                itemBuilder: (ctx, i) {
+                  final f = filteredFiles[i];
+                  final color = _getFileColor(f.name);
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE2E8F0))),
+                    child: Column(
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                    color: color.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(10)),
+                                child: Icon(_getFileIcon(f.name),
+                                    color: color, size: 20)),
+                            const SizedBox(width: 12),
+                            Expanded(
+                                child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                  Text(f.name,
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                          color: AppColors.textPrimary)),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                      '${f.size.isNotEmpty ? f.size : '—'} · ${f.createdAt.isNotEmpty ? f.createdAt : '—'} · ${f.uploadedBy.isNotEmpty ? 'Owner ${f.uploadedBy}' : 'Uploaded'}',
+                                      style: const TextStyle(
+                                          fontSize: 11,
+                                          color: AppColors.textSecondary,
+                                          fontWeight: FontWeight.w500)),
+                                ])),
+                            PopupMenuButton<String>(
+                              icon: const Icon(Icons.more_vert,
+                                  color: AppColors.textSecondary),
+                              onSelected: (val) {
+                                if (val == 'Delete') {
+                                  _showDeleteConfirm(context, f.name);
+                                } else {
+                                  _showEditDialog(context, val, f.name);
+                                }
+                              },
+                              itemBuilder: (ctx) => [
+                                const PopupMenuItem(
+                                    value: 'Edit', child: Text('Edit')),
+                                const PopupMenuItem(
+                                    value: 'Rename', child: Text('Rename')),
+                                const PopupMenuItem(
+                                    value: 'Delete',
+                                    child: Text('Delete',
+                                        style: TextStyle(color: Colors.red))),
+                              ],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            _fileActionBtn(
+                                context, 'Download', Icons.download_rounded,
+                                f.name,
+                                fileId: f.id,
+                                isPrimary: false),
+                            const SizedBox(width: 8),
+                            _fileActionBtn(context, 'Share', Icons.share_rounded,
+                                f.name,
+                                fileId: f.id,
+                                isPrimary: true),
                           ],
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        _fileActionBtn(
-                            context, 'Download', Icons.download_rounded, f.name,
-                            isPrimary: false),
-                        const SizedBox(width: 8),
-                        _fileActionBtn(
-                            context, 'Share', Icons.share_rounded, f.name,
-                            isPrimary: true),
-                      ],
-                    ),
-                  ],
-                ),
+                  );
+                },
               );
             },
           ),
@@ -752,7 +901,7 @@ class _FilesTabState extends State<_FilesTab> {
 
   Widget _fileActionBtn(
       BuildContext context, String l, IconData i, String fileName,
-      {required bool isPrimary}) {
+      {required bool isPrimary, String fileId = ''}) {
     return GestureDetector(
       onTap: () {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1150,18 +1299,27 @@ class ProjectsListScreen extends StatefulWidget {
 }
 
 class _ProjectsListScreenState extends State<ProjectsListScreen> {
-  late Future<List<ProjectModel>> _projectsFuture;
+  Future<List<ProjectModel>>? _projectsFuture;
 
   @override
-  void initState() {
-    super.initState();
-    _projectsFuture = context
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _projectsFuture ??= context
         .read<AppRepositories>()
         .projects
         .listProjects()
-        .then((items) =>
-            items.map((project) => project.toDisplayModel()).toList())
-        .catchError((_) => DummyData.projects);
+        .then((items) => items.map((project) => project.toDisplayModel()).toList());
+  }
+
+  void _retry() {
+    setState(() {
+      _projectsFuture = context
+          .read<AppRepositories>()
+          .projects
+          .listProjects()
+          .then((items) =>
+              items.map((project) => project.toDisplayModel()).toList());
+    });
   }
 
   @override
@@ -1201,10 +1359,40 @@ class _ProjectsListScreenState extends State<ProjectsListScreen> {
             child: FutureBuilder<List<ProjectModel>>(
                 future: _projectsFuture,
                 builder: (context, snapshot) {
-                  final projects = snapshot.data ?? DummyData.projects;
                   if (snapshot.connectionState == ConnectionState.waiting &&
                       !snapshot.hasData) {
                     return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError || !snapshot.hasData) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              snapshot.error?.toString() ??
+                                  'Could not load projects',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                  color: AppColors.textSecondary, fontSize: 14),
+                            ),
+                            const SizedBox(height: 16),
+                            TextButton(
+                                onPressed: _retry,
+                                child: const Text('Retry')),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+                  final projects = snapshot.data!;
+                  if (projects.isEmpty) {
+                    return const Center(
+                      child: Text('No projects found',
+                          style:
+                              TextStyle(color: AppColors.textSecondary)),
+                    );
                   }
                   return ListView(
                       padding: const EdgeInsets.symmetric(horizontal: 20),

@@ -4,12 +4,12 @@ import '../../core/theme.dart';
 import '../../core/routes.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/session/session_controller.dart';
+import '../../data/repositories/app_repositories.dart';
 import '../../widgets/widgets.dart';
-import '../../data/dummy_data.dart';
 
 // ── Routing Logic ─────────────────────────────────────────────────────────────
-void _navigateToCorrectHome(BuildContext context, String role,
-    {String? email, String? name, bool isNew = false}) {
+Future<void> _navigateToCorrectHome(BuildContext context, String role,
+    {String? email, String? name, bool isNew = false}) async {
   if (role == 'Admin') {
     Navigator.pushNamedAndRemoveUntil(context, R.adminHome, (_) => false);
     return;
@@ -18,28 +18,34 @@ void _navigateToCorrectHome(BuildContext context, String role,
   bool hasData = false;
   String displayName = name ?? 'User';
 
-  if (email != null && email.trim().isNotEmpty) {
-    final searchEmail = email.trim().toLowerCase();
+  if (isNew) {
     try {
-      final user = DummyData.users
-          .firstWhere((u) => u.email.toLowerCase() == searchEmail);
-      displayName = user.name;
-      hasData = DummyData.projects.any((p) => p.members.contains(user.name));
+      final repos = context.read<AppRepositories>();
+      final projects = await repos.projects.listProjects();
+      hasData = projects.isNotEmpty;
     } catch (_) {
       hasData = false;
     }
-  } else if (name != null && name.trim().isNotEmpty) {
-    hasData = DummyData.projects.any((p) => p.members.contains(name.trim()));
+    final session = context.read<SessionController>();
+    displayName = session.currentUser?.displayName ??
+        session.currentUser?.fullName ??
+        displayName;
+  } else if (email != null && email.trim().isNotEmpty ||
+      name != null && name.trim().isNotEmpty) {
+    try {
+      final repos = context.read<AppRepositories>();
+      final projects = await repos.projects.listProjects();
+      hasData = projects.isNotEmpty;
+    } catch (_) {
+      hasData = false;
+    }
   }
 
-  // Logic: Show NewUserHomeScreen ONLY for new registrations with no data.
-  // Otherwise, show the original regular home screen.
-  bool shouldShowEmptyHome = isNew && !hasData;
+  if (!context.mounted) return;
+  final shouldShowEmptyHome = isNew && !hasData;
 
   debugPrint('--- AUTH NAVIGATION ---');
   debugPrint('Role: $role, isNew: $isNew, hasData: $hasData');
-  debugPrint(
-      'Target: ${shouldShowEmptyHome ? "NewUserHomeScreen" : "Regular Home"}');
 
   if (shouldShowEmptyHome) {
     Navigator.pushNamedAndRemoveUntil(context, R.newUserHome, (_) => false,
@@ -2438,7 +2444,7 @@ class ConfirmationAdminScreen extends StatelessWidget {
     return _ConfirmationScreen(
       emoji: '💻🖥️',
       text: '"You now have full admin access."',
-      onTap: () => _navigateToCorrectHome(context, 'Admin', isNew: true),
+      onTap: () async => _navigateToCorrectHome(context, 'Admin', isNew: true),
     );
   }
 }
@@ -2451,7 +2457,8 @@ class ConfirmationFreelancerScreen extends StatelessWidget {
     return _ConfirmationScreen(
       emoji: '✅📄',
       text: '" Teams can now find you based\non yourself "',
-      onTap: () => _navigateToCorrectHome(context, 'Freelancer', isNew: true),
+      onTap: () async =>
+          _navigateToCorrectHome(context, 'Freelancer', isNew: true),
     );
   }
 }
@@ -2464,7 +2471,8 @@ class ConfirmationStudentScreen extends StatelessWidget {
     return _ConfirmationScreen(
       emoji: '👫✅',
       text: '" we will help you to find the the\nright project team"',
-      onTap: () => _navigateToCorrectHome(context, 'Student', isNew: true),
+      onTap: () async =>
+          _navigateToCorrectHome(context, 'Student', isNew: true),
     );
   }
 }

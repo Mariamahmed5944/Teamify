@@ -3,7 +3,9 @@ import 'package:provider/provider.dart';
 import '../../core/theme.dart';
 import '../../core/routes.dart';
 import '../../core/session/session_controller.dart';
-import '../../data/dummy_data.dart';
+import '../../data/repositories/app_repositories.dart';
+import '../../data/models/models.dart' as api;
+import '../../models/models.dart';
 import '../../widgets/widgets.dart';
 
 // ── Profile Base Widget ───────────────────────────────────────────────────────
@@ -178,16 +180,60 @@ class FreelancerProfileScreen extends StatelessWidget {
   const FreelancerProfileScreen({super.key});
   @override
   Widget build(BuildContext context) {
-    return const _ProfileBase(
-      name: 'Mariam Khan',
-      role: 'Freelance Developer',
-      initials: 'MK',
-      email: 'mariam.khan@email.com',
-      location: 'San Francisco, CA',
-      joined: 'Joined March 2025',
-      projects: '3',
-      tasksDone: '24',
-      score: '87',
+    final session = context.watch<SessionController>();
+    final fallback = session.currentUser;
+    return FutureBuilder(
+      future: context.read<AppRepositories>().users.getProfile(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !snapshot.hasData &&
+            fallback == null) {
+          return const Scaffold(
+              body: Center(child: CircularProgressIndicator()));
+        }
+        if (snapshot.hasError &&
+            fallback == null) {
+          return Scaffold(
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(snapshot.error!.toString(),
+                        textAlign: TextAlign.center,
+                        style:
+                            const TextStyle(color: AppColors.textSecondary)),
+                    const SizedBox(height: 12),
+                    TextButton(
+                      onPressed: () =>
+                          Navigator.pushReplacementNamed(context, R.freelancerProfile),
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+        final apiUser = snapshot.data ?? fallback;
+        if (apiUser == null) {
+          return const Scaffold(
+              body: Center(child: Text('Unable to load profile')));
+        }
+        final m = apiUser.toDisplayModel();
+        return _ProfileBase(
+          name: m.name,
+          role: apiUser.displayRole,
+          initials: m.initials,
+          email: m.email,
+          location: '—',
+          joined: 'Member',
+          projects: '${m.projectsCount}',
+          tasksDone: '—',
+          score: '—',
+        );
+      },
     );
   }
 }
@@ -197,16 +243,42 @@ class StudentProfileScreen extends StatelessWidget {
   const StudentProfileScreen({super.key});
   @override
   Widget build(BuildContext context) {
-    return const _ProfileBase(
-      name: 'Mariam Khan',
-      role: 'Student Developer',
-      initials: 'MK',
-      email: 'mariam.khan@email.com',
-      location: 'San Francisco, CA',
-      joined: 'Joined March 2025',
-      projects: '3',
-      tasksDone: '24',
-      score: '87',
+    final session = context.watch<SessionController>();
+    final fallback = session.currentUser;
+    return FutureBuilder(
+      future: context.read<AppRepositories>().users.getProfile(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !snapshot.hasData &&
+            fallback == null) {
+          return const Scaffold(
+              body: Center(child: CircularProgressIndicator()));
+        }
+        if (snapshot.hasError && fallback == null) {
+          return Scaffold(
+            body: Center(
+              child: Text(snapshot.error!.toString(),
+                  style: const TextStyle(color: AppColors.textSecondary)),
+            ),
+          );
+        }
+        final apiUser = snapshot.data ?? fallback;
+        if (apiUser == null) {
+          return const Scaffold(body: Center(child: Text('Unable to load profile')));
+        }
+        final m = apiUser.toDisplayModel();
+        return _ProfileBase(
+          name: m.name,
+          role: apiUser.displayRole,
+          initials: m.initials,
+          email: m.email,
+          location: '—',
+          joined: 'Member',
+          projects: '${m.projectsCount}',
+          tasksDone: '—',
+          score: '—',
+        );
+      },
     );
   }
 }
@@ -216,17 +288,43 @@ class AdminProfileScreen extends StatelessWidget {
   const AdminProfileScreen({super.key});
   @override
   Widget build(BuildContext context) {
-    return const _ProfileBase(
-      name: 'Mariam Khan',
-      role: 'System Administrator',
-      initials: 'MK',
-      email: 'mariam.khan@email.com',
-      location: 'San Francisco, CA',
-      joined: 'Joined March 2025',
-      projects: '3',
-      tasksDone: '24',
-      score: '87',
-      isAdmin: true,
+    final session = context.watch<SessionController>();
+    final fallback = session.currentUser;
+    return FutureBuilder(
+      future: context.read<AppRepositories>().users.getProfile(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !snapshot.hasData &&
+            fallback == null) {
+          return const Scaffold(
+              body: Center(child: CircularProgressIndicator()));
+        }
+        if (snapshot.hasError && fallback == null) {
+          return Scaffold(
+            body: Center(
+              child: Text(snapshot.error!.toString(),
+                  style: const TextStyle(color: AppColors.textSecondary)),
+            ),
+          );
+        }
+        final apiUser = snapshot.data ?? fallback;
+        if (apiUser == null) {
+          return const Scaffold(body: Center(child: Text('Unable to load profile')));
+        }
+        final m = apiUser.toDisplayModel();
+        return _ProfileBase(
+          name: m.name,
+          role: 'System Administrator',
+          initials: m.initials,
+          email: m.email,
+          location: '—',
+          joined: 'Member',
+          projects: '${m.projectsCount}',
+          tasksDone: '—',
+          score: '—',
+          isAdmin: true,
+        );
+      },
     );
   }
 }
@@ -342,6 +440,7 @@ class CompletedProjectsScreen extends StatelessWidget {
   const CompletedProjectsScreen({super.key});
   @override
   Widget build(BuildContext context) {
+    final repos = context.read<AppRepositories>();
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -350,39 +449,52 @@ class CompletedProjectsScreen extends StatelessWidget {
               onPressed: () => Navigator.pop(context)),
           title: const Text('Completed Projects',
               style: TextStyle(fontWeight: FontWeight.bold))),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: DummyData.projects.length,
-        itemBuilder: (_, i) {
-          final p = DummyData.projects[i];
-          return TCard(
-              margin: const EdgeInsets.only(bottom: 10),
-              child: Row(children: [
-                Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(10)),
-                    child: const Icon(Icons.folder_outlined,
-                        color: AppColors.primary, size: 22)),
-                const SizedBox(width: 12),
-                Expanded(
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                      Text(p.name,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textPrimary)),
-                      Text(p.company,
-                          style: const TextStyle(
-                              fontSize: 12, color: AppColors.textSecondary)),
-                    ])),
-                TChip(
-                    label: '${p.progress}%',
-                    bg: AppColors.success.withOpacity(0.1),
-                    textColor: AppColors.success),
-              ]));
+      body: RepositoryLoader<List<api.ApiProject>>(
+        load: () => repos.projects.listProjects(),
+        isEmpty: (list) => list
+            .where((p) => p.status.toLowerCase() == 'completed')
+            .isEmpty,
+        emptyMessage: 'No completed projects yet',
+        builder: (ctx, apiProjects) {
+          final completed = apiProjects
+              .where((p) => p.status.toLowerCase() == 'completed')
+              .map((p) => p.toDisplayModel())
+              .toList();
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: completed.length,
+            itemBuilder: (_, i) {
+              final p = completed[i];
+              return TCard(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  child: Row(children: [
+                    Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(10)),
+                        child: const Icon(Icons.folder_outlined,
+                            color: AppColors.primary, size: 22)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                        child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                          Text(p.name,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textPrimary)),
+                          Text(p.company,
+                              style: const TextStyle(
+                                  fontSize: 12, color: AppColors.textSecondary)),
+                        ])),
+                    TChip(
+                        label: '${p.progress}%',
+                        bg: AppColors.success.withOpacity(0.1),
+                        textColor: AppColors.success),
+                  ]));
+            },
+          );
         },
       ),
     );

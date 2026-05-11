@@ -39,6 +39,24 @@ def _is_allowed_mime(mime: str) -> bool:
     return any(mime.startswith(p) for p in ALLOWED_MIME_PREFIXES)
 
 
+# ─── GET /api/files  (list uploads for authenticated user) ───────────────────
+
+@files_bp.route("", methods=["GET"])
+@auth_required
+def list_my_files():
+    """Return metadata rows for files owned by the current user."""
+    try:
+        owner_id = int(get_jwt_identity())
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid token identity"}), 401
+    metas = (
+        FileMetadata.query.filter_by(owner_id=owner_id)
+        .order_by(FileMetadata.created_at.desc())
+        .all()
+    )
+    return jsonify({"files": [m.to_dict() for m in metas]}), 200
+
+
 # ─── POST /api/files ─────────────────────────────────────────────────────────
 
 @files_bp.route("", methods=["POST"])

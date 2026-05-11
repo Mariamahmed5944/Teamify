@@ -44,14 +44,29 @@ class ApiFile {
   });
 
   factory ApiFile.fromJson(Map<String, dynamic> json) {
+    final bytes = asInt(json['size_bytes']);
+    final sizeStr = asString(json['size'] ?? json['file_size']);
     return ApiFile(
       id: asString(json['id'] ?? json['file_id']),
       name: asString(json['filename'] ?? json['name']),
-      size: asString(json['size'] ?? json['file_size']),
+      size: sizeStr.isNotEmpty ? sizeStr : _formatBytes(bytes),
       type: asString(json['mime_type'] ?? json['type']),
-      uploadedBy: asString(json['uploaded_by'] ?? json['user_id']),
+      uploadedBy: asString(json['uploaded_by'] ?? json['owner_id']),
       createdAt: asString(json['created_at'] ?? json['uploaded_at']),
     );
+  }
+
+  static String _formatBytes(int bytes) {
+    if (bytes <= 0) return '';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    var i = 0;
+    var n = bytes.toDouble();
+    while (n >= 1024 && i < units.length - 1) {
+      n /= 1024;
+      i++;
+    }
+    final decimals = i == 0 ? 0 : 1;
+    return '${n.toStringAsFixed(decimals)} ${units[i]}';
   }
 }
 

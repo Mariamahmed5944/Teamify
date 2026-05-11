@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../core/theme.dart';
 import '../core/routes.dart';
 
+export 'repository_loader.dart';
+
 // ── TCard ─────────────────────────────────────────────────────────────────────
 class TCard extends StatelessWidget {
   final Widget child;
