@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import '../core/theme.dart';
 import '../core/routes.dart';
 
-export 'repository_loader.dart';
-
 // ── TCard ─────────────────────────────────────────────────────────────────────
 class TCard extends StatelessWidget {
   final Widget child;
@@ -431,5 +429,96 @@ void handleFreelancerNav(BuildContext ctx, int i) {
     case 4:
       Navigator.pushNamed(ctx, R.freelancerProfile);
       break;
+  }
+}
+
+// ── Repository Loader ─────────────────────────────────────────────────────────
+class RepositoryLoader<T> extends StatefulWidget {
+  final Future<T> Function() load;
+  final Widget Function(BuildContext context, T data) builder;
+  final bool Function(T data)? isEmpty;
+  final String emptyMessage;
+
+  const RepositoryLoader({
+    super.key,
+    required this.load,
+    required this.builder,
+    this.isEmpty,
+    this.emptyMessage = 'No data found',
+  });
+
+  @override
+  State<RepositoryLoader<T>> createState() => _RepositoryLoaderState<T>();
+}
+
+class _RepositoryLoaderState<T> extends State<RepositoryLoader<T>> {
+  late Future<T> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = widget.load();
+  }
+
+  void _retry() {
+    setState(() {
+      _future = widget.load();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<T>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError || !snapshot.hasData) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    snapshot.error?.toString() ??
+                        'Something went wrong. Try again.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextButton(
+                    onPressed: _retry,
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        final data = snapshot.data as T;
+        if (widget.isEmpty != null && widget.isEmpty!(data)) {
+          return Center(
+            child: Text(
+              widget.emptyMessage,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 14,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          );
+        }
+
+        return widget.builder(context, data);
+      },
+    );
   }
 }

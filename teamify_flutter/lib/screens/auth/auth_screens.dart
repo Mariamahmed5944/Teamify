@@ -17,23 +17,22 @@ Future<void> _navigateToCorrectHome(BuildContext context, String role,
 
   bool hasData = false;
   String displayName = name ?? 'User';
+  final repos = context.read<AppRepositories>();
+  final session = context.read<SessionController>();
 
   if (isNew) {
     try {
-      final repos = context.read<AppRepositories>();
       final projects = await repos.projects.listProjects();
       hasData = projects.isNotEmpty;
     } catch (_) {
       hasData = false;
     }
-    final session = context.read<SessionController>();
     displayName = session.currentUser?.displayName ??
         session.currentUser?.fullName ??
         displayName;
   } else if (email != null && email.trim().isNotEmpty ||
       name != null && name.trim().isNotEmpty) {
     try {
-      final repos = context.read<AppRepositories>();
       final projects = await repos.projects.listProjects();
       hasData = projects.isNotEmpty;
     } catch (_) {
@@ -2457,8 +2456,7 @@ class ConfirmationFreelancerScreen extends StatelessWidget {
     return _ConfirmationScreen(
       emoji: '✅📄',
       text: '" Teams can now find you based\non yourself "',
-      onTap: () async =>
-          _navigateToCorrectHome(context, 'Freelancer', isNew: true),
+      onTap: () => _navigateToCorrectHome(context, 'Freelancer', isNew: true),
     );
   }
 }
@@ -2471,8 +2469,7 @@ class ConfirmationStudentScreen extends StatelessWidget {
     return _ConfirmationScreen(
       emoji: '👫✅',
       text: '" we will help you to find the the\nright project team"',
-      onTap: () async =>
-          _navigateToCorrectHome(context, 'Student', isNew: true),
+      onTap: () => _navigateToCorrectHome(context, 'Student', isNew: true),
     );
   }
 }

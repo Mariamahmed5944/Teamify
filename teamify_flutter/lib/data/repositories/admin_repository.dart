@@ -1,5 +1,5 @@
 import '../../core/network/api_client.dart';
-import '../../models/models.dart';
+import '../../models/models.dart' as ui;
 import '../models/models.dart';
 import 'repository_helpers.dart';
 
@@ -17,9 +17,57 @@ class AdminRepository {
 
   Future<List<ApiUser>> listPendingUsers() async {
     final response = await _client.get<dynamic>('/admin/users/pending');
-    return responseList(response.data, ['items', 'users', 'pending_users', 'data'])
+    return responseList(
+            response.data, ['items', 'users', 'pending_users', 'data'])
         .map(ApiUser.fromJson)
         .toList();
+  }
+
+  Future<List<ui.LoginLog>> listLoginLogs() async {
+    final response = await _client.get<dynamic>('/admin/logs');
+    return responseList(response.data, ['items', 'logs', 'data']).map((json) {
+      final timestamp = asString(json['timestamp'] ?? json['created_at']);
+      final user = responseMap(json['user']);
+      final userName = asString(
+        json['user_name'] ??
+            json['username'] ??
+            user['display_name'] ??
+            user['full_name'] ??
+            user['email'],
+        'Unknown user',
+      );
+      final status = asString(json['status']).toLowerCase() == 'success'
+          ? 'Success'
+          : 'Failed';
+      return ui.LoginLog(
+        id: asString(json['id']),
+        userName: userName,
+        status: status,
+        time: _formatTime(timestamp),
+        date: _formatDate(timestamp),
+        device: asString(json['device_info'] ?? json['device'], 'Unknown'),
+        ip: asString(json['ip_address'] ?? json['ip'], 'Unknown'),
+      );
+    }).toList();
+  }
+
+  Future<List<ui.SecurityAlert>> listAlerts() async {
+    final response = await _client.get<dynamic>('/admin/alerts');
+    return responseList(response.data, ['items', 'alerts', 'data']).map((json) {
+      final resolved = asBool(json['resolved']);
+      final type = asString(json['type'], 'Security Alert');
+      final description = asString(json['description']);
+      final timestamp = asString(json['timestamp'] ?? json['created_at']);
+      return ui.SecurityAlert(
+        id: asString(json['id']),
+        title: _titleFromType(type),
+        user: asString(json['user_name'] ?? json['user_id'], 'System'),
+        description: description.isNotEmpty ? description : type,
+        risk: _riskFromType(type, description),
+        status: resolved ? 'Resolved' : 'New',
+        time: _formatDateTime(timestamp),
+      );
+    }).toList();
   }
 
   Future<void> approveUser(String id) async {
@@ -33,66 +81,36 @@ class AdminRepository {
     );
   }
 
-  Future<List<LoginLog>> listLoginLogs({String filter = 'All'}) async {
-    final qp = <String, dynamic>{};
-    if (filter == 'Success') qp['status'] = 'success';
-    if (filter == 'Failed') qp['status'] = 'fail';
-    final response = await _client.get<dynamic>(
-      '/admin/logs',
-      queryParameters: qp.isEmpty ? null : qp,
-    );
-    final raw = responseList(response.data, ['items']);
-    return raw.map(_mapLoginLog).toList();
+  static String _titleFromType(String type) {
+    return type
+        .replaceAll('_', ' ')
+        .split(' ')
+        .where((part) => part.isNotEmpty)
+        .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
+        .join(' ');
   }
 
-  Future<List<SecurityAlert>> listAlerts() async {
-    final response = await _client.get<dynamic>('/admin/alerts');
-    final raw = responseList(response.data, ['items']);
-    return raw.map(_mapSecurityAlert).toList();
+  static String _riskFromType(String type, String description) {
+    final value = '$type $description'.toLowerCase();
+    if (value.contains('brute') ||
+        value.contains('failed') ||
+        value.contains('critical')) {
+      return 'HIGH RISK';
+    }
+    if (value.contains('anomaly') || value.contains('suspicious')) {
+      return 'MEDIUM RISK';
+    }
+    return 'LOW RISK';
   }
-}
 
-LoginLog _mapLoginLog(Map<String, dynamic> m) {
-  final ts = asString(m['timestamp']);
-  var time = ts;
-  var date = '';
-  if (ts.contains('T')) {
-    final parts = ts.split('T');
-    date = parts[0];
-    final rest = parts[1];
-    time = rest.length >= 5 ? rest.substring(0, 5) : rest;
-  } else if (ts.length > 5) {
-    time = ts;
+  static String _formatDateTime(String value) =>
+      value.isEmpty ? 'Unknown' : value.replaceFirst('T', ' ').split('.').first;
+
+  static String _formatDate(String value) =>
+      _formatDateTime(value).split(' ').first;
+
+  static String _formatTime(String value) {
+    final parts = _formatDateTime(value).split(' ');
+    return parts.length > 1 ? parts[1] : 'Unknown';
   }
-  final uid = m['user_id'];
-  return LoginLog(
-    id: asString(m['id']),
-    userName: uid == null ? 'Unknown' : 'User #$uid',
-    status: asString(m['status']) == 'success' ? 'Success' : 'Failed',
-    time: time.isNotEmpty ? time : '—',
-    date: date.isNotEmpty ? date : '—',
-    device: asString(m['device_info']).isEmpty ? 'Unknown' : asString(m['device_info']),
-    ip: asString(m['ip_address']),
-  );
-}
-
-SecurityAlert _mapSecurityAlert(Map<String, dynamic> m) {
-  final typ = asString(m['type'], 'Security event');
-  final title = typ.replaceAll('_', ' ');
-  final resolved = asBool(m['resolved']);
-  final desc = asString(m['description']);
-  final ts = asString(m['timestamp']);
-  final lt = typ.toLowerCase();
-  final risk = lt.contains('brute') || lt.contains('force') || lt.contains('critical')
-      ? 'HIGH RISK'
-      : lt.contains('warn') ? 'LOW RISK' : 'MEDIUM RISK';
-  return SecurityAlert(
-    id: asString(m['id']),
-    title: title.isNotEmpty ? title : 'Alert',
-    user: resolved ? 'Resolved' : 'System',
-    description: desc.isEmpty ? 'No description' : desc,
-    risk: risk,
-    status: resolved ? 'Resolved' : 'New',
-    time: ts.length > 19 ? ts.substring(0, 19) : (ts.isNotEmpty ? ts : '—'),
-  );
 }

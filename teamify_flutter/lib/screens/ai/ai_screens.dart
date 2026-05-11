@@ -1,13 +1,53 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/session/session_controller.dart';
 import '../../core/theme.dart';
 import '../../core/routes.dart';
-import '../../core/session/session_controller.dart';
 import '../../data/models/models.dart' as api;
 import '../../data/repositories/app_repositories.dart';
 import '../../models/models.dart';
 import '../../widgets/widgets.dart';
+
+Future<List<UserModel>> _fetchTeammateRecommendations(
+    BuildContext context) async {
+  final repos = context.read<AppRepositories>();
+  final user = context.read<SessionController>().currentUser;
+  final result = await repos.ai.recommendTeammates({
+    'user_id': user?.id,
+    'skills': user?.skills ?? const <String>[],
+  });
+  final raw = result['recommendations'] ??
+      result['teammates'] ??
+      result['users'] ??
+      result['data'];
+  if (raw is List && raw.isNotEmpty) {
+    return raw
+        .whereType<Map>()
+        .map((item) => api.ApiUser.fromJson(Map<String, dynamic>.from(item))
+            .toDisplayModel())
+        .toList();
+  }
+  return repos.search
+      .users('')
+      .then((users) => users.map((user) => user.toDisplayModel()).toList());
+}
+
+Future<List<Map<String, dynamic>>> _fetchRecommendedCourses(
+    BuildContext context) async {
+  final userId = context.read<SessionController>().currentUser?.id ?? '';
+  if (userId.isEmpty) return const [];
+  final result = await context.read<AppRepositories>().ai.mentorCourses(userId);
+  final raw = result['courses'] ??
+      result['recommended_courses'] ??
+      result['items'] ??
+      result['data'];
+  if (raw is! List) return const [];
+  return raw
+      .whereType<Map>()
+      .map((item) => Map<String, dynamic>.from(item))
+      .toList();
+}
 
 // ── AI Hub ────────────────────────────────────────────────────────────────────
 class AIHubScreen extends StatelessWidget {
@@ -348,47 +388,8 @@ class AITaskAllocationScreen extends StatelessWidget {
 }
 
 // ── Suggested Result ──────────────────────────────────────────────────────────
-
-Future<List<Map<String, dynamic>>> _fetchTeammateRecommendations(
-    AppRepositories repos, SessionController session) async {
-  final uid = session.currentUser?.id ?? '';
-  final map =
-      await repos.ai.recommendTeammates({'user_id': uid, 'skills': <String>[]});
-  final raw = map['recommendations'];
-  if (raw is! List) return [];
-  return raw
-      .map((e) => e is Map<String, dynamic> ? e : Map<String, dynamic>.from(e as Map))
-      .toList();
-}
-
-class AISuggestedResultScreen extends StatefulWidget {
+class AISuggestedResultScreen extends StatelessWidget {
   const AISuggestedResultScreen({super.key});
-  @override
-  State<AISuggestedResultScreen> createState() =>
-      _AISuggestedResultScreenState();
-}
-
-class _AISuggestedResultScreenState extends State<AISuggestedResultScreen> {
-  Future<List<Map<String, dynamic>>>? _future;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _future ??= _fetchTeammateRecommendations(
-      context.read<AppRepositories>(),
-      context.read<SessionController>(),
-    );
-  }
-
-  void _retry() {
-    setState(() {
-      _future = _fetchTeammateRecommendations(
-        context.read<AppRepositories>(),
-        context.read<SessionController>(),
-      );
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -399,73 +400,34 @@ class _AISuggestedResultScreenState extends State<AISuggestedResultScreen> {
               onPressed: () => Navigator.pop(context)),
           title: const Text('AI Result',
               style: TextStyle(fontWeight: FontWeight.bold))),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting &&
-              !snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError || !snapshot.hasData) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(snapshot.error?.toString() ?? 'Failed to load result',
-                        textAlign: TextAlign.center,
-                        style:
-                            const TextStyle(color: AppColors.textSecondary)),
-                    TextButton(onPressed: _retry, child: const Text('Retry')),
-                  ],
-                ),
-              ),
-            );
-          }
-          final rows = snapshot.data!;
-          if (rows.isEmpty) {
-            return const Center(
-                child: Text('No recommendations yet',
-                    style: TextStyle(color: AppColors.textSecondary)));
-          }
-          final display = rows.take(3).toList();
-          return ListView(padding: const EdgeInsets.all(16), children: [
-            ...display.map((rec) {
-              final name =
-                  rec['display_name']?.toString() ?? rec['name']?.toString() ?? 'Member';
-              final scoreVal = rec['similarity_score'];
-              final score =
-                  scoreVal is num ? scoreVal.toDouble() : double.tryParse('$scoreVal') ?? 0.0;
-              final skillsList = rec['skills'];
-              final skillStr = skillsList is List
-                  ? skillsList.map((x) => x.toString()).take(3).join(', ')
-                  : '';
-              final initialsChar = name.trim().isNotEmpty ? name.trim()[0] : '?';
-              final barVal = score <= 1 && score >= -1 ? (score.clamp(-1.0, 1.0) + 1) / 2 : score.clamp(0.0, 1.0);
-              final pct = (score * 100).round().clamp(0, 100);
-              return TCard(
+      body: RepositoryLoader<List<UserModel>>(
+        load: () => _fetchTeammateRecommendations(context),
+        isEmpty: (users) => users.isEmpty,
+        emptyMessage: 'No suggested teammates found',
+        builder: (context, users) =>
+            ListView(padding: const EdgeInsets.all(16), children: [
+          ...users.take(3).map((u) => TCard(
                 margin: const EdgeInsets.only(bottom: 12),
                 child: Row(children: [
-                  TAvatar(initials: initialsChar.toUpperCase(), radius: 24),
+                  TAvatar(initials: u.initials, radius: 24),
                   const SizedBox(width: 12),
                   Expanded(
                       child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                    Text(name,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textPrimary)),
-                    Text(skillStr,
-                        style: const TextStyle(
-                            fontSize: 12, color: AppColors.textSecondary)),
-                    const SizedBox(height: 4),
-                    TBar(value: barVal, color: AppColors.primary),
-                  ])),
+                        Text(u.name,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textPrimary)),
+                        Text(u.role,
+                            style: const TextStyle(
+                                fontSize: 12, color: AppColors.textSecondary)),
+                        const SizedBox(height: 4),
+                        TBar(value: u.rating / 5, color: AppColors.primary),
+                      ])),
                   const SizedBox(width: 12),
                   Column(children: [
-                    Text('$pct%',
+                    Text('${(u.rating * 20).toInt()}%',
                         style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             color: AppColors.primary,
@@ -475,15 +437,12 @@ class _AISuggestedResultScreenState extends State<AISuggestedResultScreen> {
                             fontSize: 11, color: AppColors.textSecondary)),
                   ]),
                 ]),
-              );
-            }),
-            const SizedBox(height: 8),
-            TButton(
-                label: 'View Explanation',
-                onTap: () =>
-                    Navigator.pushNamed(context, R.aiExplanation)),
-          ]);
-        },
+              )),
+          const SizedBox(height: 8),
+          TButton(
+              label: 'View Explanation',
+              onTap: () => Navigator.pushNamed(context, R.aiExplanation)),
+        ]),
       ),
     );
   }
@@ -957,34 +916,8 @@ class AIMentorScreen extends StatelessWidget {
 }
 
 // ── Team Recommendation ───────────────────────────────────────────────────────
-class TeamRecommendationScreen extends StatefulWidget {
+class TeamRecommendationScreen extends StatelessWidget {
   const TeamRecommendationScreen({super.key});
-  @override
-  State<TeamRecommendationScreen> createState() =>
-      _TeamRecommendationScreenState();
-}
-
-class _TeamRecommendationScreenState extends State<TeamRecommendationScreen> {
-  Future<List<Map<String, dynamic>>>? _future;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _future ??= _fetchTeammateRecommendations(
-      context.read<AppRepositories>(),
-      context.read<SessionController>(),
-    );
-  }
-
-  void _retry() {
-    setState(() {
-      _future = _fetchTeammateRecommendations(
-        context.read<AppRepositories>(),
-        context.read<SessionController>(),
-      );
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -995,150 +928,56 @@ class _TeamRecommendationScreenState extends State<TeamRecommendationScreen> {
               onPressed: () => Navigator.pop(context)),
           title: const Text('Team Recommendation',
               style: TextStyle(fontWeight: FontWeight.bold))),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _future,
-        builder: (_, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting &&
-              !snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError || !snapshot.hasData) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                        snapshot.error?.toString() ?? 'Unable to load team data',
-                        textAlign: TextAlign.center,
-                        style:
-                            const TextStyle(color: AppColors.textSecondary)),
-                    TextButton(onPressed: _retry, child: const Text('Retry')),
-                  ],
-                ),
-              ),
-            );
-          }
-          final rows = snapshot.data!;
-          if (rows.isEmpty) {
-            return const Center(
-                child: Text('No teammate recommendations yet',
-                    style: TextStyle(color: AppColors.textSecondary)));
-          }
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              const AIBanner(
-                  title: 'AI Team Builder',
-                  subtitle:
-                      'Optimal team composition for your project'),
-              const SizedBox(height: 16),
-              ...rows.map((rec) {
-                final name = rec['display_name']?.toString() ??
-                    rec['name']?.toString() ??
-                    'Member';
-                final scoreVal = rec['similarity_score'];
-                final score = scoreVal is num
-                    ? scoreVal.toDouble()
-                    : double.tryParse('$scoreVal') ?? 0.0;
-                final skillsList = rec['skills'];
-                final skillStr = skillsList is List
-                    ? skillsList.map((x) => x.toString()).join(', ')
-                    : '';
-                final initialsChar =
-                    name.trim().isNotEmpty ? name.trim()[0] : '?';
-                final barVal = score.abs() <= 1
-                    ? (score.clamp(-1.0, 1.0) + 1) / 2
-                    : score.clamp(0.0, 1.0);
-                final pct = (score * 100).round().clamp(0, 100);
-                return TCard(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  child: Row(children: [
-                    TAvatar(initials: initialsChar.toUpperCase(), radius: 24),
-                    const SizedBox(width: 12),
-                    Expanded(
-                        child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                          Text(name,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.textPrimary)),
-                          Text(skillStr,
-                              style: const TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.textSecondary)),
-                          const SizedBox(height: 4),
-                          TBar(value: barVal),
-                        ])),
-                    const SizedBox(width: 12),
-                    Column(children: [
-                      Text('$pct%',
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.primary)),
-                      const Text('match',
-                          style: TextStyle(
-                              fontSize: 11, color: AppColors.textSecondary)),
-                    ]),
+      body: RepositoryLoader<List<UserModel>>(
+        load: () => _fetchTeammateRecommendations(context),
+        isEmpty: (users) => users.isEmpty,
+        emptyMessage: 'No team recommendations found',
+        builder: (context, users) =>
+            ListView(padding: const EdgeInsets.all(16), children: [
+          const AIBanner(
+              title: 'AI Team Builder',
+              subtitle: 'Optimal team composition for your project'),
+          const SizedBox(height: 16),
+          ...users.map((u) => TCard(
+                margin: const EdgeInsets.only(bottom: 10),
+                child: Row(children: [
+                  TAvatar(initials: u.initials, radius: 24),
+                  const SizedBox(width: 12),
+                  Expanded(
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                        Text(u.name,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textPrimary)),
+                        Text(u.skills.take(3).join(', '),
+                            style: const TextStyle(
+                                fontSize: 12, color: AppColors.textSecondary)),
+                        const SizedBox(height: 4),
+                        TBar(value: u.rating / 5),
+                      ])),
+                  const SizedBox(width: 12),
+                  Column(children: [
+                    Text('${(u.rating * 20).toInt()}%',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary)),
+                    const Text('match',
+                        style: TextStyle(
+                            fontSize: 11, color: AppColors.textSecondary)),
                   ]),
-                );
-              }),
-            ],
-          );
-        },
+                ]),
+              )),
+        ]),
       ),
     );
   }
 }
 
 // ── Recommended Courses ───────────────────────────────────────────────────────
-
-Future<List<Map<String, dynamic>>> _fetchCourses(
-    AppRepositories repos, SessionController session) async {
-  final id = session.currentUser?.id;
-  if (id == null || id.isEmpty) {
-    return [];
-  }
-  final map = await repos.ai.mentorCourses(id);
-  final raw = map['recommended_courses'];
-  if (raw is! List) return [];
-  return raw
-      .map((e) =>
-          e is Map<String, dynamic> ? e : Map<String, dynamic>.from(e as Map))
-      .toList();
-}
-
-class RecommendedCoursesScreen extends StatefulWidget {
+class RecommendedCoursesScreen extends StatelessWidget {
   const RecommendedCoursesScreen({super.key});
-
-  @override
-  State<RecommendedCoursesScreen> createState() =>
-      _RecommendedCoursesScreenState();
-}
-
-class _RecommendedCoursesScreenState extends State<RecommendedCoursesScreen> {
-  Future<List<Map<String, dynamic>>>? _future;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _future ??= _fetchCourses(
-      context.read<AppRepositories>(),
-      context.read<SessionController>(),
-    );
-  }
-
-  void _retry() {
-    setState(() {
-      _future = _fetchCourses(
-        context.read<AppRepositories>(),
-        context.read<SessionController>(),
-      );
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1149,93 +988,53 @@ class _RecommendedCoursesScreenState extends State<RecommendedCoursesScreen> {
               onPressed: () => Navigator.pop(context)),
           title: const Text('Recommended Courses',
               style: TextStyle(fontWeight: FontWeight.bold))),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _future,
-        builder: (_, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting &&
-              !snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError || !snapshot.hasData) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(snapshot.error?.toString() ?? 'Unable to load courses',
-                        textAlign: TextAlign.center,
-                        style:
-                            const TextStyle(color: AppColors.textSecondary)),
-                    TextButton(onPressed: _retry, child: const Text('Retry')),
-                  ],
-                ),
-              ),
+      body: RepositoryLoader<List<Map<String, dynamic>>>(
+        load: () => _fetchRecommendedCourses(context),
+        isEmpty: (courses) => courses.isEmpty,
+        emptyMessage: 'No recommended courses found',
+        builder: (context, courses) => ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: courses.length,
+          itemBuilder: (_, i) {
+            final c = courses[i];
+            final progress =
+                c['progress'] is num ? (c['progress'] as num).toInt() : 0;
+            final match = c['match'] is num ? (c['match'] as num).toInt() : 0;
+            return TCard(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: Row(children: [
+                Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12)),
+                    child: const Icon(Icons.play_circle_outline,
+                        color: AppColors.primary, size: 28)),
+                const SizedBox(width: 12),
+                Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      Text(
+                          (c['title'] ?? c['name'] ?? 'Recommended course')
+                              .toString(),
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary)),
+                      Text((c['platform'] ?? c['provider'] ?? '').toString(),
+                          style: const TextStyle(
+                              fontSize: 12, color: AppColors.textSecondary)),
+                      const SizedBox(height: 6),
+                      TBar(value: progress / 100),
+                      const SizedBox(height: 2),
+                      Text('$progress% complete • $match% match',
+                          style: const TextStyle(
+                              fontSize: 11, color: AppColors.primary)),
+                    ])),
+              ]),
             );
-          }
-          final courses = snapshot.data!;
-          if (courses.isEmpty) {
-            return const Center(
-                child: Text('No courses recommended yet',
-                    style: TextStyle(color: AppColors.textSecondary)));
-          }
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: courses.length,
-            itemBuilder: (_, i) {
-              final c = courses[i];
-              final title = c['title']?.toString() ??
-                  c['name']?.toString() ??
-                  c['course']?.toString() ??
-                  'Course';
-              final platform = c['platform']?.toString() ??
-                  c['provider']?.toString() ??
-                  'Learning';
-              final progRaw = c['progress'] ?? c['completion'];
-              final progress = progRaw is num
-                  ? progRaw.toInt().clamp(0, 100)
-                  : int.tryParse('$progRaw') ?? 10;
-              final matchRaw =
-                  c['match'] ?? c['relevance'] ?? c['score'] ?? progress;
-              final match = matchRaw is num
-                  ? matchRaw.toInt().clamp(0, 100)
-                  : int.tryParse('$matchRaw') ?? 80;
-
-              return TCard(
-                margin: const EdgeInsets.only(bottom: 12),
-                child: Row(children: [
-                  Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12)),
-                      child: const Icon(Icons.play_circle_outline,
-                          color: AppColors.primary, size: 28)),
-                  const SizedBox(width: 12),
-                  Expanded(
-                      child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                        Text(title,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textPrimary)),
-                        Text(platform,
-                            style: const TextStyle(
-                                fontSize: 12,
-                                color: AppColors.textSecondary)),
-                        const SizedBox(height: 6),
-                        TBar(value: progress / 100),
-                        const SizedBox(height: 2),
-                        Text('$progress% complete • $match% match',
-                            style: const TextStyle(
-                                fontSize: 11, color: AppColors.primary)),
-                      ])),
-                ]),
-              );
-            },
-          );
-        },
+          },
+        ),
       ),
     );
   }

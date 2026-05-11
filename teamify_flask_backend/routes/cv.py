@@ -63,21 +63,6 @@ def _can_read_cv(caller_id: int, caller_role: str, cv: CV) -> bool:
     return False
 
 
-# ─── GET /api/cv  — List caller's own CV(s) ───────────────────────────────────
-
-@cv_bp.route("", methods=["GET"])
-@jwt_required()
-def list_my_cvs():
-    """Return the authenticated member's CV rows (0 or 1 in normal use)."""
-    try:
-        caller_id, _caller_role = _resolve_caller()
-    except ValueError as exc:
-        return jsonify({"error": "Unauthorized", "message": str(exc)}), 401
-
-    rows = CV.query.filter_by(user_id=caller_id).order_by(CV.id.desc()).all()
-    return jsonify({"cvs": [c.to_dict(public_only=False) for c in rows]}), 200
-
-
 # ─── POST /api/cv  — Create or replace own CV ─────────────────────────────────
 
 @cv_bp.route("", methods=["POST"])
@@ -148,6 +133,29 @@ def create_or_update_cv():
     )
 
     return jsonify({"message": "CV saved successfully.", "cv": cv.to_dict()}), 201 if is_new else 200
+
+
+# ─── GET /api/cv  — List readable CVs ─────────────────────────────────────────
+
+@cv_bp.route("", methods=["GET"])
+@jwt_required()
+def list_cvs():
+    """List CVs visible to the authenticated caller."""
+    try:
+        caller_id, caller_role = _resolve_caller()
+    except ValueError as exc:
+        return jsonify({"error": "Unauthorized", "message": str(exc)}), 401
+
+    if caller_role == "admin":
+        cvs = CV.query.order_by(CV.updated_at.desc()).all()
+        return jsonify({"cvs": [cv.to_dict() for cv in cvs]}), 200
+
+    if caller_role == "guest":
+        cvs = CV.query.filter_by(is_public=True).order_by(CV.updated_at.desc()).all()
+        return jsonify({"cvs": [cv.to_dict(public_only=True) for cv in cvs]}), 200
+
+    cvs = CV.query.filter_by(user_id=caller_id).order_by(CV.updated_at.desc()).all()
+    return jsonify({"cvs": [cv.to_dict() for cv in cvs]}), 200
 
 
 # ─── GET /api/cv/<id>  — Read a CV ────────────────────────────────────────────

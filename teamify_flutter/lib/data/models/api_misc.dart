@@ -45,11 +45,11 @@ class ApiFile {
 
   factory ApiFile.fromJson(Map<String, dynamic> json) {
     final bytes = asInt(json['size_bytes']);
-    final sizeStr = asString(json['size'] ?? json['file_size']);
+    final size = asString(json['size'] ?? json['file_size']);
     return ApiFile(
       id: asString(json['id'] ?? json['file_id']),
       name: asString(json['filename'] ?? json['name']),
-      size: sizeStr.isNotEmpty ? sizeStr : _formatBytes(bytes),
+      size: size.isNotEmpty ? size : _formatBytes(bytes),
       type: asString(json['mime_type'] ?? json['type']),
       uploadedBy: asString(json['uploaded_by'] ?? json['owner_id']),
       createdAt: asString(json['created_at'] ?? json['uploaded_at']),
@@ -59,14 +59,14 @@ class ApiFile {
   static String _formatBytes(int bytes) {
     if (bytes <= 0) return '';
     const units = ['B', 'KB', 'MB', 'GB'];
-    var i = 0;
-    var n = bytes.toDouble();
-    while (n >= 1024 && i < units.length - 1) {
-      n /= 1024;
-      i++;
+    var value = bytes.toDouble();
+    var unitIndex = 0;
+    while (value >= 1024 && unitIndex < units.length - 1) {
+      value /= 1024;
+      unitIndex++;
     }
-    final decimals = i == 0 ? 0 : 1;
-    return '${n.toStringAsFixed(decimals)} ${units[i]}';
+    final decimals = unitIndex == 0 ? 0 : 1;
+    return '${value.toStringAsFixed(decimals)} ${units[unitIndex]}';
   }
 }
 

@@ -39,24 +39,6 @@ def _is_allowed_mime(mime: str) -> bool:
     return any(mime.startswith(p) for p in ALLOWED_MIME_PREFIXES)
 
 
-# ─── GET /api/files  (list uploads for authenticated user) ───────────────────
-
-@files_bp.route("", methods=["GET"])
-@auth_required
-def list_my_files():
-    """Return metadata rows for files owned by the current user."""
-    try:
-        owner_id = int(get_jwt_identity())
-    except (ValueError, TypeError):
-        return jsonify({"error": "Invalid token identity"}), 401
-    metas = (
-        FileMetadata.query.filter_by(owner_id=owner_id)
-        .order_by(FileMetadata.created_at.desc())
-        .all()
-    )
-    return jsonify({"files": [m.to_dict() for m in metas]}), 200
-
-
 # ─── POST /api/files ─────────────────────────────────────────────────────────
 
 @files_bp.route("", methods=["POST"])
@@ -168,6 +150,25 @@ def upload_file():
     db.session.commit()
 
     return jsonify({"message": "File stored", "file": meta.to_dict()}), 201
+
+
+# ─── GET /api/files ──────────────────────────────────────────────────────────
+
+@files_bp.route("", methods=["GET"])
+@auth_required
+def list_files():
+    """List uploaded file metadata for the authenticated user."""
+    try:
+        owner_id = int(get_jwt_identity())
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid token identity"}), 401
+
+    files = (
+        FileMetadata.query.filter_by(owner_id=owner_id)
+        .order_by(FileMetadata.created_at.desc())
+        .all()
+    )
+    return jsonify({"files": [f.to_dict() for f in files]}), 200
 
 
 # ─── GET /api/files/<id> ─────────────────────────────────────────────────────

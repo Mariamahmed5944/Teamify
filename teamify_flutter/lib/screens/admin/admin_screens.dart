@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme.dart';
 import '../../core/routes.dart';
-import '../../data/repositories/app_repositories.dart';
 import '../../data/models/models.dart' as api;
+import '../../data/repositories/app_repositories.dart';
 import '../../models/models.dart';
 import '../../widgets/widgets.dart';
 
@@ -279,22 +279,25 @@ class AdminUsersScreen extends StatefulWidget {
 }
 
 class _AdminUsersScreenState extends State<AdminUsersScreen> {
-  Future<List<UserModel>>? _usersFuture;
+  late Future<List<UserModel>> _usersFuture;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _usersFuture ??= context.read<AppRepositories>().admin.listUsers().then(
-          (users) => users.map((user) => user.toDisplayModel()).toList(),
-        );
+  void initState() {
+    super.initState();
+    _usersFuture = _loadUsers();
   }
 
-  void _reloadUsers() {
+  Future<List<UserModel>> _loadUsers() {
+    return context
+        .read<AppRepositories>()
+        .admin
+        .listUsers()
+        .then((users) => users.map((user) => user.toDisplayModel()).toList());
+  }
+
+  void _retryUsers() {
     setState(() {
-      _usersFuture = context.read<AppRepositories>().admin.listUsers().then(
-            (users) =>
-                users.map((user) => user.toDisplayModel()).toList(),
-          );
+      _usersFuture = _loadUsers();
     });
   }
 
@@ -350,13 +353,12 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                   child: Column(
                     children: [
                       Text(
-                        snapshot.error?.toString() ??
-                            'Unable to load users.',
-                        style: const TextStyle(color: AppColors.textSecondary),
+                        snapshot.error?.toString() ?? 'Unable to load users.',
                         textAlign: TextAlign.center,
+                        style: const TextStyle(color: AppColors.textSecondary),
                       ),
                       TextButton(
-                        onPressed: _reloadUsers,
+                        onPressed: _retryUsers,
                         child: const Text('Retry'),
                       ),
                     ],
@@ -628,21 +630,6 @@ class LoginLogsScreen extends StatefulWidget {
 
 class _LoginLogsScreenState extends State<LoginLogsScreen> {
   String _filter = 'All';
-  Future<List<LoginLog>>? _logsFuture;
-
-  void _reloadLogs() {
-    _logsFuture = context.read<AppRepositories>().admin.listLoginLogs(
-          filter: _filter,
-        );
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _logsFuture ??= context.read<AppRepositories>().admin.listLoginLogs(
-          filter: _filter,
-        );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -706,10 +693,7 @@ class _LoginLogsScreenState extends State<LoginLogsScreen> {
               children: ['All', 'Success', 'Failed'].map((f) {
             final sel = _filter == f;
             return GestureDetector(
-              onTap: () => setState(() {
-                _filter = f;
-                _reloadLogs();
-              }),
+              onTap: () => setState(() => _filter = f),
               child: Container(
                 margin: const EdgeInsets.only(right: 8),
                 padding:
@@ -729,41 +713,28 @@ class _LoginLogsScreenState extends State<LoginLogsScreen> {
           }).toList()),
         ),
         Expanded(
-          child: FutureBuilder<List<LoginLog>>(
-            future: _logsFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting &&
-                  !snapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (snapshot.hasError || !snapshot.hasData) {
-                return Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        snapshot.error?.toString() ?? 'Failed to load logs',
-                        textAlign: TextAlign.center,
-                      ),
-                      TextButton(
-                          onPressed: () => setState(() => _reloadLogs()),
-                          child: const Text('Retry')),
-                    ],
-                  ),
-                );
-              }
-              final logs = snapshot.data!;
-              if (logs.isEmpty) {
+          child: RepositoryLoader<List<LoginLog>>(
+            load: () => context.read<AppRepositories>().admin.listLoginLogs(),
+            isEmpty: (logs) => logs.isEmpty,
+            emptyMessage: 'No login logs found',
+            builder: (context, logs) {
+              final filteredLogs = logs.where((l) {
+                if (_filter == 'Success') return l.isSuccess;
+                if (_filter == 'Failed') return !l.isSuccess;
+                return true;
+              }).toList();
+              if (filteredLogs.isEmpty) {
                 return const Center(
-                    child: Text('No login logs found',
-                        style: TextStyle(color: AppColors.textSecondary)));
+                  child: Text('No login logs found',
+                      style: TextStyle(color: AppColors.textSecondary)),
+                );
               }
               return ListView.builder(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                itemCount: logs.length,
+                itemCount: filteredLogs.length,
                 itemBuilder: (_, i) {
-                  final l = logs[i];
+                  final l = filteredLogs[i];
                   return Container(
                     margin: const EdgeInsets.only(bottom: 10),
                     padding: const EdgeInsets.all(14),
@@ -834,29 +805,8 @@ class _LoginLogsScreenState extends State<LoginLogsScreen> {
 }
 
 // ── Security Alerts ───────────────────────────────────────────────────────────
-class SecurityAlertsScreen extends StatefulWidget {
+class SecurityAlertsScreen extends StatelessWidget {
   const SecurityAlertsScreen({super.key});
-
-  @override
-  State<SecurityAlertsScreen> createState() => _SecurityAlertsScreenState();
-}
-
-class _SecurityAlertsScreenState extends State<SecurityAlertsScreen> {
-  Future<List<SecurityAlert>>? _alertsFuture;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _alertsFuture ??=
-        context.read<AppRepositories>().admin.listAlerts();
-  }
-
-  void _retry() {
-    setState(() {
-      _alertsFuture = context.read<AppRepositories>().admin.listAlerts();
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -896,126 +846,104 @@ class _SecurityAlertsScreenState extends State<SecurityAlertsScreen> {
           ]),
         ],
       ),
-      body: FutureBuilder<List<SecurityAlert>>(
-        future: _alertsFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting &&
-              !snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError || !snapshot.hasData) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(snapshot.error?.toString() ?? 'Failed to load alerts',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: AppColors.textSecondary)),
-                  TextButton(onPressed: _retry, child: const Text('Retry')),
-                ],
-              ),
-            );
-          }
-          final alerts = snapshot.data!;
-          if (alerts.isEmpty) {
-            return const Center(
-                child: Text('No security alerts',
-                    style: TextStyle(color: AppColors.textSecondary)));
-          }
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: alerts.length,
-            itemBuilder: (_, i) {
-              final a = alerts[i];
-              final Color riskColor = a.risk.contains('HIGH')
-                  ? AppColors.error
-                  : a.risk.contains('MEDIUM')
-                      ? AppColors.warning
-                      : AppColors.success;
-              final IconData alertIcon = a.risk.contains('HIGH')
-                  ? Icons.warning_amber_outlined
-                  : Icons.shield_outlined;
-              return GestureDetector(
-                onTap: () => Navigator.pushNamed(context, R.alertDetails,
-                    arguments: a),
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16)),
-                  child:
-                      Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                            color: riskColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12)),
-                        child: Icon(alertIcon, color: riskColor, size: 22)),
-                    const SizedBox(width: 12),
-                    Expanded(
-                        child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                          Row(children: [
-                            Expanded(
-                                child: Text(a.title,
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.textPrimary,
-                                        fontSize: 15))),
-                            const Icon(Icons.arrow_forward_ios,
-                                size: 14, color: AppColors.textSecondary),
-                          ]),
-                          Row(children: [
-                            const Icon(Icons.person_outline,
-                                size: 12, color: AppColors.textSecondary),
-                            const SizedBox(width: 2),
-                            Text(a.user,
+      body: RepositoryLoader<List<SecurityAlert>>(
+        load: () => context.read<AppRepositories>().admin.listAlerts(),
+        isEmpty: (alerts) => alerts.isEmpty,
+        emptyMessage: 'No security alerts found',
+        builder: (context, alerts) => ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: alerts.length,
+          itemBuilder: (_, i) {
+            final a = alerts[i];
+            final Color riskColor = a.risk.contains('HIGH')
+                ? AppColors.error
+                : a.risk.contains('MEDIUM')
+                    ? AppColors.warning
+                    : AppColors.success;
+            final IconData alertIcon = a.risk.contains('HIGH')
+                ? Icons.warning_amber_outlined
+                : Icons.shield_outlined;
+            return GestureDetector(
+              onTap: () =>
+                  Navigator.pushNamed(context, R.alertDetails, arguments: a),
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16)),
+                child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                              color: riskColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12)),
+                          child: Icon(alertIcon, color: riskColor, size: 22)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                          child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                            Row(children: [
+                              Expanded(
+                                  child: Text(a.title,
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.textPrimary,
+                                          fontSize: 15))),
+                              const Icon(Icons.arrow_forward_ios,
+                                  size: 14, color: AppColors.textSecondary),
+                            ]),
+                            Row(children: [
+                              const Icon(Icons.person_outline,
+                                  size: 12, color: AppColors.textSecondary),
+                              const SizedBox(width: 2),
+                              Text(a.user,
+                                  style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.textSecondary))
+                            ]),
+                            const SizedBox(height: 6),
+                            Text(a.description,
                                 style: const TextStyle(
                                     fontSize: 12,
-                                    color: AppColors.textSecondary))
-                          ]),
-                          const SizedBox(height: 6),
-                          Text(a.description,
-                              style: const TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.textSecondary),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis),
-                          const SizedBox(height: 8),
-                          Row(children: [
-                            TChip(
-                                label: a.risk,
-                                bg: riskColor.withOpacity(0.1),
-                                textColor: riskColor,
-                                fontSize: 10),
-                            const SizedBox(width: 6),
-                            TChip(
-                                label: a.status,
-                                bg: a.status == 'New'
-                                    ? AppColors.primary.withOpacity(0.1)
-                                    : AppColors.border,
-                                textColor: a.status == 'New'
-                                    ? AppColors.primary
-                                    : AppColors.textSecondary,
-                                fontSize: 10),
-                            const Spacer(),
-                            const Icon(Icons.access_time,
-                                size: 12, color: AppColors.textSecondary),
-                            const SizedBox(width: 2),
-                            Text(a.time,
-                                style: const TextStyle(
-                                    fontSize: 11,
-                                    color: AppColors.textSecondary)),
-                          ]),
-                        ])),
-                  ]),
-                ),
-              );
-            },
-          );
-        },
+                                    color: AppColors.textSecondary),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis),
+                            const SizedBox(height: 8),
+                            Row(children: [
+                              TChip(
+                                  label: a.risk,
+                                  bg: riskColor.withOpacity(0.1),
+                                  textColor: riskColor,
+                                  fontSize: 10),
+                              const SizedBox(width: 6),
+                              TChip(
+                                  label: a.status,
+                                  bg: a.status == 'New'
+                                      ? AppColors.primary.withOpacity(0.1)
+                                      : AppColors.border,
+                                  textColor: a.status == 'New'
+                                      ? AppColors.primary
+                                      : AppColors.textSecondary,
+                                  fontSize: 10),
+                              const Spacer(),
+                              const Icon(Icons.access_time,
+                                  size: 12, color: AppColors.textSecondary),
+                              const SizedBox(width: 2),
+                              Text(a.time,
+                                  style: const TextStyle(
+                                      fontSize: 11,
+                                      color: AppColors.textSecondary)),
+                            ]),
+                          ])),
+                    ]),
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -1026,22 +954,28 @@ class AlertDetailsScreen extends StatelessWidget {
   const AlertDetailsScreen({super.key});
   @override
   Widget build(BuildContext context) {
-    final dynamic raw = ModalRoute.of(context)?.settings.arguments;
-    if (raw is! SecurityAlert) {
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is! SecurityAlert) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text('Alert Details'),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios, size: 18),
-            onPressed: () => Navigator.pop(context),
+        backgroundColor: Colors.transparent,
+        body: Stack(children: [
+          GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(color: Colors.black54)),
+          const Align(
+            alignment: Alignment.bottomCenter,
+            child: Card(
+              margin: EdgeInsets.zero,
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: SafeArea(child: Text('No alert selected.')),
+              ),
+            ),
           ),
-        ),
-        body: const Center(
-            child:
-                Text('No alert selected', style: TextStyle(color: AppColors.textSecondary))),
+        ]),
       );
     }
-    final SecurityAlert a = raw;
+    final a = args;
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Stack(children: [
@@ -1833,7 +1767,6 @@ class AnalystScreen extends StatelessWidget {
 // ── Secure Files ──────────────────────────────────────────────────────────────
 class SecurityFilesScreen extends StatelessWidget {
   const SecurityFilesScreen({super.key});
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1871,149 +1804,129 @@ class SecurityFilesScreen extends StatelessWidget {
           ]),
         ],
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16)),
-              child: Column(children: [
-                Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(12)),
-                    child: const Icon(Icons.upload_outlined,
-                        color: AppColors.primary, size: 32)),
-                const SizedBox(height: 12),
-                const Text('Upload Files',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
-                        fontSize: 16)),
-                const Text('Drag and drop or click to browse',
-                    style: TextStyle(
-                        fontSize: 12, color: AppColors.textSecondary)),
-                const SizedBox(height: 16),
-                TButton(label: 'Select Files', onTap: () {}),
-              ]),
-            ),
-          ),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16),
-            child: Text('Uploaded Files',
+      body: ListView(padding: const EdgeInsets.all(16), children: [
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+              color: Colors.white, borderRadius: BorderRadius.circular(16)),
+          child: Column(children: [
+            Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(12)),
+                child: const Icon(Icons.upload_outlined,
+                    color: AppColors.primary, size: 32)),
+            const SizedBox(height: 12),
+            const Text('Upload Files',
                 style: TextStyle(
-                    fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary)),
-          ),
-          const SizedBox(height: 12),
-          Expanded(
-            child: RepositoryLoader<List<api.ApiFile>>(
-              load: () =>
-                  context.read<AppRepositories>().files.listFiles(),
-              isEmpty: (f) => f.isEmpty,
-              emptyMessage: 'No uploaded files yet',
-              builder: (_, files) {
-                return ListView.builder(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-                  itemCount: files.length,
-                  itemBuilder: (_, i) {
-                    final f = files[i];
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16)),
-                      child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(children: [
-                              Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                      color:
-                                          AppColors.primary.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(8)),
-                                  child: const Icon(Icons.description_outlined,
-                                      color: AppColors.primary, size: 22)),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                  child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                    Text(f.name,
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            color: AppColors.textPrimary)),
-                                    Text(
-                                        f.size.isNotEmpty ? f.size : '—',
-                                        style: const TextStyle(
-                                            fontSize: 12,
-                                            color:
-                                                AppColors.textSecondary)),
-                                  ])),
-                              IconButton(
-                                  icon: const Icon(Icons.close,
-                                      size: 18,
-                                      color: AppColors.textSecondary),
-                                  onPressed: () {}),
-                            ]),
-                            const SizedBox(height: 8),
-                            Row(children: [
-                              TChip(
-                                  label: '🔒 Encrypted',
-                                  bg:
-                                      AppColors.success.withOpacity(0.1),
-                                  textColor: AppColors.success,
-                                  fontSize: 11),
-                              const SizedBox(width: 6),
-                              TChip(
-                                  label: '✓ Verified',
-                                  bg:
-                                      AppColors.success.withOpacity(0.1),
-                                  textColor: AppColors.success,
-                                  fontSize: 11),
-                            ]),
-                            const SizedBox(height: 8),
-                            Row(children: [
-                              Text(
-                                  f.createdAt.isNotEmpty ? f.createdAt : '—',
-                                  style: const TextStyle(
-                                      fontSize: 11,
-                                      color: AppColors.textSecondary)),
-                              const Spacer(),
-                              GestureDetector(
-                                  onTap: () {},
-                                  child: const Row(children: [
-                                    Icon(Icons.download_outlined,
-                                        size: 16,
-                                        color: AppColors.primary),
-                                    SizedBox(width: 4),
-                                    Text('Download',
-                                        style: TextStyle(
-                                            fontSize: 12,
-                                            color: AppColors.primary,
-                                            fontWeight:
-                                                FontWeight.w600)),
-                                  ])),
-                            ]),
-                          ]),
-                    );
-                  },
+                    color: AppColors.textPrimary,
+                    fontSize: 16)),
+            const Text('Drag and drop or click to browse',
+                style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+            const SizedBox(height: 16),
+            TButton(label: 'Select Files', onTap: () {}),
+          ]),
+        ),
+        const SizedBox(height: 20),
+        const Text('Uploaded Files',
+            style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary)),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 500,
+          child: RepositoryLoader<List<api.ApiFile>>(
+            load: () => context.read<AppRepositories>().files.listFiles(),
+            isEmpty: (files) => files.isEmpty,
+            emptyMessage: 'No uploaded files found',
+            builder: (context, files) => ListView.builder(
+              itemCount: files.length,
+              itemBuilder: (_, i) {
+                final f = files[i];
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16)),
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(children: [
+                          Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                  color: AppColors.primary.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8)),
+                              child: const Icon(Icons.description_outlined,
+                                  color: AppColors.primary, size: 22)),
+                          const SizedBox(width: 12),
+                          Expanded(
+                              child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                Text(f.name,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.textPrimary)),
+                                Text(
+                                    f.size.isNotEmpty ? f.size : 'Unknown size',
+                                    style: const TextStyle(
+                                        fontSize: 12,
+                                        color: AppColors.textSecondary)),
+                              ])),
+                          IconButton(
+                              icon: const Icon(Icons.close,
+                                  size: 18, color: AppColors.textSecondary),
+                              onPressed: () {}),
+                        ]),
+                        const SizedBox(height: 8),
+                        Row(children: [
+                          TChip(
+                              label: '🔒 Encrypted',
+                              bg: AppColors.success.withOpacity(0.1),
+                              textColor: AppColors.success,
+                              fontSize: 11),
+                          const SizedBox(width: 6),
+                          TChip(
+                              label: '✓ Verified',
+                              bg: AppColors.success.withOpacity(0.1),
+                              textColor: AppColors.success,
+                              fontSize: 11),
+                        ]),
+                        const SizedBox(height: 8),
+                        Row(children: [
+                          Text(
+                              f.createdAt.isNotEmpty
+                                  ? f.createdAt
+                                  : 'Unknown date',
+                              style: const TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.textSecondary)),
+                          const Spacer(),
+                          GestureDetector(
+                              onTap: () {},
+                              child: const Row(children: [
+                                Icon(Icons.download_outlined,
+                                    size: 16, color: AppColors.primary),
+                                SizedBox(width: 4),
+                                Text('Download',
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.w600)),
+                              ])),
+                        ]),
+                      ]),
                 );
               },
             ),
           ),
-        ],
-      ),
+        ),
+      ]),
     );
   }
 }
@@ -2985,63 +2898,61 @@ class _ReviewActivityScreenState extends State<ReviewActivityScreen> {
               'alert': false,
               'color': AppColors.primary
             },
-          ]
-              .map((a) => GestureDetector(
-                    onTap: () {
-                      if (a['alert'] as bool) {
-                        Navigator.pushNamed(context, R.askAI);
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Activity: ${a['title']}')));
-                      }
-                    },
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                          color: AppColors.background,
-                          borderRadius: BorderRadius.circular(12)),
-                      child: Row(
-                        children: [
-                          Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                  color: (a['color'] as Color).withOpacity(0.1),
-                                  shape: BoxShape.circle),
-                              child: Icon(a['icon'] as IconData,
-                                  color: a['color'] as Color, size: 18)),
-                          const SizedBox(width: 10),
-                          Expanded(
-                              child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                Text(a['title'] as String,
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        color: AppColors.textPrimary,
-                                        fontSize: 13)),
-                                Text(a['time'] as String,
-                                    style: const TextStyle(
-                                        fontSize: 11,
-                                        color: AppColors.textSecondary)),
-                              ])),
-                          if (a['alert'] as bool)
-                            Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                    color: AppColors.error.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(20)),
-                                child: const Text('Alert',
-                                    style: TextStyle(
-                                        fontSize: 11,
-                                        color: AppColors.error,
-                                        fontWeight: FontWeight.w600))),
-                        ],
-                      ),
-                    ),
-                  ))
-              ,
+          ].map((a) => GestureDetector(
+                onTap: () {
+                  if (a['alert'] as bool) {
+                    Navigator.pushNamed(context, R.askAI);
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Activity: ${a['title']}')));
+                  }
+                },
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                      color: AppColors.background,
+                      borderRadius: BorderRadius.circular(12)),
+                  child: Row(
+                    children: [
+                      Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                              color: (a['color'] as Color).withOpacity(0.1),
+                              shape: BoxShape.circle),
+                          child: Icon(a['icon'] as IconData,
+                              color: a['color'] as Color, size: 18)),
+                      const SizedBox(width: 10),
+                      Expanded(
+                          child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                            Text(a['title'] as String,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.textPrimary,
+                                    fontSize: 13)),
+                            Text(a['time'] as String,
+                                style: const TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.textSecondary)),
+                          ])),
+                      if (a['alert'] as bool)
+                        Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                                color: AppColors.error.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(20)),
+                            child: const Text('Alert',
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.error,
+                                    fontWeight: FontWeight.w600))),
+                    ],
+                  ),
+                ),
+              )),
           const SizedBox(height: 8),
           GestureDetector(
             onTap: () => Navigator.pushNamed(context, R.askAI),
@@ -3132,7 +3043,6 @@ class AskAIScreen extends StatefulWidget {
 }
 
 class _AskAIScreenState extends State<AskAIScreen> {
-  final _ctrl = TextEditingController();
   bool _answered = false;
 
   @override
@@ -3164,26 +3074,28 @@ class _AskAIScreenState extends State<AskAIScreen> {
               decoration: BoxDecoration(
                   color: const Color(0xFFEEF2FF),
                   borderRadius: BorderRadius.circular(14)),
-              child:
-                  const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Icon(Icons.tips_and_updates_outlined,
-                    color: AppColors.primary, size: 18),
-                SizedBox(width: 8),
-                Expanded(
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                      Text('AI Insight',
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textPrimary,
-                              fontSize: 13)),
-                      Text(
-                          'Unusual behavior detected due to login from Germany at 2:13 AM, outside normal hours (9AM–5PM).',
-                          style: TextStyle(
-                              fontSize: 12, color: AppColors.textSecondary)),
-                    ])),
-              ])),
+              child: const Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.tips_and_updates_outlined,
+                        color: AppColors.primary, size: 18),
+                    SizedBox(width: 8),
+                    Expanded(
+                        child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                          Text('AI Insight',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textPrimary,
+                                  fontSize: 13)),
+                          Text(
+                              'Unusual behavior detected due to login from Germany at 2:13 AM, outside normal hours (9AM–5PM).',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary)),
+                        ])),
+                  ])),
           const SizedBox(height: 16),
           Align(
               alignment: Alignment.centerRight,
@@ -3711,13 +3623,10 @@ class UserDetailsAdminScreen extends StatelessWidget {
           const SizedBox(height: 12),
           TCard(
               child: Column(children: [
-            _infoRow(
-                Icons.email_outlined,
-                'Email Address',
-                u.email.isNotEmpty ? u.email : '—'),
+            _infoRow(Icons.email_outlined, 'Email Address',
+                u.email.isNotEmpty ? u.email : 'Unknown'),
             const Divider(height: 1, color: AppColors.border),
-            _infoRow(
-                Icons.calendar_today_outlined, 'Joined Date', '—'),
+            _infoRow(Icons.calendar_today_outlined, 'Joined Date', 'Unknown'),
             const Divider(height: 1, color: AppColors.border),
             _infoRow(Icons.history, 'Last Activity', '2 hours ago'),
           ])),
@@ -3726,15 +3635,11 @@ class UserDetailsAdminScreen extends StatelessWidget {
           const SizedBox(height: 12),
           Row(children: [
             Expanded(
-                child:             _statCard(
-                    'Projects',
-                    '${u.projectsCount}',
-                    Icons.folder_outlined,
-                    AppColors.primary)),
+                child: _statCard('Projects', '${u.projectsCount}',
+                    Icons.folder_outlined, AppColors.primary)),
             const SizedBox(width: 12),
             Expanded(
-                child: _statCard('Tasks Done', '0',
-                    Icons.check_circle_outline,
+                child: _statCard('Tasks Done', '0', Icons.check_circle_outline,
                     AppColors.success)),
           ]),
           const SizedBox(height: 24),
