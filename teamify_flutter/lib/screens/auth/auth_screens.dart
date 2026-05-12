@@ -301,130 +301,6 @@ class _IllustrationWork extends StatelessWidget {
   }
 }
 
-class _WorkPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..style = PaintingStyle.fill;
-    final w = size.width;
-    final h = size.height;
-
-    // Background dots pattern
-    paint.color = const Color(0xFFE8E8E8);
-    for (int i = 0; i < 6; i++) {
-      for (int j = 0; j < 4; j++) {
-        canvas.drawCircle(Offset(i * 18.0, j * 18.0), 2.5, paint);
-        canvas.drawCircle(Offset(w - i * 18.0, j * 18.0), 2.5, paint);
-      }
-    }
-
-    // Table/floor line
-    paint.color = const Color(0xFFE8E8E8);
-    canvas.drawRRect(
-        RRect.fromRectAndRadius(
-            Rect.fromLTWH(20, h * 0.72, w - 40, 8), const Radius.circular(4)),
-        paint);
-
-    // --- Board on wall ---
-    paint.color = Colors.white;
-    final boardRect = RRect.fromRectAndRadius(
-        Rect.fromLTWH(w * 0.38, h * 0.05, w * 0.22, h * 0.38),
-        const Radius.circular(6));
-    canvas.drawRRect(boardRect, paint);
-    paint.color = const Color(0xFFE0E0E0);
-    paint.style = PaintingStyle.stroke;
-    paint.strokeWidth = 1.5;
-    canvas.drawRRect(boardRect, paint);
-    paint.style = PaintingStyle.fill;
-    // Blue square
-    paint.color = const Color(0xFF2D5FA6);
-    canvas.drawRect(
-        Rect.fromLTWH(w * 0.49, h * 0.12, w * 0.07, h * 0.09), paint);
-    // Gray squares
-    paint.color = const Color(0xFFBBBBBB);
-    canvas.drawRect(
-        Rect.fromLTWH(w * 0.41, h * 0.12, w * 0.07, h * 0.09), paint);
-    canvas.drawRect(
-        Rect.fromLTWH(w * 0.41, h * 0.23, w * 0.07, h * 0.09), paint);
-    canvas.drawRect(
-        Rect.fromLTWH(w * 0.49, h * 0.23, w * 0.07, h * 0.09), paint);
-
-    // --- Left person (woman leaning) ---
-    // Body
-    paint.color = const Color(0xFFF5F5F5);
-    canvas.drawRRect(
-        RRect.fromRectAndRadius(
-            Rect.fromLTWH(w * 0.05, h * 0.38, w * 0.18, h * 0.30),
-            const Radius.circular(8)),
-        paint);
-    // Hair
-    paint.color = const Color(0xFF1A1A2E);
-    canvas.drawCircle(Offset(w * 0.13, h * 0.28), w * 0.07, paint);
-    // Head
-    paint.color = const Color(0xFFD4956A);
-    canvas.drawCircle(Offset(w * 0.14, h * 0.30), w * 0.055, paint);
-    // Arm leaning forward
-    paint.color = const Color(0xFFD4956A);
-    final armPath = Path()
-      ..moveTo(w * 0.18, h * 0.48)
-      ..quadraticBezierTo(w * 0.28, h * 0.52, w * 0.33, h * 0.60);
-    paint.style = PaintingStyle.stroke;
-    paint.strokeWidth = 10;
-    paint.strokeCap = StrokeCap.round;
-    canvas.drawPath(armPath, paint);
-    paint.style = PaintingStyle.fill;
-
-    // --- Left laptop ---
-    paint.color = const Color(0xFF222222);
-    canvas.drawRRect(
-        RRect.fromRectAndRadius(
-            Rect.fromLTWH(w * 0.25, h * 0.55, w * 0.18, h * 0.14),
-            const Radius.circular(4)),
-        paint);
-    paint.color = const Color(0xFF1A1A2E);
-    canvas.drawRRect(
-        RRect.fromRectAndRadius(
-            Rect.fromLTWH(w * 0.22, h * 0.68, w * 0.24, h * 0.04),
-            const Radius.circular(2)),
-        paint);
-
-    // --- Right person (man sitting) ---
-    // Body - blue shirt
-    paint.color = const Color(0xFF2D5FA6);
-    canvas.drawRRect(
-        RRect.fromRectAndRadius(
-            Rect.fromLTWH(w * 0.62, h * 0.42, w * 0.20, h * 0.28),
-            const Radius.circular(8)),
-        paint);
-    // Head
-    paint.color = const Color(0xFFD4956A);
-    canvas.drawCircle(Offset(w * 0.72, h * 0.30), w * 0.055, paint);
-    // Hair
-    paint.color = const Color(0xFF1A1A2E);
-    canvas.drawArc(
-        Rect.fromCircle(center: Offset(w * 0.72, h * 0.28), radius: w * 0.055),
-        3.14,
-        3.14,
-        true,
-        paint);
-
-    // --- Right laptop ---
-    paint.color = const Color(0xFF1A1A2E);
-    canvas.drawRRect(
-        RRect.fromRectAndRadius(
-            Rect.fromLTWH(w * 0.58, h * 0.57, w * 0.20, h * 0.13),
-            const Radius.circular(4)),
-        paint);
-    canvas.drawRRect(
-        RRect.fromRectAndRadius(
-            Rect.fromLTWH(w * 0.55, h * 0.69, w * 0.26, h * 0.03),
-            const Radius.circular(2)),
-        paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
 class _IllustrationAlert extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -437,93 +313,6 @@ class _IllustrationAlert extends StatelessWidget {
   }
 }
 
-class _AlertPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..style = PaintingStyle.fill;
-    final w = size.width;
-    final h = size.height;
-
-    // Background circle
-    paint.color = const Color(0xFFF0F0F0);
-    canvas.drawCircle(Offset(w * 0.5, h * 0.55), w * 0.35, paint);
-
-    // Left phone
-    paint.color = const Color(0xFF1A3A6B);
-    final leftPhone = RRect.fromRectAndRadius(
-      Rect.fromLTWH(w * 0.05, h * 0.18, w * 0.28, h * 0.58),
-      const Radius.circular(14),
-    );
-    canvas.drawRRect(leftPhone, paint);
-    // Left phone screen
-    paint.color = const Color(0xFFCCDDFF);
-    canvas.drawRRect(
-        RRect.fromRectAndRadius(
-            Rect.fromLTWH(w * 0.08, h * 0.22, w * 0.22, h * 0.48),
-            const Radius.circular(8)),
-        paint);
-    // Left person in phone
-    paint.color = const Color(0xFF2D5FA6);
-    canvas.drawCircle(Offset(w * 0.19, h * 0.35), w * 0.055, paint);
-    paint.color = const Color(0xFFD4956A);
-    canvas.drawCircle(Offset(w * 0.19, h * 0.35), w * 0.04, paint);
-
-    // Right phone
-    paint.color = const Color(0xFF1A3A6B);
-    final rightPhone = RRect.fromRectAndRadius(
-      Rect.fromLTWH(w * 0.67, h * 0.18, w * 0.28, h * 0.58),
-      const Radius.circular(14),
-    );
-    canvas.drawRRect(rightPhone, paint);
-    // Right phone screen
-    paint.color = const Color(0xFFCCDDFF);
-    canvas.drawRRect(
-        RRect.fromRectAndRadius(
-            Rect.fromLTWH(w * 0.70, h * 0.22, w * 0.22, h * 0.48),
-            const Radius.circular(8)),
-        paint);
-    // Right person in phone
-    paint.color = const Color(0xFFD4956A);
-    canvas.drawCircle(Offset(w * 0.81, h * 0.35), w * 0.04, paint);
-
-    // Handshake in middle
-    paint.color = const Color(0xFFD4956A);
-    paint.style = PaintingStyle.stroke;
-    paint.strokeWidth = 8;
-    paint.strokeCap = StrokeCap.round;
-    // Left arm
-    canvas.drawLine(
-        Offset(w * 0.30, h * 0.55), Offset(w * 0.50, h * 0.52), paint);
-    // Right arm
-    canvas.drawLine(
-        Offset(w * 0.70, h * 0.55), Offset(w * 0.50, h * 0.52), paint);
-    paint.style = PaintingStyle.fill;
-    canvas.drawCircle(Offset(w * 0.50, h * 0.52), 10, paint);
-
-    // Gear icons
-    paint.color = const Color(0xFFCCCCCC);
-    _drawGear(canvas, Offset(w * 0.08, h * 0.12), 12, paint);
-    _drawGear(canvas, Offset(w * 0.92, h * 0.12), 12, paint);
-    _drawGear(canvas, Offset(w * 0.12, h * 0.88), 8, paint);
-    _drawGear(canvas, Offset(w * 0.88, h * 0.88), 8, paint);
-
-    // Leaf decorations
-    paint.color = const Color(0xFF4DA6FF).withOpacity(0.5);
-    canvas.drawOval(Rect.fromLTWH(w * 0.02, h * 0.72, 20, 30), paint);
-    canvas.drawOval(Rect.fromLTWH(w * 0.88, h * 0.72, 20, 30), paint);
-  }
-
-  void _drawGear(Canvas canvas, Offset center, double radius, Paint paint) {
-    canvas.drawCircle(center, radius, paint);
-    paint.color = Colors.white;
-    canvas.drawCircle(center, radius * 0.5, paint);
-    paint.color = const Color(0xFFCCCCCC);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
 class _IllustrationSecure extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -534,155 +323,6 @@ class _IllustrationSecure extends StatelessWidget {
       fit: BoxFit.contain,
     );
   }
-}
-
-class _SecurePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..style = PaintingStyle.fill;
-    final w = size.width;
-    final h = size.height;
-
-    // Top-left browser window
-    _drawBrowserWindow(canvas, Rect.fromLTWH(0, 0, w * 0.42, h * 0.45), paint,
-        hasChart: true);
-    // Top-right browser window
-    _drawBrowserWindow(
-        canvas, Rect.fromLTWH(w * 0.55, h * 0.02, w * 0.42, h * 0.42), paint,
-        hasChat: true);
-    // Bottom-left person with tablet
-    _drawPersonTablet(canvas, Offset(w * 0.18, h * 0.65), paint);
-    // Bottom-right person
-    _drawPersonEnvelope(canvas, Offset(w * 0.72, h * 0.62), paint);
-
-    // Globe in middle
-    paint.color = const Color(0xFFE0E8F0);
-    canvas.drawCircle(Offset(w * 0.5, h * 0.5), 18, paint);
-    paint.style = PaintingStyle.stroke;
-    paint.strokeWidth = 1.5;
-    paint.color = const Color(0xFFAAAAAA);
-    canvas.drawCircle(Offset(w * 0.5, h * 0.5), 18, paint);
-    paint.style = PaintingStyle.fill;
-
-    // Chat bubbles
-    paint.color = const Color(0xFFE8E8E8);
-    canvas.drawRRect(
-        RRect.fromRectAndRadius(Rect.fromLTWH(w * 0.22, h * 0.48, 30, 18),
-            const Radius.circular(8)),
-        paint);
-    canvas.drawRRect(
-        RRect.fromRectAndRadius(Rect.fromLTWH(w * 0.60, h * 0.22, 30, 18),
-            const Radius.circular(8)),
-        paint);
-    // Dots in bubbles
-    paint.color = const Color(0xFFAAAAAA);
-    for (int i = 0; i < 3; i++) {
-      canvas.drawCircle(
-          Offset(w * 0.22 + 6 + i * 8.0, h * 0.48 + 9), 2.5, paint);
-      canvas.drawCircle(
-          Offset(w * 0.60 + 6 + i * 8.0, h * 0.22 + 9), 2.5, paint);
-    }
-  }
-
-  void _drawBrowserWindow(Canvas canvas, Rect rect, Paint paint,
-      {bool hasChart = false, bool hasChat = false}) {
-    paint.color = Colors.white;
-    final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(8));
-    canvas.drawRRect(rrect, paint);
-    paint.color = const Color(0xFFE0E0E0);
-    paint.style = PaintingStyle.stroke;
-    paint.strokeWidth = 1;
-    canvas.drawRRect(rrect, paint);
-    paint.style = PaintingStyle.fill;
-    // Title bar
-    paint.color = const Color(0xFFF5F5F5);
-    canvas.drawRRect(
-        RRect.fromRectAndRadius(
-            Rect.fromLTWH(rect.left + 1, rect.top + 1, rect.width - 2, 14),
-            const Radius.circular(8)),
-        paint);
-    // Dots
-    for (int i = 0; i < 3; i++) {
-      paint.color = i == 0
-          ? Colors.red
-          : i == 1
-              ? Colors.orange
-              : Colors.green;
-      canvas.drawCircle(
-          Offset(rect.left + 8 + i * 10.0, rect.top + 8), 3, paint);
-    }
-    if (hasChart) {
-      // Simple chart bars
-      paint.color = const Color(0xFF2D5FA6);
-      for (int i = 0; i < 5; i++) {
-        final barH = (i % 3 + 1) * 10.0;
-        canvas.drawRect(
-            Rect.fromLTWH(
-                rect.left + 8 + i * 12.0, rect.bottom - 20 - barH, 8, barH),
-            paint);
-      }
-    }
-    if (hasChat) {
-      // Person avatar
-      paint.color = const Color(0xFFD4956A);
-      canvas.drawCircle(
-          Offset(rect.left + rect.width * 0.5, rect.top + 35), 14, paint);
-    }
-  }
-
-  void _drawPersonTablet(Canvas canvas, Offset center, Paint paint) {
-    // Person sitting with tablet
-    paint.color = const Color(0xFF2D2D2D);
-    canvas.drawCircle(Offset(center.dx, center.dy - 30), 16, paint);
-    paint.color = const Color(0xFFD4956A);
-    canvas.drawCircle(Offset(center.dx, center.dy - 30), 12, paint);
-    // Body
-    paint.color = const Color(0xFF555577);
-    canvas.drawRRect(
-        RRect.fromRectAndRadius(
-            Rect.fromLTWH(center.dx - 18, center.dy - 15, 36, 35),
-            const Radius.circular(6)),
-        paint);
-    // Tablet
-    paint.color = const Color(0xFF333333);
-    canvas.drawRRect(
-        RRect.fromRectAndRadius(
-            Rect.fromLTWH(center.dx - 14, center.dy + 5, 28, 20),
-            const Radius.circular(3)),
-        paint);
-    paint.color = const Color(0xFF87CEEB);
-    canvas.drawRect(
-        Rect.fromLTWH(center.dx - 11, center.dy + 8, 22, 14), paint);
-    // Envelope being passed
-    paint.color = const Color(0xFF2D5FA6);
-    canvas.drawRect(Rect.fromLTWH(center.dx + 20, center.dy, 25, 18), paint);
-    paint.color = Colors.white;
-    paint.style = PaintingStyle.stroke;
-    paint.strokeWidth = 1.5;
-    canvas.drawLine(Offset(center.dx + 20, center.dy),
-        Offset(center.dx + 32, center.dy + 9), paint);
-    canvas.drawLine(Offset(center.dx + 45, center.dy),
-        Offset(center.dx + 32, center.dy + 9), paint);
-    paint.style = PaintingStyle.fill;
-  }
-
-  void _drawPersonEnvelope(Canvas canvas, Offset center, Paint paint) {
-    // Person receiving envelope
-    paint.color = const Color(0xFFD4956A);
-    canvas.drawCircle(Offset(center.dx, center.dy - 30), 12, paint);
-    paint.color = const Color(0xFF2D7D9A);
-    canvas.drawRRect(
-        RRect.fromRectAndRadius(
-            Rect.fromLTWH(center.dx - 16, center.dy - 15, 32, 30),
-            const Radius.circular(6)),
-        paint);
-    // Hand reaching out
-    paint.color = const Color(0xFFD4956A);
-    canvas.drawOval(Rect.fromLTWH(center.dx - 30, center.dy, 20, 14), paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 // ── Role Selection ────────────────────────────────────────────────────────────
@@ -756,7 +396,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.08),
+                          color: AppColors.primary.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(8)),
                       child: Icon(r['icon'] as IconData,
                           color: AppColors.primary, size: 22),
@@ -786,11 +426,12 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
               onTap: () {
                 if (_selected == 'Admin') {
                   Navigator.pushNamed(context, R.login, arguments: 'Admin');
-                } else if (_selected == 'Student')
+                } else if (_selected == 'Student') {
                   Navigator.pushNamed(context, R.login, arguments: 'Student');
-                else
+                } else {
                   Navigator.pushNamed(context, R.login,
                       arguments: 'Freelancer');
+                }
               },
             ),
             const SizedBox(height: 8),
@@ -951,10 +592,11 @@ class _LoginScreenState extends State<LoginScreen> {
               onTap: () {
                 if (role == 'Admin') {
                   Navigator.pushNamed(context, R.signupAdmin);
-                } else if (role == 'Student')
+                } else if (role == 'Student') {
                   Navigator.pushNamed(context, R.signupStudent);
-                else
+                } else {
                   Navigator.pushNamed(context, R.signupFreelancer);
+                }
               },
               child: RichText(
                   text: const TextSpan(
@@ -1317,7 +959,7 @@ class _FreelancerSignupScreenState extends State<FreelancerSignupScreen> {
                       });
                       setState(() {});
                     },
-                    selectedColor: AppColors.primary.withOpacity(0.1),
+                    selectedColor: AppColors.primary.withValues(alpha: 0.1),
                     checkmarkColor: AppColors.primary,
                     labelStyle: TextStyle(
                       color: isSelected
@@ -1488,10 +1130,11 @@ class _FreelancerSignupScreenState extends State<FreelancerSignupScreen> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
-                                color: AppColors.primary.withOpacity(0.1),
+                                color: AppColors.primary.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
-                                    color: AppColors.primary.withOpacity(0.3)),
+                                    color: AppColors.primary
+                                        .withValues(alpha: 0.3)),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -1725,7 +1368,7 @@ class _StudentSignupScreenState extends State<StudentSignupScreen> {
                       });
                       setState(() {});
                     },
-                    selectedColor: AppColors.primary.withOpacity(0.1),
+                    selectedColor: AppColors.primary.withValues(alpha: 0.1),
                     checkmarkColor: AppColors.primary,
                     labelStyle: TextStyle(
                       color: isSelected
@@ -1892,10 +1535,11 @@ class _StudentSignupScreenState extends State<StudentSignupScreen> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
-                                color: AppColors.primary.withOpacity(0.1),
+                                color: AppColors.primary.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
-                                    color: AppColors.primary.withOpacity(0.3)),
+                                    color: AppColors.primary
+                                        .withValues(alpha: 0.3)),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -2286,10 +1930,11 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                 } else {
                   if (role == 'Admin') {
                     Navigator.pushNamed(context, R.confirmationAdmin);
-                  } else if (role == 'Student')
+                  } else if (role == 'Student') {
                     Navigator.pushNamed(context, R.confirmationStudent);
-                  else
+                  } else {
                     Navigator.pushNamed(context, R.confirmationFreelancer);
+                  }
                 }
               }),
         ]),

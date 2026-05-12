@@ -152,7 +152,7 @@ class AIHubScreen extends StatelessWidget {
                                     padding: const EdgeInsets.all(8),
                                     decoration: BoxDecoration(
                                         color: (t['color'] as Color)
-                                            .withOpacity(0.1),
+                                            .withValues(alpha: 0.1),
                                         borderRadius:
                                             BorderRadius.circular(10)),
                                     child: Icon(t['icon'] as IconData,
@@ -276,9 +276,9 @@ class _SmartTodoScreenState extends State<SmartTodoScreen> {
               TChip(
                   label: t['priority'] as String,
                   bg: t['priority'] == 'High'
-                      ? AppColors.error.withOpacity(0.1)
+                      ? AppColors.error.withValues(alpha: 0.1)
                       : t['priority'] == 'Medium'
-                          ? AppColors.warning.withOpacity(0.1)
+                          ? AppColors.warning.withValues(alpha: 0.1)
                           : AppColors.border,
                   textColor: t['priority'] == 'High'
                       ? AppColors.error
@@ -356,7 +356,7 @@ class AITaskAllocationScreen extends StatelessWidget {
                 ])),
             TChip(
                 label: '92%',
-                bg: AppColors.success.withOpacity(0.1),
+                bg: AppColors.success.withValues(alpha: 0.1),
                 textColor: AppColors.success,
                 fontSize: 16),
           ]),
@@ -571,7 +571,7 @@ class _AIPriorityScreenState extends State<AIPriorityScreen> {
                       margin: const EdgeInsets.only(bottom: 10),
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                          color: sel ? c.withOpacity(0.1) : Colors.white,
+                          color: sel ? c.withValues(alpha: 0.1) : Colors.white,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                               color: sel ? c : AppColors.border,
@@ -708,7 +708,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
           TChip(
               label: 'Session $_session',
-              bg: AppColors.primary.withOpacity(0.1)),
+              bg: AppColors.primary.withValues(alpha: 0.1)),
           const SizedBox(height: 32),
           SizedBox(
               width: 220,
@@ -890,7 +890,7 @@ class AIMentorScreen extends StatelessWidget {
                 Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
+                        color: AppColors.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8)),
                     child: Icon(r['icon'] as IconData,
                         color: AppColors.primary, size: 20)),
@@ -1006,7 +1006,7 @@ class RecommendedCoursesScreen extends StatelessWidget {
                 Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
+                        color: AppColors.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12)),
                     child: const Icon(Icons.play_circle_outline,
                         color: AppColors.primary, size: 28)),
@@ -1105,7 +1105,7 @@ class SkillsScreen extends StatelessWidget {
                                   color: AppColors.textPrimary))),
                       TChip(
                           label: s['level'] as String,
-                          bg: (s['color'] as Color).withOpacity(0.1),
+                          bg: (s['color'] as Color).withValues(alpha: 0.1),
                           textColor: s['color'] as Color),
                     ]),
                     const SizedBox(height: 4),

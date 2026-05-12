@@ -71,7 +71,7 @@ class ResumeCVStartScreen extends StatelessWidget {
                   Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.1),
+                          color: AppColors.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12)),
                       child: Icon(o['icon'] as IconData,
                           color: AppColors.primary, size: 24)),
@@ -89,7 +89,7 @@ class ResumeCVStartScreen extends StatelessWidget {
                             const SizedBox(width: 8),
                             TChip(
                                 label: o['badge'] as String,
-                                bg: AppColors.success.withOpacity(0.1),
+                                bg: AppColors.success.withValues(alpha: 0.1),
                                 textColor: AppColors.success,
                                 fontSize: 10)
                           ],
@@ -132,7 +132,7 @@ class _ResumeBuilderScreenState extends State<ResumeBuilderScreen> {
       body: ListView(padding: const EdgeInsets.all(16), children: [
         // Build with AI banner
         TCard(
-            color: AppColors.primary.withOpacity(0.05),
+            color: AppColors.primary.withValues(alpha: 0.05),
             child: Row(children: [
               Container(
                   padding: const EdgeInsets.all(12),
@@ -309,8 +309,9 @@ class _ResumeBuilderScreenState extends State<ResumeBuilderScreen> {
                 margin: const EdgeInsets.only(right: 8),
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 decoration: BoxDecoration(
-                    color:
-                        sel ? AppColors.primary.withOpacity(0.1) : Colors.white,
+                    color: sel
+                        ? AppColors.primary.withValues(alpha: 0.1)
+                        : Colors.white,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                         color: sel ? AppColors.primary : AppColors.border,
@@ -340,10 +341,9 @@ class _ResumeBuilderScreenState extends State<ResumeBuilderScreen> {
               : () async {
                   setState(() => _generating = true);
                   await Future.delayed(const Duration(seconds: 2));
-                  if (mounted) {
-                    setState(() => _generating = false);
-                    Navigator.pushNamed(context, R.resumePreview);
-                  }
+                  if (!context.mounted) return;
+                  setState(() => _generating = false);
+                  Navigator.pushNamed(context, R.resumePreview);
                 },
         ),
         const SizedBox(height: 10),
@@ -610,9 +610,10 @@ class _ResumeEditContentScreenState extends State<ResumeEditContentScreen> {
                               onDeleted: () =>
                                   setState(() => _skills.remove(s)),
                               backgroundColor:
-                                  AppColors.primary.withOpacity(0.1),
+                                  AppColors.primary.withValues(alpha: 0.1),
                               side: BorderSide(
-                                  color: AppColors.primary.withOpacity(0.3)),
+                                  color:
+                                      AppColors.primary.withValues(alpha: 0.3)),
                               labelStyle:
                                   const TextStyle(color: AppColors.primary),
                             ))
@@ -808,7 +809,7 @@ class _ResumeCustomizeScreenState extends State<ResumeCustomizeScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         decoration: BoxDecoration(
                             color: sel
-                                ? AppColors.primary.withOpacity(0.08)
+                                ? AppColors.primary.withValues(alpha: 0.08)
                                 : Colors.white,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
@@ -940,7 +941,7 @@ class ResumeExportSuccessScreen extends StatelessWidget {
                   width: 80,
                   height: 80,
                   decoration: BoxDecoration(
-                      color: AppColors.success.withOpacity(0.15),
+                      color: AppColors.success.withValues(alpha: 0.15),
                       shape: BoxShape.circle),
                   child: const Icon(Icons.check,
                       color: AppColors.success, size: 40)),
@@ -959,7 +960,7 @@ class ResumeExportSuccessScreen extends StatelessWidget {
                   Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.1),
+                          color: AppColors.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10)),
                       child: const Icon(Icons.check_circle_outline,
                           color: AppColors.primary, size: 28)),

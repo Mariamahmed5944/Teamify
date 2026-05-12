@@ -737,7 +737,7 @@ class _FileSharingScreenState extends State<FileSharingScreen> {
                 Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
+                        color: AppColors.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10)),
                     child: const Icon(Icons.insert_drive_file_outlined,
                         color: AppColors.primary, size: 22)),
@@ -855,7 +855,7 @@ class _FileIntegrityScreenState extends State<FileIntegrityScreen> {
                                 color: AppColors.textPrimary))),
                     TChip(
                         label: 'SHA-256 ✓',
-                        bg: AppColors.success.withOpacity(0.1),
+                        bg: AppColors.success.withValues(alpha: 0.1),
                         textColor: AppColors.success),
                   ]))),
           ]);

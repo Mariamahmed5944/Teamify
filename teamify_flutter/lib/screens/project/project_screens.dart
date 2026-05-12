@@ -281,10 +281,12 @@ class _OverviewTab extends StatelessWidget {
                                     style: const TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 14)),
-                                const Text('Member',
-                                    style: const TextStyle(
-                                        fontSize: 12,
-                                        color: AppColors.textSecondary)),
+                                const Text(
+                                  'Member',
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.textSecondary),
+                                ),
                               ]),
                         ],
                       ),
@@ -371,7 +373,7 @@ class _OverviewTab extends StatelessWidget {
         Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: AppColors.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10)),
             child: const Text('Upcoming',
                 style: TextStyle(
@@ -457,7 +459,8 @@ class _TasksTab extends StatelessWidget {
                               decoration: BoxDecoration(
                                   color: t.status == 'Complete'
                                       ? const Color(0xFFDCFCE7)
-                                      : AppColors.primary.withOpacity(0.1),
+                                      : AppColors.primary
+                                          .withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(10)),
                               child: Text(t.status,
                                   style: TextStyle(
@@ -604,7 +607,7 @@ class _FilesTabState extends State<_FilesTab> {
                   borderRadius: BorderRadius.circular(8),
                   boxShadow: [
                     BoxShadow(
-                        color: AppColors.primary.withOpacity(0.3),
+                        color: AppColors.primary.withValues(alpha: 0.3),
                         blurRadius: 10,
                         offset: const Offset(0, 4))
                   ]),
@@ -659,7 +662,7 @@ class _FilesTabState extends State<_FilesTab> {
                             Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                    color: color.withOpacity(0.1),
+                                    color: color.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(10)),
                                 child: Icon(_getFileIcon(f.name),
                                     color: color, size: 20)),
@@ -983,7 +986,7 @@ class _AnalyticsTab extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.primary.withOpacity(0.1)),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1255,8 +1258,8 @@ class _ProjectsListScreenState extends State<ProjectsListScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 decoration: BoxDecoration(
                     color: Colors.white,
-                    border:
-                        Border.all(color: AppColors.primary.withOpacity(0.5)),
+                    border: Border.all(
+                        color: AppColors.primary.withValues(alpha: 0.5)),
                     borderRadius: BorderRadius.circular(12)),
                 child: const TextField(
                     decoration: InputDecoration(
@@ -1317,7 +1320,7 @@ class _ProjectsListScreenState extends State<ProjectsListScreen> {
                                       color: Colors.white,
                                       border: Border.all(
                                           color: AppColors.primary
-                                              .withOpacity(0.2)),
+                                              .withValues(alpha: 0.2)),
                                       borderRadius: BorderRadius.circular(12)),
                                   child: Column(
                                       crossAxisAlignment:
@@ -1354,7 +1357,7 @@ class _ProjectsListScreenState extends State<ProjectsListScreen> {
                                           TChip(
                                               label: p.delayRisk,
                                               bg: AppColors.success
-                                                  .withOpacity(0.1),
+                                                  .withValues(alpha: 0.1),
                                               textColor: AppColors.success)
                                         ]),
                                       ])),
@@ -1422,7 +1425,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             border: Border.all(
-                color: AppColors.primary.withOpacity(0.3), width: 1.5),
+                color: AppColors.primary.withValues(alpha: 0.3), width: 1.5),
             borderRadius: BorderRadius.circular(30),
           ),
           child: Column(
@@ -1486,7 +1489,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   Widget _field(String h, TextEditingController ctrl) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
-            border: Border.all(color: AppColors.primary.withOpacity(0.5)),
+            border: Border.all(color: AppColors.primary.withValues(alpha: 0.5)),
             borderRadius: BorderRadius.circular(12)),
         child: TextField(
             controller: ctrl,
@@ -1634,7 +1637,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   Widget _dropField(String h, IconData? i) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-            border: Border.all(color: AppColors.primary.withOpacity(0.5)),
+            border: Border.all(color: AppColors.primary.withValues(alpha: 0.5)),
             borderRadius: BorderRadius.circular(12)),
         child: Row(
           children: [
@@ -1658,7 +1661,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   Widget _statusDrop() => Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-            border: Border.all(color: AppColors.primary.withOpacity(0.5)),
+            border: Border.all(color: AppColors.primary.withValues(alpha: 0.5)),
             borderRadius: BorderRadius.circular(12)),
         child: Row(
           children: [
@@ -1681,7 +1684,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   Widget _priorityDrop() => Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-            border: Border.all(color: AppColors.primary.withOpacity(0.5)),
+            border: Border.all(color: AppColors.primary.withValues(alpha: 0.5)),
             borderRadius: BorderRadius.circular(12)),
         child: Row(
           children: [
@@ -1702,7 +1705,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   Widget _areaField(String h, TextEditingController ctrl) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
-            border: Border.all(color: AppColors.primary.withOpacity(0.5)),
+            border: Border.all(color: AppColors.primary.withValues(alpha: 0.5)),
             borderRadius: BorderRadius.circular(12)),
         child: TextField(
             controller: ctrl,

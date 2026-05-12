@@ -8,6 +8,14 @@ class AdminRepository {
 
   AdminRepository(this._client);
 
+  /// List all uploaded files (admin view, via /api/files).
+  Future<List<ApiFile>> listFiles() async {
+    final response = await _client.get<dynamic>('/api/files');
+    return responseList(response.data, ['files', 'data'])
+        .map(ApiFile.fromJson)
+        .toList();
+  }
+
   Future<List<ApiUser>> listUsers() async {
     final response = await _client.get<dynamic>('/admin/users');
     return responseList(response.data, ['items', 'users', 'data'])

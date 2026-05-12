@@ -30,7 +30,7 @@ class TCard extends StatelessWidget {
           border: Border.all(color: AppColors.border),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(0.04),
+                color: Colors.black.withValues(alpha: 0.04),
                 blurRadius: 8,
                 offset: const Offset(0, 2))
           ],
@@ -139,7 +139,7 @@ class TChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: bg ?? AppColors.primary.withOpacity(0.1),
+        color: bg ?? AppColors.primary.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(label,
@@ -253,7 +253,7 @@ class TBottomNav extends StatelessWidget {
         color: AppColors.white,
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withValues(alpha: 0.08),
               blurRadius: 16,
               offset: const Offset(0, -4))
         ],
@@ -321,7 +321,7 @@ class StatBox extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                  color: (iconBg ?? AppColors.primary).withOpacity(0.1),
+                  color: (iconBg ?? AppColors.primary).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8)),
               child: Icon(icon, color: iconBg ?? AppColors.primary, size: 20),
             ),
@@ -357,9 +357,9 @@ class AIBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.08),
+        color: AppColors.primary.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.primary.withOpacity(0.15)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
       ),
       child: Row(
         children: [

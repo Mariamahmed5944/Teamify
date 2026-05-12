@@ -179,13 +179,19 @@ class FreelancerProfileScreen extends StatelessWidget {
   const FreelancerProfileScreen({super.key});
   @override
   Widget build(BuildContext context) {
-    return const _ProfileBase(
-      name: 'Mariam Khan',
+    final session = context.watch<SessionController>();
+    final user = session.currentUser;
+    final name = user?.fullName ?? user?.displayName ?? 'Freelancer';
+    final initials = name.length >= 2
+        ? '${name.split(' ').first[0]}${name.split(' ').length > 1 ? name.split(' ')[1][0] : name[1]}'
+        : name[0];
+    return _ProfileBase(
+      name: name,
       role: 'Freelance Developer',
-      initials: 'MK',
-      email: 'mariam.khan@email.com',
-      location: 'San Francisco, CA',
-      joined: 'Joined March 2025',
+      initials: initials.toUpperCase(),
+      email: user?.email ?? '',
+      location: 'Remote',
+      joined: 'Member',
       projects: '3',
       tasksDone: '24',
       score: '87',
@@ -198,13 +204,19 @@ class StudentProfileScreen extends StatelessWidget {
   const StudentProfileScreen({super.key});
   @override
   Widget build(BuildContext context) {
-    return const _ProfileBase(
-      name: 'Mariam Khan',
+    final session = context.watch<SessionController>();
+    final user = session.currentUser;
+    final name = user?.fullName ?? user?.displayName ?? 'Student';
+    final initials = name.length >= 2
+        ? '${name.split(' ').first[0]}${name.split(' ').length > 1 ? name.split(' ')[1][0] : name[1]}'
+        : name[0];
+    return _ProfileBase(
+      name: name,
       role: 'Student Developer',
-      initials: 'MK',
-      email: 'mariam.khan@email.com',
-      location: 'San Francisco, CA',
-      joined: 'Joined March 2025',
+      initials: initials.toUpperCase(),
+      email: user?.email ?? '',
+      location: 'University',
+      joined: 'Member',
       projects: '3',
       tasksDone: '24',
       score: '87',
@@ -217,13 +229,19 @@ class AdminProfileScreen extends StatelessWidget {
   const AdminProfileScreen({super.key});
   @override
   Widget build(BuildContext context) {
-    return const _ProfileBase(
-      name: 'Mariam Khan',
+    final session = context.watch<SessionController>();
+    final user = session.currentUser;
+    final name = user?.fullName ?? user?.displayName ?? 'Admin';
+    final initials = name.length >= 2
+        ? '${name.split(' ').first[0]}${name.split(' ').length > 1 ? name.split(' ')[1][0] : name[1]}'
+        : name[0];
+    return _ProfileBase(
+      name: name,
       role: 'System Administrator',
-      initials: 'MK',
-      email: 'mariam.khan@email.com',
-      location: 'San Francisco, CA',
-      joined: 'Joined March 2025',
+      initials: initials.toUpperCase(),
+      email: user?.email ?? '',
+      location: 'Remote',
+      joined: 'Member',
       projects: '3',
       tasksDone: '24',
       score: '87',
@@ -240,11 +258,18 @@ class EditProfileScreen extends StatefulWidget {
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
-  final _name = TextEditingController(text: 'Alice Smith');
-  final _email = TextEditingController(text: 'alice@teamify.com');
-  final _phone = TextEditingController(text: '+20 100 000 0000');
-  final _bio = TextEditingController(
-      text: 'Flutter developer with 3+ years experience.');
+  late final TextEditingController _name;
+  late final TextEditingController _email;
+  final _phone = TextEditingController(text: '');
+  final _bio = TextEditingController(text: '');
+
+  @override
+  void initState() {
+    super.initState();
+    final user = context.read<SessionController>().currentUser;
+    _name = TextEditingController(text: user?.fullName ?? user?.displayName ?? '');
+    _email = TextEditingController(text: user?.email ?? '');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -262,7 +287,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         children: [
           Center(
               child: Stack(children: [
-            const TAvatar(initials: 'AS', radius: 40),
+            TAvatar(initials: _name.text.isNotEmpty ? _name.text[0].toUpperCase() : '?', radius: 40),
             Positioned(
                 bottom: 0,
                 right: 0,
@@ -371,7 +396,7 @@ class CompletedProjectsScreen extends StatelessWidget {
                   Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.1),
+                          color: AppColors.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10)),
                       child: const Icon(Icons.folder_outlined,
                           color: AppColors.primary, size: 22)),
@@ -390,7 +415,7 @@ class CompletedProjectsScreen extends StatelessWidget {
                       ])),
                   TChip(
                       label: '${p.progress}%',
-                      bg: AppColors.success.withOpacity(0.1),
+                      bg: AppColors.success.withValues(alpha: 0.1),
                       textColor: AppColors.success),
                 ]));
           },
@@ -606,7 +631,7 @@ class _CoursesTab extends StatelessWidget {
           Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                  color: Colors.purple.withOpacity(0.15),
+                  color: Colors.purple.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(20)),
               child: const Text('Advanced',
                   style: TextStyle(
@@ -683,7 +708,7 @@ class _CoursesTab extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                      color: (c['levelColor'] as Color).withOpacity(0.15),
+                      color: (c['levelColor'] as Color).withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(20)),
                   child: Text(c['level'] as String,
                       style: TextStyle(

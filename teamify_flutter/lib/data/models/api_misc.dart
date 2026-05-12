@@ -33,6 +33,7 @@ class ApiFile {
   final String type;
   final String uploadedBy;
   final String createdAt;
+  final String sha256;
 
   const ApiFile({
     required this.id,
@@ -41,6 +42,7 @@ class ApiFile {
     this.type = '',
     this.uploadedBy = '',
     this.createdAt = '',
+    this.sha256 = '',
   });
 
   factory ApiFile.fromJson(Map<String, dynamic> json) {
@@ -48,13 +50,17 @@ class ApiFile {
     final size = asString(json['size'] ?? json['file_size']);
     return ApiFile(
       id: asString(json['id'] ?? json['file_id']),
-      name: asString(json['filename'] ?? json['name']),
+      name: asString(json['filename'] ?? json['original_filename'] ?? json['name']),
       size: size.isNotEmpty ? size : _formatBytes(bytes),
       type: asString(json['mime_type'] ?? json['type']),
       uploadedBy: asString(json['uploaded_by'] ?? json['owner_id']),
       createdAt: asString(json['created_at'] ?? json['uploaded_at']),
+      sha256: asString(json['sha256'] ?? json['sha256_hash']),
     );
   }
+
+  /// Whether the file has a verified integrity hash.
+  bool get hasIntegrityHash => sha256.isNotEmpty;
 
   static String _formatBytes(int bytes) {
     if (bytes <= 0) return '';

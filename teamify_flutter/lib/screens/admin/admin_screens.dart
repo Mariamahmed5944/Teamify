@@ -44,7 +44,7 @@ class _AdminBottomNav extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(color: Colors.white, boxShadow: [
         BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 16,
             offset: const Offset(0, -4))
       ]),
@@ -130,7 +130,7 @@ class AdminHomeScreen extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.1),
+                          color: Colors.white.withValues(alpha: 0.1),
                           shape: BoxShape.circle),
                       child: const Icon(Icons.security,
                           color: Colors.white, size: 24),
@@ -207,7 +207,7 @@ class AdminHomeScreen extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
+              color: Colors.white.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(16)),
           child: Row(
             children: [
@@ -403,7 +403,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                 children: [
                                   TChip(
                                       label: u.role,
-                                      bg: AppColors.primary.withOpacity(0.1),
+                                      bg: AppColors.primary.withValues(alpha: 0.1),
                                       textColor: AppColors.primary),
                                   const SizedBox(height: 4),
                                   Row(children: [
@@ -475,7 +475,7 @@ class AdminRolesScreen extends StatelessWidget {
                 Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                        color: (r['color'] as Color).withOpacity(0.1),
+                        color: (r['color'] as Color).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10)),
                     child: Icon(Icons.shield_outlined,
                         color: r['color'] as Color, size: 22)),
@@ -513,7 +513,7 @@ class AdminRolesScreen extends StatelessWidget {
                   children: (r['perms'] as List<String>)
                       .map((p) => TChip(
                           label: p,
-                          bg: (r['color'] as Color).withOpacity(0.1),
+                          bg: (r['color'] as Color).withValues(alpha: 0.1),
                           textColor: r['color'] as Color))
                       .toList()),
             ]),
@@ -611,7 +611,7 @@ class _SecurityChecklistScreenState extends State<SecurityChecklistScreen> {
                                 isDone ? TextDecoration.lineThrough : null))),
                 TChip(
                     label: pri,
-                    bg: priColor.withOpacity(0.1),
+                    bg: priColor.withValues(alpha: 0.1),
                     textColor: priColor,
                     fontSize: 10),
               ]));
@@ -768,8 +768,8 @@ class _LoginLogsScreenState extends State<LoginLogsScreen> {
                           TChip(
                               label: l.isSuccess ? '✓ Success' : '✕ Failed',
                               bg: l.isSuccess
-                                  ? AppColors.success.withOpacity(0.1)
-                                  : AppColors.error.withOpacity(0.1),
+                                  ? AppColors.success.withValues(alpha: 0.1)
+                                  : AppColors.error.withValues(alpha: 0.1),
                               textColor: l.isSuccess
                                   ? AppColors.success
                                   : AppColors.error),
@@ -878,7 +878,7 @@ class SecurityAlertsScreen extends StatelessWidget {
                       Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                              color: riskColor.withOpacity(0.1),
+                              color: riskColor.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12)),
                           child: Icon(alertIcon, color: riskColor, size: 22)),
                       const SizedBox(width: 12),
@@ -916,14 +916,14 @@ class SecurityAlertsScreen extends StatelessWidget {
                             Row(children: [
                               TChip(
                                   label: a.risk,
-                                  bg: riskColor.withOpacity(0.1),
+                                  bg: riskColor.withValues(alpha: 0.1),
                                   textColor: riskColor,
                                   fontSize: 10),
                               const SizedBox(width: 6),
                               TChip(
                                   label: a.status,
                                   bg: a.status == 'New'
-                                      ? AppColors.primary.withOpacity(0.1)
+                                      ? AppColors.primary.withValues(alpha: 0.1)
                                       : AppColors.border,
                                   textColor: a.status == 'New'
                                       ? AppColors.primary
@@ -1157,10 +1157,10 @@ class SecurityMonitorScreen extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppColors.error.withOpacity(0.2)),
+              border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
               boxShadow: [
                 BoxShadow(
-                    color: AppColors.error.withOpacity(0.05),
+                    color: AppColors.error.withValues(alpha: 0.05),
                     blurRadius: 15,
                     offset: const Offset(0, 8))
               ],
@@ -1170,7 +1170,7 @@ class SecurityMonitorScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                      color: AppColors.error.withOpacity(0.1),
+                      color: AppColors.error.withValues(alpha: 0.1),
                       shape: BoxShape.circle),
                   child: const Icon(Icons.cancel_outlined,
                       color: AppColors.error, size: 28),
@@ -1248,7 +1248,7 @@ class SecurityMonitorScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 color: const Color(0xFFEEF2FF),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.primary.withOpacity(0.1)),
+                border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
               ),
               child: Row(
                 children: [
@@ -1340,7 +1340,7 @@ class SecurityMonitorScreen extends StatelessWidget {
         child: OutlinedButton(
           onPressed: () => Navigator.pushNamed(context, route),
           style: OutlinedButton.styleFrom(
-            side: BorderSide(color: color.withOpacity(0.3)),
+            side: BorderSide(color: color.withValues(alpha: 0.3)),
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             minimumSize: const Size(double.infinity, 48),
@@ -1457,7 +1457,7 @@ class EncryptionStatusScreen extends StatelessWidget {
           Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                  color: AppColors.success.withOpacity(0.1),
+                  color: AppColors.success.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12)),
               child: const Icon(Icons.lock_outline,
                   color: AppColors.success, size: 28)),
@@ -1510,7 +1510,7 @@ class EncryptionStatusScreen extends StatelessWidget {
                   ])),
               TChip(
                   label: e['status']!,
-                  bg: AppColors.success.withOpacity(0.1),
+                  bg: AppColors.success.withValues(alpha: 0.1),
                   textColor: AppColors.success),
             ]))),
       ]),
@@ -1813,7 +1813,7 @@ class SecurityFilesScreen extends StatelessWidget {
             Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.08),
+                    color: AppColors.primary.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(12)),
                 child: const Icon(Icons.upload_outlined,
                     color: AppColors.primary, size: 32)),
@@ -1839,7 +1839,7 @@ class SecurityFilesScreen extends StatelessWidget {
         SizedBox(
           height: 500,
           child: RepositoryLoader<List<api.ApiFile>>(
-            load: () => context.read<AppRepositories>().files.listFiles(),
+            load: () => context.read<AppRepositories>().admin.listFiles(),
             isEmpty: (files) => files.isEmpty,
             emptyMessage: 'No uploaded files found',
             builder: (context, files) => ListView.builder(
@@ -1859,7 +1859,7 @@ class SecurityFilesScreen extends StatelessWidget {
                           Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                  color: AppColors.primary.withOpacity(0.1),
+                                  color: AppColors.primary.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(8)),
                               child: const Icon(Icons.description_outlined,
                                   color: AppColors.primary, size: 22)),
@@ -1887,14 +1887,18 @@ class SecurityFilesScreen extends StatelessWidget {
                         Row(children: [
                           TChip(
                               label: '🔒 Encrypted',
-                              bg: AppColors.success.withOpacity(0.1),
+                              bg: AppColors.success.withValues(alpha: 0.1),
                               textColor: AppColors.success,
                               fontSize: 11),
                           const SizedBox(width: 6),
                           TChip(
-                              label: '✓ Verified',
-                              bg: AppColors.success.withOpacity(0.1),
-                              textColor: AppColors.success,
+                              label: f.hasIntegrityHash ? '✓ Verified' : '⚠ No Hash',
+                              bg: f.hasIntegrityHash
+                                  ? AppColors.success.withValues(alpha: 0.1)
+                                  : AppColors.warning.withValues(alpha: 0.1),
+                              textColor: f.hasIntegrityHash
+                                  ? AppColors.success
+                                  : AppColors.warning,
                               fontSize: 11),
                         ]),
                         const SizedBox(height: 8),
@@ -1977,7 +1981,7 @@ class SecurityCenterScreen extends StatelessWidget {
           decoration: BoxDecoration(
               color: const Color(0xFFFFF3E0),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.orange.withOpacity(0.3))),
+              border: Border.all(color: Colors.orange.withValues(alpha: 0.3))),
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             const Row(children: [
@@ -2264,7 +2268,7 @@ class SecurityOverviewScreen extends StatelessWidget {
                 Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.08),
+                        color: AppColors.primary.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(8)),
                     child: Icon(s['icon'] as IconData,
                         color: AppColors.primary, size: 18)),
@@ -2354,7 +2358,7 @@ class SecurityMentorScreen extends StatelessWidget {
             decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.error.withOpacity(0.3))),
+                border: Border.all(color: AppColors.error.withValues(alpha: 0.3))),
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
@@ -2454,7 +2458,7 @@ class SecurityMentorScreen extends StatelessWidget {
                 Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.08),
+                        color: AppColors.primary.withValues(alpha: 0.08),
                         shape: BoxShape.circle),
                     child: Icon(a['icon'] as IconData,
                         color: AppColors.primary, size: 16)),
@@ -2494,7 +2498,7 @@ class SecurityMentorScreen extends StatelessWidget {
             decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.error.withOpacity(0.2))),
+                border: Border.all(color: AppColors.error.withValues(alpha: 0.2))),
             child: const Row(children: [
               Icon(Icons.warning_amber_outlined,
                   color: AppColors.error, size: 18),
@@ -2508,7 +2512,7 @@ class SecurityMentorScreen extends StatelessWidget {
             decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.warning.withOpacity(0.2))),
+                border: Border.all(color: AppColors.warning.withValues(alpha: 0.2))),
             child: const Row(children: [
               Icon(Icons.warning_amber_outlined,
                   color: AppColors.warning, size: 18),
@@ -2637,7 +2641,7 @@ class ForceLogoutScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
                       color: (d['suspicious'] as bool)
-                          ? AppColors.error.withOpacity(0.3)
+                          ? AppColors.error.withValues(alpha: 0.3)
                           : AppColors.border)),
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -2673,7 +2677,7 @@ class ForceLogoutScreen extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                              color: AppColors.error.withOpacity(0.1),
+                              color: AppColors.error.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(20)),
                           child: const Text('Suspicious',
                               style: TextStyle(
@@ -2738,14 +2742,14 @@ class LogoutAllDevicesScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(
-                        color: Colors.black.withOpacity(0.06), blurRadius: 20)
+                        color: Colors.black.withValues(alpha: 0.06), blurRadius: 20)
                   ]),
               child: Column(children: [
                 Container(
                     width: 64,
                     height: 64,
                     decoration: BoxDecoration(
-                        color: Colors.orange.withOpacity(0.15),
+                        color: Colors.orange.withValues(alpha: 0.15),
                         shape: BoxShape.circle),
                     child: const Icon(Icons.warning_amber_outlined,
                         color: Colors.orange, size: 32)),
@@ -2918,7 +2922,7 @@ class _ReviewActivityScreenState extends State<ReviewActivityScreen> {
                       Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                              color: (a['color'] as Color).withOpacity(0.1),
+                              color: (a['color'] as Color).withValues(alpha: 0.1),
                               shape: BoxShape.circle),
                           child: Icon(a['icon'] as IconData,
                               color: a['color'] as Color, size: 18)),
@@ -2942,7 +2946,7 @@ class _ReviewActivityScreenState extends State<ReviewActivityScreen> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
-                                color: AppColors.error.withOpacity(0.1),
+                                color: AppColors.error.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(20)),
                             child: const Text('Alert',
                                 style: TextStyle(
@@ -3200,7 +3204,7 @@ class TwoFAEnableScreen extends StatelessWidget {
                 width: 72,
                 height: 72,
                 decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.08),
+                    color: AppColors.primary.withValues(alpha: 0.08),
                     shape: BoxShape.circle),
                 child: const Icon(Icons.shield_outlined,
                     color: AppColors.primary, size: 36)),
@@ -3289,7 +3293,7 @@ class _TwoFAVerifyScreenState extends State<TwoFAVerifyScreen> {
                 width: 72,
                 height: 72,
                 decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.08),
+                    color: AppColors.primary.withValues(alpha: 0.08),
                     shape: BoxShape.circle),
                 child: const Icon(Icons.shield_outlined,
                     color: AppColors.primary, size: 36)),
@@ -3384,7 +3388,7 @@ class TwoFASuccessScreen extends StatelessWidget {
                 width: 72,
                 height: 72,
                 decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.08),
+                    color: AppColors.primary.withValues(alpha: 0.08),
                     shape: BoxShape.circle),
                 child: const Icon(Icons.shield_outlined,
                     color: AppColors.primary, size: 36)),
@@ -3605,7 +3609,7 @@ class UserDetailsAdminScreen extends StatelessWidget {
                 children: [
                   TChip(
                       label: 'Active',
-                      bg: AppColors.success.withOpacity(0.1),
+                      bg: AppColors.success.withValues(alpha: 0.1),
                       textColor: AppColors.success),
                   const SizedBox(width: 8),
                   Row(children: [
@@ -3791,7 +3795,7 @@ class _EditRolePermissionsScreenState extends State<EditRolePermissionsScreen> {
                   Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                          color: (_role!['color'] as Color).withOpacity(0.1),
+                          color: (_role!['color'] as Color).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10)),
                       child: Icon(Icons.shield_outlined,
                           color: _role!['color'] as Color, size: 24)),

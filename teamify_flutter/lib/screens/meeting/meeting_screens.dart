@@ -41,14 +41,14 @@ class _MeetingScreenState extends State<MeetingScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
                   Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.1),
+                          color: AppColors.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12)),
                       child: const Icon(Icons.videocam_outlined,
                           color: AppColors.primary)),
@@ -82,7 +82,7 @@ class _MeetingScreenState extends State<MeetingScreen> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
+                        color: AppColors.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8)),
                     child: const Text('3 active',
                         style: TextStyle(

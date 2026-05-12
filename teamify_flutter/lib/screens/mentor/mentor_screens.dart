@@ -88,11 +88,11 @@ class _DetailedPerformanceTab extends StatelessWidget {
           padding: const EdgeInsets.all(30),
           decoration: BoxDecoration(
             gradient: LinearGradient(colors: [
-              AppColors.primary.withOpacity(0.05),
-              AppColors.success.withOpacity(0.05)
+              AppColors.primary.withValues(alpha: 0.05),
+              AppColors.success.withValues(alpha: 0.05)
             ]),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppColors.primary.withOpacity(0.1)),
+            border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
           ),
           child: const Column(children: [
             Stack(alignment: Alignment.center, children: [
@@ -179,7 +179,7 @@ class _DetailedPerformanceTab extends StatelessWidget {
             width: 20,
             height: 100 * h,
             decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.2),
+                color: AppColors.primary.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(4))),
         const SizedBox(height: 8),
         Text(label,
@@ -218,7 +218,7 @@ class _DetailedCoursesTab extends StatelessWidget {
                         TextStyle(fontWeight: FontWeight.bold, fontSize: 15))),
             TChip(
                 label: 'Advanced',
-                bg: Colors.purple.withOpacity(0.1),
+                bg: Colors.purple.withValues(alpha: 0.1),
                 textColor: Colors.purple),
           ]),
           const Text('Tech Academy • 24 lessons',
@@ -279,7 +279,7 @@ class _DetailedCoursesTab extends StatelessWidget {
           Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
             TChip(
                 label: level,
-                bg: AppColors.primary.withOpacity(0.1),
+                bg: AppColors.primary.withValues(alpha: 0.1),
                 textColor: AppColors.primary),
             const SizedBox(height: 8),
             ElevatedButton(
@@ -394,7 +394,7 @@ class _FeedbackTabState extends State<_FeedbackTab> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.05),
+              color: AppColors.primary.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(16)),
           child: const Row(children: [
             Icon(Icons.auto_awesome, color: AppColors.primary, size: 24),
@@ -459,7 +459,7 @@ class _MentorOverviewTab extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       children: [
         TCard(
-          color: AppColors.primary.withOpacity(0.05),
+          color: AppColors.primary.withValues(alpha: 0.05),
           child:
               const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
@@ -542,7 +542,7 @@ class _MentorOverviewTab extends StatelessWidget {
                 ]),
               ])),
           Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            TChip(label: tag, bg: tagCol.withOpacity(0.1), textColor: tagCol),
+            TChip(label: tag, bg: tagCol.withValues(alpha: 0.1), textColor: tagCol),
             const SizedBox(height: 8),
             TextButton(
                 onPressed: () {},
@@ -615,7 +615,7 @@ class _SkillsTab extends StatelessWidget {
                 ])),
             TChip(
                 label: level,
-                bg: AppColors.primary.withOpacity(0.1),
+                bg: AppColors.primary.withValues(alpha: 0.1),
                 textColor: AppColors.primary),
           ]),
           const SizedBox(height: 12),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme.dart';
 import '../../core/routes.dart';
+import '../../core/session/session_controller.dart';
 import '../../data/repositories/app_repositories.dart';
 import '../../data/models/models.dart' as api;
 import '../../widgets/widgets.dart';
@@ -202,7 +203,7 @@ class FreelancerHomeScreen extends StatelessWidget {
           boxShadow: isDark
               ? [
                   BoxShadow(
-                      color: color.withOpacity(0.3),
+                      color: color.withValues(alpha: 0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 4))
                 ]
@@ -424,7 +425,7 @@ class _SearchScreenState extends State<SearchScreen> {
                                             padding: const EdgeInsets.all(10),
                                             decoration: BoxDecoration(
                                                 color: AppColors.primary
-                                                    .withOpacity(0.1),
+                                                    .withValues(alpha: 0.1),
                                                 shape: BoxShape.circle),
                                             child: Icon(r['icon'] as IconData,
                                                 color: AppColors.primary,
@@ -539,7 +540,7 @@ class _SearchScreenState extends State<SearchScreen> {
             Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8)),
                 child: const Icon(Icons.folder_outlined,
                     color: AppColors.primary, size: 16)),
@@ -592,7 +593,7 @@ class _SearchScreenState extends State<SearchScreen> {
           Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                  color: AppColors.success.withOpacity(0.1),
+                  color: AppColors.success.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8)),
               child: const Icon(Icons.check_circle_outline,
                   color: AppColors.success, size: 20)),
@@ -621,6 +622,10 @@ class StudentHomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final session = context.watch<SessionController>();
+    final user = session.currentUser;
+    final displayName = user?.fullName ?? user?.displayName ?? 'Student';
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -642,34 +647,26 @@ class StudentHomeScreen extends StatelessWidget {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.15),
+                      color: AppColors.primary.withValues(alpha: 0.15),
                       shape: BoxShape.circle),
                   child: const Center(
                       child: Icon(Icons.person_outline,
                           color: AppColors.primary, size: 26))),
               const SizedBox(width: 12),
-              const Column(
+              Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Ahmed Hassan',
-                        style: TextStyle(
+                    Text(displayName,
+                        style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             color: AppColors.textPrimary,
                             fontSize: 15)),
                     Row(children: [
-                      Icon(Icons.school_outlined,
+                      const Icon(Icons.school_outlined,
                           size: 13, color: AppColors.textSecondary),
-                      SizedBox(width: 4),
-                      Text('Cairo University',
-                          style: TextStyle(
-                              fontSize: 12, color: AppColors.textSecondary))
-                    ]),
-                    Row(children: [
-                      Icon(Icons.location_on_outlined,
-                          size: 13, color: AppColors.textSecondary),
-                      SizedBox(width: 4),
-                      Text('Cairo, Egypt',
-                          style: TextStyle(
+                      const SizedBox(width: 4),
+                      Text(user?.email ?? '',
+                          style: const TextStyle(
                               fontSize: 12, color: AppColors.textSecondary))
                     ]),
                   ]),
@@ -714,7 +711,7 @@ class StudentHomeScreen extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                            color: AppColors.success.withOpacity(0.15),
+                            color: AppColors.success.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(20)),
                         child: const Text('↗ +15% improvement',
                             style: TextStyle(
@@ -758,7 +755,7 @@ class StudentHomeScreen extends StatelessWidget {
                       width: 36,
                       height: 36,
                       decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           shape: BoxShape.circle),
                       child:
                           const Icon(Icons.add, color: Colors.white, size: 22),
@@ -864,7 +861,7 @@ class StudentHomeScreen extends StatelessWidget {
                     Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                            color: (a['color'] as Color).withOpacity(0.1),
+                            color: (a['color'] as Color).withValues(alpha: 0.1),
                             shape: BoxShape.circle),
                         child: Icon(a['icon'] as IconData,
                             color: a['color'] as Color, size: 18)),
@@ -921,51 +918,6 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  final List<Map<String, String>> _notifs = [
-    {
-      'title': 'New task assigned',
-      'body': 'You have been assigned to "Design homepage mockup"',
-      'time': '5 minutes ago',
-      'type': 'task'
-    },
-    {
-      'title': 'AI Delay Warning',
-      'body': '"Back-end API Integration" has high delay risk (85%)',
-      'time': '1 hour ago',
-      'type': 'ai'
-    },
-    {
-      'title': 'Deadline approaching',
-      'body': 'Final Design Review is due in 2 days',
-      'time': '3 hours ago',
-      'type': 'deadline'
-    },
-    {
-      'title': 'New message from John Doe',
-      'body': 'Great work on the wireframes! Let\'s discuss...',
-      'time': '5 hours ago',
-      'type': 'message'
-    },
-    {
-      'title': 'Added to Design Team',
-      'body': 'You have been added to the Design Team',
-      'time': '1 day ago',
-      'type': 'team'
-    },
-    {
-      'title': 'New device login',
-      'body': 'Login detected from iPhone 13 mini',
-      'time': '2 days ago',
-      'type': 'security'
-    },
-    {
-      'title': 'Task updated',
-      'body': 'Deadline for "Create wireframes" has been extended',
-      'time': '3 days ago',
-      'type': 'task'
-    },
-  ];
-
   bool _allRead = false;
 
   @override
@@ -979,28 +931,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             icon: const Icon(Icons.arrow_back_ios,
                 size: 18, color: AppColors.textPrimary),
             onPressed: () => Navigator.pop(context)),
-        title: Row(
-          children: [
-            const Text('Notifications',
-                style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                    color: AppColors.textPrimary)),
-            const SizedBox(width: 8),
-            if (!_allRead)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                    color: AppColors.error,
-                    borderRadius: BorderRadius.circular(10)),
-                child: const Text('2',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold)),
-              ),
-          ],
-        ),
+        title: const Text('Notifications',
+            style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: AppColors.textPrimary)),
       ),
       body: Column(
         children: [
@@ -1013,129 +948,125 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ),
           ),
           Expanded(
-            child: _notifs.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+            child: RepositoryLoader<List<api.ApiNotification>>(
+              load: () => context
+                  .read<AppRepositories>()
+                  .notifications
+                  .listNotifications(),
+              isEmpty: (items) => items.isEmpty,
+              emptyMessage: "You're all caught up! No notifications.",
+              builder: (context, notifs) => ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: notifs.length,
+                itemBuilder: (_, i) {
+                  final n = notifs[i];
+
+                  // Pick icon/color based on title keywords
+                  Color iconBg;
+                  IconData icon;
+                  Color iconColor;
+                  final titleLower = n.title.toLowerCase();
+
+                  if (titleLower.contains('task') ||
+                      titleLower.contains('assigned')) {
+                    iconBg = const Color(0xFFEFF6FF);
+                    icon = Icons.check_circle_outline;
+                    iconColor = AppColors.primary;
+                  } else if (titleLower.contains('ai') ||
+                      titleLower.contains('delay') ||
+                      titleLower.contains('warning')) {
+                    iconBg = const Color(0xFFFEF2F2);
+                    icon = Icons.error_outline;
+                    iconColor = const Color(0xFFDC2626);
+                  } else if (titleLower.contains('deadline') ||
+                      titleLower.contains('due')) {
+                    iconBg = const Color(0xFFFFFBEB);
+                    icon = Icons.calendar_today_outlined;
+                    iconColor = const Color(0xFFD97706);
+                  } else if (titleLower.contains('message') ||
+                      titleLower.contains('chat')) {
+                    iconBg = const Color(0xFFF0FDF4);
+                    icon = Icons.chat_bubble_outline;
+                    iconColor = const Color(0xFF16A34A);
+                  } else if (titleLower.contains('team') ||
+                      titleLower.contains('added')) {
+                    iconBg = const Color(0xFFF5F3FF);
+                    icon = Icons.people_outline;
+                    iconColor = const Color(0xFF7C3AED);
+                  } else if (titleLower.contains('security') ||
+                      titleLower.contains('login') ||
+                      titleLower.contains('device')) {
+                    iconBg = const Color(0xFFFEF2F2);
+                    icon = Icons.security_outlined;
+                    iconColor = const Color(0xFFDC2626);
+                  } else {
+                    iconBg = AppColors.primary.withValues(alpha: 0.1);
+                    icon = Icons.notifications_none;
+                    iconColor = AppColors.primary;
+                  }
+
+                  return TCard(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.notifications_off_outlined,
-                            size: 80,
-                            color: AppColors.textHint.withOpacity(0.5)),
-                        const SizedBox(height: 16),
-                        const Text('No Notifications',
-                            style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textPrimary)),
-                        const Text("You're all caught up!",
-                            style: TextStyle(color: AppColors.textSecondary)),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: _notifs.length,
-                    itemBuilder: (_, i) {
-                      final n = _notifs[i];
-                      final type = n['type'];
-
-                      Color iconBg;
-                      IconData icon;
-                      Color iconColor;
-
-                      switch (type) {
-                        case 'task':
-                          iconBg = const Color(0xFFEFF6FF);
-                          icon = Icons.check_circle_outline;
-                          iconColor = AppColors.primary;
-                          break;
-                        case 'ai':
-                          iconBg = const Color(0xFFFEF2F2);
-                          icon = Icons.error_outline;
-                          iconColor = const Color(0xFFDC2626);
-                          break;
-                        case 'deadline':
-                          iconBg = const Color(0xFFFFFBEB);
-                          icon = Icons.calendar_today_outlined;
-                          iconColor = const Color(0xFFD97706);
-                          break;
-                        case 'message':
-                          iconBg = const Color(0xFFF0FDF4);
-                          icon = Icons.chat_bubble_outline;
-                          iconColor = const Color(0xFF16A34A);
-                          break;
-                        case 'team':
-                          iconBg = const Color(0xFFF5F3FF);
-                          icon = Icons.people_outline;
-                          iconColor = const Color(0xFF7C3AED);
-                          break;
-                        case 'security':
-                          iconBg = const Color(0xFFFEF2F2);
-                          icon = Icons.security_outlined;
-                          iconColor = const Color(0xFFDC2626);
-                          break;
-                        default:
-                          iconBg = AppColors.primary.withOpacity(0.1);
-                          icon = Icons.notifications_none;
-                          iconColor = AppColors.primary;
-                      }
-
-                      return TCard(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.all(16),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                  color: iconBg, shape: BoxShape.circle),
-                              child: Icon(icon, color: iconColor, size: 22),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                              color: iconBg, shape: BoxShape.circle),
+                          child: Icon(icon, color: iconColor, size: 22),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(n['title']!,
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              color: AppColors.textPrimary,
-                                              fontSize: 14)),
-                                      if (!_allRead && i < 2)
-                                        Container(
-                                            width: 8,
-                                            height: 8,
-                                            decoration: const BoxDecoration(
-                                                color: AppColors.primary,
-                                                shape: BoxShape.circle)),
-                                    ],
+                                  Expanded(
+                                    child: Text(n.title,
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.textPrimary,
+                                            fontSize: 14)),
                                   ),
-                                  const SizedBox(height: 4),
-                                  Text(n['body']!,
-                                      style: const TextStyle(
-                                          fontSize: 12,
-                                          color: AppColors.textSecondary)),
-                                  const SizedBox(height: 4),
-                                  Text(n['time']!,
-                                      style: const TextStyle(
-                                          fontSize: 11,
-                                          color: AppColors.textHint)),
+                                  if (!_allRead && !n.isRead)
+                                    Container(
+                                        width: 8,
+                                        height: 8,
+                                        decoration: const BoxDecoration(
+                                            color: AppColors.primary,
+                                            shape: BoxShape.circle)),
                                 ],
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 4),
+                              Text(n.body,
+                                  style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.textSecondary)),
+                              if (n.createdAt.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                Text(n.createdAt,
+                                    style: const TextStyle(
+                                        fontSize: 11,
+                                        color: AppColors.textHint)),
+                              ],
+                            ],
+                          ),
                         ),
-                      );
-                    },
-                  ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 }
+

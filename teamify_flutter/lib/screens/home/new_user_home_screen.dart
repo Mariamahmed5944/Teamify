@@ -59,7 +59,7 @@ class NewUserHomeScreen extends StatelessWidget {
                             : 'Your journey as a $displayRole starts here. Let\'s set up your workspace.',
                         style: TextStyle(
                             fontSize: 14,
-                            color: Colors.white.withOpacity(0.8),
+                            color: Colors.white.withValues(alpha: 0.8),
                             height: 1.4),
                       ),
                     ],
@@ -198,7 +198,7 @@ class _ActionCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.08),
+              color: AppColors.primary.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, color: AppColors.primary, size: 20),
@@ -241,7 +241,7 @@ class _StepItem extends StatelessWidget {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-            color: AppColors.success.withOpacity(0.1), shape: BoxShape.circle),
+            color: AppColors.success.withValues(alpha: 0.1), shape: BoxShape.circle),
         child: const Icon(Icons.check, color: AppColors.success, size: 16),
       ),
       title: Text(title,
