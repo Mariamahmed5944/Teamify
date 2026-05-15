@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+
 import '../../core/network/api_client.dart';
 import '../../models/models.dart' as ui;
 import '../models/models.dart';
@@ -87,6 +89,126 @@ class AdminRepository {
       '/admin/users/$id/reject',
       data: reason == null ? null : {'reason': reason},
     );
+  }
+
+  // ── User Detail & Management ─────────────────────────────────────────────
+
+  /// GET /admin/users/<id>
+  Future<ApiUser> getUserDetail(String id) async {
+    final response =
+        await _client.get<Map<String, dynamic>>('/admin/users/$id');
+    final data = responseMap(response.data);
+    final user = responseMap(data['user']);
+    return ApiUser.fromJson(user.isNotEmpty ? user : data);
+  }
+
+  /// PUT /admin/users/<id>
+  Future<ApiUser> updateUserDetails(
+      String id, Map<String, dynamic> payload) async {
+    final response = await _client.put<Map<String, dynamic>>(
+      '/admin/users/$id',
+      data: payload,
+    );
+    final data = responseMap(response.data);
+    final user = responseMap(data['user']);
+    return ApiUser.fromJson(user.isNotEmpty ? user : data);
+  }
+
+  /// DELETE /admin/users/<id>
+  Future<void> deleteUser(String id) async {
+    await _client.delete<dynamic>('/admin/users/$id');
+  }
+
+  /// PATCH /admin/users/<id>/lock
+  Future<void> lockUser(String id) async {
+    await _client.patch<dynamic>('/admin/users/$id/lock');
+  }
+
+  /// PATCH /admin/users/<id>/unlock
+  Future<void> unlockUser(String id) async {
+    await _client.patch<dynamic>('/admin/users/$id/unlock');
+  }
+
+  // ── Project Management ───────────────────────────────────────────────────
+
+  /// GET /admin/projects
+  Future<List<ApiProject>> listAllProjects() async {
+    final response = await _client.get<dynamic>('/admin/projects');
+    return responseList(response.data, ['projects', 'data'])
+        .map(ApiProject.fromJson)
+        .toList();
+  }
+
+  /// DELETE /admin/projects/<id>
+  Future<void> deleteProjectAdmin(String id) async {
+    await _client.delete<dynamic>('/admin/projects/$id');
+  }
+
+  // ── Reports & Analytics ──────────────────────────────────────────────────
+
+  /// GET /admin/reports/summary
+  Future<Map<String, dynamic>> getReportSummary() async {
+    final response =
+        await _client.get<Map<String, dynamic>>('/admin/reports/summary');
+    return responseMap(response.data);
+  }
+
+  /// GET /admin/analytics/overview
+  Future<Map<String, dynamic>> getAnalyticsOverview() async {
+    final response =
+        await _client.get<Map<String, dynamic>>('/admin/analytics/overview');
+    return responseMap(response.data);
+  }
+
+  /// GET /admin/analytics/users/growth
+  Future<List<Map<String, dynamic>>> getUserGrowthData() async {
+    final response =
+        await _client.get<dynamic>('/admin/analytics/users/growth');
+    return responseList(response.data, ['data', 'growth'])
+        .cast<Map<String, dynamic>>();
+  }
+
+  // ── Activity & Audit Logs ────────────────────────────────────────────────
+
+  /// GET /admin/activity
+  Future<List<Map<String, dynamic>>> getAdminActivity() async {
+    final response = await _client.get<dynamic>('/admin/activity');
+    return responseList(response.data, ['items', 'activity', 'data'])
+        .cast<Map<String, dynamic>>();
+  }
+
+  /// GET /admin/audit-logs
+  Future<List<Map<String, dynamic>>> getAuditLogs() async {
+    final response = await _client.get<dynamic>('/admin/audit-logs');
+    return responseList(response.data, ['logs', 'items', 'data'])
+        .cast<Map<String, dynamic>>();
+  }
+
+  // ── Alert Management ─────────────────────────────────────────────────────
+
+  /// PATCH /admin/alerts/<id>/resolve
+  Future<void> resolveAlert(String id) async {
+    await _client.patch<dynamic>('/admin/alerts/$id/resolve');
+  }
+
+  // ── Exports ──────────────────────────────────────────────────────────────
+
+  /// GET /admin/export/users — returns CSV bytes
+  Future<List<int>> exportUsersCsv() async {
+    final response = await _client.get<List<int>>(
+      '/admin/export/users',
+      options: Options(responseType: ResponseType.bytes),
+    );
+    return response.data ?? [];
+  }
+
+  /// GET /admin/export/projects — returns CSV bytes
+  Future<List<int>> exportProjectsCsv() async {
+    final response = await _client.get<List<int>>(
+      '/admin/export/projects',
+      options: Options(responseType: ResponseType.bytes),
+    );
+    return response.data ?? [];
   }
 
   static String _titleFromType(String type) {

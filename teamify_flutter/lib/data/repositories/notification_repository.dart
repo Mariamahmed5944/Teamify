@@ -7,6 +7,7 @@ class NotificationRepository {
 
   NotificationRepository(this._client);
 
+  // GET /api/notifications
   Future<List<ApiNotification>> listNotifications() async {
     final response = await _client.get<dynamic>('/api/notifications');
     return responseList(response.data, ['notifications', 'data'])
@@ -14,7 +15,21 @@ class NotificationRepository {
         .toList();
   }
 
+  // GET /api/notifications/unread-count
+  Future<int> getUnreadCount() async {
+    final response = await _client
+        .get<Map<String, dynamic>>('/api/notifications/unread-count');
+    final data = responseMap(response.data);
+    return (data['unread_count'] as num?)?.toInt() ?? 0;
+  }
+
+  // PATCH /api/notifications/<id>/read
   Future<void> markRead(String id) async {
     await _client.patch<dynamic>('/api/notifications/$id/read');
+  }
+
+  // POST /api/notifications/mark-all-read
+  Future<void> markAllAsRead() async {
+    await _client.post<dynamic>('/api/notifications/mark-all-read');
   }
 }

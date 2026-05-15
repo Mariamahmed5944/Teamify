@@ -27,6 +27,8 @@ class AuthRepository {
   })  : _client = client,
         _tokenStorage = tokenStorage;
 
+  // ── Core auth ────────────────────────────────────────────────────────────────
+
   Future<AuthResult> login({
     required String email,
     required String password,
@@ -89,6 +91,96 @@ class AuthRepository {
     final token = await _tokenStorage.readAccessToken();
     return token != null && token.isNotEmpty;
   }
+
+  // ── Password recovery ─────────────────────────────────────────────────────
+
+  /// POST /api/auth/forgot-password
+  Future<void> forgotPassword(String email) async {
+    await _client.post<dynamic>(
+      '/api/auth/forgot-password',
+      data: {'email': email},
+      options: Options(extra: {'skipAuth': true}),
+    );
+  }
+
+  /// POST /api/auth/verify-otp
+  Future<Map<String, dynamic>> verifyOtp(String email, String otp) async {
+    final response = await _client.post<Map<String, dynamic>>(
+      '/api/auth/verify-otp',
+      data: {'email': email, 'otp': otp},
+      options: Options(extra: {'skipAuth': true}),
+    );
+    return responseMap(response.data);
+  }
+
+  /// POST /api/auth/reset-password
+  Future<void> resetPassword(String token, String newPassword) async {
+    await _client.post<dynamic>(
+      '/api/auth/reset-password',
+      data: {'token': token, 'new_password': newPassword},
+      options: Options(extra: {'skipAuth': true}),
+    );
+  }
+
+  // ── OAuth login ───────────────────────────────────────────────────────────
+
+  /// POST /api/auth/google
+  Future<AuthResult> loginWithGoogle(String idToken,
+      {String? userType}) async {
+    final response = await _client.post<Map<String, dynamic>>(
+      '/api/auth/google',
+      data: {
+        'id_token': idToken,
+        if (userType != null) 'user_type': userType,
+      },
+      options: Options(extra: {'skipAuth': true}),
+    );
+    await _saveTokens(response.data);
+    final user = _extractUser(response.data);
+    return AuthResult(
+        user: user, message: asString(response.data?['message']));
+  }
+
+  /// POST /api/auth/github
+  Future<AuthResult> loginWithGithub(String code) async {
+    final response = await _client.post<Map<String, dynamic>>(
+      '/api/auth/github',
+      data: {'code': code},
+      options: Options(extra: {'skipAuth': true}),
+    );
+    await _saveTokens(response.data);
+    final user = _extractUser(response.data);
+    return AuthResult(
+        user: user, message: asString(response.data?['message']));
+  }
+
+  // ── Two-Factor Authentication ─────────────────────────────────────────────
+
+  /// POST /api/auth/2fa/setup
+  /// Returns: { secret, qr_code (base64 PNG), message }
+  Future<Map<String, dynamic>> setup2fa() async {
+    final response =
+        await _client.post<Map<String, dynamic>>('/api/auth/2fa/setup');
+    return responseMap(response.data);
+  }
+
+  /// POST /api/auth/2fa/verify
+  Future<void> verify2fa(String token) async {
+    await _client.post<dynamic>(
+      '/api/auth/2fa/verify',
+      data: {'token': token},
+    );
+  }
+
+  /// DELETE /api/auth/2fa/disable
+  Future<void> disable2fa(String token) async {
+    await _client.delete<dynamic>(
+      '/api/auth/2fa/disable',
+      data: {'token': token},
+    );
+  }
+
+  // ── Private helpers ───────────────────────────────────────────────────────
 
   Future<void> _saveTokens(Map<String, dynamic>? data) async {
     final access = data?['access_token']?.toString();

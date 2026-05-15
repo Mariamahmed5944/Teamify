@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'core/theme.dart';
 import 'core/routes.dart';
+import 'core/cache/cache_manager.dart';
+import 'core/network/websocket_manager.dart';
 import 'core/session/session_controller.dart';
 import 'data/repositories/app_repositories.dart';
+import 'services/app_services.dart';
 
 import 'screens/auth/auth_screens.dart';
 import 'screens/home/home_screens.dart';
@@ -19,15 +22,41 @@ import 'screens/mentor/mentor_screens.dart';
 import 'screens/team/team_screens.dart';
 import 'screens/meeting/meeting_screens.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // ── Infrastructure ──────────────────────────────────────────────────────
+  final cache = CacheManager();
+  await cache.init();
+
   final repositories = AppRepositories();
+
+  final session = SessionController(repositories.auth);
+
+  // ── Service layer ──────────────────────────────────────────────────────
+  final services = AppServices(
+    repos: repositories,
+    session: session,
+    cache: cache,
+  );
+
+  // ── WebSocket ─────────────────────────────────────────────────────────
+  final ws = WebSocketManager(repositories.tokenStorage);
+
+  // Restore session, then connect WebSocket if authenticated
+  await session.restoreSession();
+  if (session.isAuthenticated) {
+    await ws.connect();
+  }
+
   runApp(
     MultiProvider(
       providers: [
         Provider<AppRepositories>.value(value: repositories),
-        ChangeNotifierProvider<SessionController>(
-          create: (_) => SessionController(repositories.auth)..restoreSession(),
-        ),
+        Provider<AppServices>.value(value: services),
+        Provider<CacheManager>.value(value: cache),
+        Provider<WebSocketManager>.value(value: ws),
+        ChangeNotifierProvider<SessionController>.value(value: session),
       ],
       child: const TeamifyApp(),
     ),

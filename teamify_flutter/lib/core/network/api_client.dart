@@ -70,6 +70,20 @@ class ApiClient {
     );
   }
 
+  Future<Response<T>> put<T>(
+    String path, {
+    Object? data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+  }) {
+    return dio.put<T>(
+      path,
+      data: data,
+      queryParameters: queryParameters,
+      options: options,
+    );
+  }
+
   Future<Response<T>> delete<T>(
     String path, {
     Object? data,

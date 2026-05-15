@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+
 import '../../core/network/api_client.dart';
 import 'repository_helpers.dart';
 
@@ -120,6 +122,38 @@ class AIRepository {
     final response = await _client.post<Map<String, dynamic>>(
       '/api/ai/recommend-teammates',
       data: {'user_stats': userStats},
+    );
+    return responseMap(response.data);
+  }
+
+  /// POST /api/ai/transcribe — speech-to-text via Whisper
+  Future<Map<String, dynamic>> transcribe(List<int> audioBytes,
+      {String filename = 'audio.wav'}) async {
+    final formData = FormData.fromMap({
+      'file': MultipartFile.fromBytes(audioBytes, filename: filename),
+    });
+    final response = await _client.post<Map<String, dynamic>>(
+      '/api/ai/transcribe',
+      data: formData,
+      options: Options(contentType: 'multipart/form-data'),
+    );
+    return responseMap(response.data);
+  }
+
+  /// POST /api/ai/detect-anomaly — security anomaly detection (admin)
+  Future<Map<String, dynamic>> detectAnomaly(
+      Map<String, dynamic> payload) async {
+    final response = await _client.post<Map<String, dynamic>>(
+      '/api/ai/detect-anomaly',
+      data: payload,
+    );
+    return responseMap(response.data);
+  }
+
+  /// GET /api/ai/mentor/analyse/<id> — full mentor analysis
+  Future<Map<String, dynamic>> mentorAnalyse(String userId) async {
+    final response = await _client.get<Map<String, dynamic>>(
+      '/api/ai/mentor/analyse/$userId',
     );
     return responseMap(response.data);
   }
