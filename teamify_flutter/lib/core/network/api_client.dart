@@ -1,8 +1,10 @@
+import 'dart:convert';
 import 'package:dio/dio.dart';
 
 import '../config/app_config.dart';
 import '../storage/token_storage.dart';
 import 'api_exception.dart';
+import '../observability/app_logger.dart';
 
 class ApiClient {
   final Dio dio;
@@ -26,20 +28,41 @@ class ApiClient {
               ),
             ),
         tokenStorage = tokenStorage ?? TokenStorage() {
+    this.dio.transformer = BackgroundTransformer()..jsonDecodeCallback = _parseAndDecode;
     this.dio.interceptors.add(
           InterceptorsWrapper(
             onRequest: _addAuthHeader,
+            onResponse: _handleResponse,
             onError: _handleError,
           ),
         );
+  }
+
+  void _handleResponse(
+    Response response,
+    ResponseInterceptorHandler handler,
+  ) {
+    final start = response.requestOptions.extra['start_time'] as DateTime?;
+    if (start != null) {
+      final duration = DateTime.now().difference(start);
+      final path = response.requestOptions.path;
+      AppLogger.trackLatency('api.$path', duration);
+    }
+    handler.next(response);
   }
 
   Future<Response<T>> get<T>(
     String path, {
     Map<String, dynamic>? queryParameters,
     Options? options,
+    CancelToken? cancelToken,
   }) {
-    return dio.get<T>(path, queryParameters: queryParameters, options: options);
+    return dio.get<T>(
+      path,
+      queryParameters: queryParameters,
+      options: options,
+      cancelToken: cancelToken,
+    );
   }
 
   Future<Response<T>> post<T>(
@@ -47,12 +70,14 @@ class ApiClient {
     Object? data,
     Map<String, dynamic>? queryParameters,
     Options? options,
+    CancelToken? cancelToken,
   }) {
     return dio.post<T>(
       path,
       data: data,
       queryParameters: queryParameters,
       options: options,
+      cancelToken: cancelToken,
     );
   }
 
@@ -61,12 +86,14 @@ class ApiClient {
     Object? data,
     Map<String, dynamic>? queryParameters,
     Options? options,
+    CancelToken? cancelToken,
   }) {
     return dio.patch<T>(
       path,
       data: data,
       queryParameters: queryParameters,
       options: options,
+      cancelToken: cancelToken,
     );
   }
 
@@ -75,12 +102,14 @@ class ApiClient {
     Object? data,
     Map<String, dynamic>? queryParameters,
     Options? options,
+    CancelToken? cancelToken,
   }) {
     return dio.put<T>(
       path,
       data: data,
       queryParameters: queryParameters,
       options: options,
+      cancelToken: cancelToken,
     );
   }
 
@@ -89,12 +118,14 @@ class ApiClient {
     Object? data,
     Map<String, dynamic>? queryParameters,
     Options? options,
+    CancelToken? cancelToken,
   }) {
     return dio.delete<T>(
       path,
       data: data,
       queryParameters: queryParameters,
       options: options,
+      cancelToken: cancelToken,
     );
   }
 
@@ -109,6 +140,7 @@ class ApiClient {
         options.headers['Authorization'] = 'Bearer $token';
       }
     }
+    options.extra['start_time'] = DateTime.now();
     handler.next(options);
   }
 
@@ -120,6 +152,7 @@ class ApiClient {
     final alreadyRetried = error.requestOptions.extra['retried'] == true;
 
     if (statusCode == 401 && !alreadyRetried && !_isRefreshing) {
+      AppLogger.log('401 Unauthorized for ${error.requestOptions.path}. Attempting token refresh...');
       final refreshed = await _refreshAccessToken();
       if (refreshed) {
         try {
@@ -129,6 +162,7 @@ class ApiClient {
           if (accessToken != null) {
             retryOptions.headers['Authorization'] = 'Bearer $accessToken';
           }
+          AppLogger.recordMetric('api.retry', 1, tags: {'path': error.requestOptions.path});
           final response = await dio.fetch<dynamic>(retryOptions);
           handler.resolve(response);
           return;
@@ -137,6 +171,20 @@ class ApiClient {
         }
       }
     }
+
+    if (error.type == DioExceptionType.cancel) {
+      handler.reject(
+        DioException(
+          requestOptions: error.requestOptions,
+          type: error.type,
+          error: const ApiException('Request cancelled'),
+          message: 'Request cancelled',
+        ),
+      );
+      return;
+    }
+
+    AppLogger.error('API Error [${error.response?.statusCode}]: ${error.message}', error);
 
     final apiException = ApiException.fromResponse(
       statusCode,
@@ -178,4 +226,9 @@ class ApiClient {
       _isRefreshing = false;
     }
   }
+}
+
+// Top-level function for Isolate JSON decoding
+dynamic _parseAndDecode(String response) {
+  return jsonDecode(response);
 }

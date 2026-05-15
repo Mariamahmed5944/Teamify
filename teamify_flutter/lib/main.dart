@@ -5,6 +5,10 @@ import 'core/routes.dart';
 import 'core/cache/cache_manager.dart';
 import 'core/network/websocket_manager.dart';
 import 'core/session/session_controller.dart';
+import 'core/session/app_lifecycle_manager.dart';
+import 'core/session/disposable_registry.dart';
+import 'core/offline/offline_manager.dart';
+import 'core/network/api_client.dart';
 import 'data/repositories/app_repositories.dart';
 import 'services/app_services.dart';
 
@@ -48,6 +52,27 @@ void main() async {
   if (session.isAuthenticated) {
     await ws.connect();
   }
+
+  // Listen for session changes to connect/disconnect WebSocket automatically
+  session.addListener(() {
+    if (session.isAuthenticated && !ws.isConnected) {
+      ws.connect();
+    } else if (!session.isAuthenticated && ws.isConnected) {
+      ws.disconnect();
+    }
+  });
+  globalDisposableRegistry.register(session);
+  globalDisposableRegistry.register(ws);
+
+  // ── Offline Manager ──────────────────────────────────────────────────
+  final offline = OfflineManager(cache: cache, apiClient: ApiClient(tokenStorage: repositories.tokenStorage));
+  offline.init();
+  globalDisposableRegistry.register(offline);
+
+  // ── Lifecycle Manager ─────────────────────────────────────────────────
+  final lifecycle = AppLifecycleManager(wsManager: ws, offlineManager: offline);
+  lifecycle.init();
+  globalDisposableRegistry.register(lifecycle);
 
   runApp(
     MultiProvider(

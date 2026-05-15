@@ -27,12 +27,12 @@ class ChatRepository {
   /// GET /api/chat/rooms/<roomId>/messages
   Future<List<Map<String, dynamic>>> getMessages(
     String roomId, {
-    int limit = 50,
-    int offset = 0,
+    int page = 1,
+    int perPage = 50,
   }) async {
     final response = await _client.get<dynamic>(
       '/api/chat/rooms/$roomId/messages',
-      queryParameters: {'limit': limit, 'offset': offset},
+      queryParameters: {'page': page, 'per_page': perPage},
     );
     return responseList(response.data, ['messages', 'data'])
         .cast<Map<String, dynamic>>();

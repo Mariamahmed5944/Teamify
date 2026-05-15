@@ -106,7 +106,7 @@ void main() {
 
     test('non-Dio exceptions are caught gracefully', () async {
       final result = await service.guard<int>(() async {
-        throw FormatException('bad data');
+        throw const FormatException('bad data');
       });
       expect(result.isFailure, isTrue);
       expect(result.error, contains('FormatException'));

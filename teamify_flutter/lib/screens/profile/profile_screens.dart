@@ -380,7 +380,7 @@ class CompletedProjectsScreen extends StatelessWidget {
         load: () => context
             .read<AppRepositories>()
             .projects
-            .listProjects()
+            .listCompletedProjects()
             .then((projects) =>
                 projects.map((project) => project.toDisplayModel()).toList()),
         isEmpty: (projects) => projects.isEmpty,

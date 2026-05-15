@@ -37,16 +37,23 @@ mixin ServiceErrorHandler {
     }
   }
 
-  /// Retries [action] up to [maxRetries] times with exponential backoff.
+  /// Retries [action] up to [maxRetries] times with jittered exponential backoff.
   Future<ApiResult<T>> guardWithRetry<T>(
     Future<T> Function() action, {
     int maxRetries = 2,
+    bool Function(dynamic error)? shouldRetry,
   }) async {
     for (var attempt = 0; attempt <= maxRetries; attempt++) {
       final result = await guard(action);
-      if (result.isSuccess || !result.isNetworkError) return result;
+      if (result.isSuccess) return result;
+      
+      final retryDecision = shouldRetry != null ? shouldRetry(result.error) : result.isNetworkError;
+      if (!retryDecision) return result;
+
       if (attempt < maxRetries) {
-        await Future.delayed(Duration(seconds: 1 << attempt)); // 1s, 2s, 4s
+        final baseDelay = 1000 * (1 << attempt); // 1s, 2s, 4s
+        final jitter = (DateTime.now().millisecondsSinceEpoch % 500); // 0-499ms jitter
+        await Future.delayed(Duration(milliseconds: baseDelay + jitter));
       }
     }
     return ApiResult.failure('Request failed after retries', isNetworkError: true);

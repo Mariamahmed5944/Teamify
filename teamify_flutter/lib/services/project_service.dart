@@ -4,6 +4,8 @@ import '../../core/network/service_error_handler.dart';
 import '../../data/models/models.dart';
 import '../../data/repositories/project_repository.dart';
 import '../../data/repositories/stats_repository.dart';
+import '../../core/network/request_deduplicator.dart';
+import '../../core/cache/swr_helper.dart';
 
 /// Service layer for project lifecycle management.
 ///
@@ -24,39 +26,40 @@ class ProjectService with ServiceErrorHandler {
     required CacheManager cache,
   })  : _repo = repo,
         _stats = stats,
-        _cache = cache;
+        _cache = cache {
+      _swr = SwrHelper(_cache);
+    }
+
+  final RequestDeduplicator _dedup = RequestDeduplicator();
+  late final SwrHelper _swr;
 
   // ── Cached list ────────────────────────────────────────────────────────
 
   /// Lists projects with cache-first strategy.
   Future<ApiResult<List<ApiProject>>> listProjects({
     bool forceRefresh = false,
+    void Function(List<ApiProject>)? onRefreshed,
   }) =>
-      guard(() async {
-        // Try cache first
-        if (!forceRefresh) {
-          final cached = await _cache.getList(_box, 'all');
-          if (cached != null) {
-            return cached.map(ApiProject.fromJson).toList();
-          }
-        }
+      _dedup.deduplicate('list_projects', () => guard(() async {
+            if (forceRefresh) {
+              final projects = await _repo.listProjects();
+              await _cache.putList(_box, 'all', projects.map((p) => p.toJson()).toList());
+              return projects;
+            }
 
-        // Fetch from API
-        final projects = await _repo.listProjects();
-
-        // Update cache
-        await _cache.putList(
-          _box,
-          'all',
-          projects.map((p) => p.toJson()).toList(),
-        );
-
-        return projects;
-      });
+            return _swr.withSwrList<ApiProject>(
+              boxName: _box,
+              key: 'all',
+              fetcher: () => _repo.listProjects(),
+              fromJson: ApiProject.fromJson,
+              toJson: (p) => p.toJson(),
+              onRefreshed: onRefreshed,
+            ).then((res) => res.isSuccess ? res.data! : throw Exception(res.error));
+          }));
 
   /// Gets a single project (no full-list fetch needed).
   Future<ApiResult<ApiProject>> getProject(String id) =>
-      guardWithRetry(() => _repo.getProject(id));
+      _dedup.deduplicate('get_project_$id', () => guardWithRetry(() => _repo.getProject(id)));
 
   /// Creates a project and invalidates the cache.
   Future<ApiResult<ApiProject>> createProject(

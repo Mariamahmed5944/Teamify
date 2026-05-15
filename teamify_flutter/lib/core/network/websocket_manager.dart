@@ -1,10 +1,12 @@
 import 'dart:async';
 
+
 import 'package:flutter/foundation.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 
 import '../config/app_config.dart';
 import '../storage/token_storage.dart';
+import '../observability/app_logger.dart';
 
 /// Event types emitted by the WebSocket manager.
 enum SocketEvent {
@@ -38,8 +40,15 @@ class WebSocketManager {
 
   io.Socket? _socket;
   bool _disposed = false;
+  bool _isConnecting = false;
   int _reconnectAttempts = 0;
   static const _maxReconnectAttempts = 10;
+  
+  // Health Monitoring
+  Timer? _heartbeatTimer;
+  DateTime? _lastPong;
+  static const _heartbeatInterval = Duration(seconds: 15);
+  static const _pongTimeout = Duration(seconds: 10);
 
   final _controller = StreamController<SocketPayload>.broadcast();
 
@@ -53,7 +62,10 @@ class WebSocketManager {
 
   /// Establish a Socket.IO connection authenticated via JWT.
   Future<void> connect() async {
-    if (_disposed) return;
+    if (_disposed || _isConnecting || isConnected) return;
+    _isConnecting = true;
+
+    try {
 
     final token = await _tokenStorage.readAccessToken();
     if (token == null || token.isEmpty) return;
@@ -76,6 +88,7 @@ class WebSocketManager {
       _reconnectAttempts = 0;
       debugPrint('[WS] Connected');
       _emit(SocketEvent.connected);
+      _startHeartbeat();
     });
 
     _socket!.onDisconnect((_) {
@@ -102,6 +115,10 @@ class WebSocketManager {
       disconnect(); // Clean up the dead socket
     });
 
+    _socket!.on('pong', (_) {
+      _lastPong = DateTime.now();
+    });
+
     // ── Chat events ──────────────────────────────────────────────────────
     _socket!.on('new_message', (data) {
       _emit(SocketEvent.chatMessage, _asMap(data));
@@ -126,6 +143,9 @@ class WebSocketManager {
     });
 
     _socket!.connect();
+    } finally {
+      _isConnecting = false;
+    }
   }
 
   /// Join a chat room.
@@ -148,6 +168,7 @@ class WebSocketManager {
 
   /// Disconnect and clean up.
   void disconnect() {
+    _stopHeartbeat();
     _socket?.disconnect();
     _socket?.dispose();
     _socket = null;
@@ -155,9 +176,36 @@ class WebSocketManager {
 
   /// Permanently dispose — no reconnect possible after this.
   void dispose() {
+    _stopHeartbeat();
     _disposed = true;
     disconnect();
     _controller.close();
+  }
+
+  // ── Health Monitoring ────────────────────────────────────────────────────
+  
+  void _startHeartbeat() {
+    _stopHeartbeat();
+    _lastPong = DateTime.now();
+    _heartbeatTimer = Timer.periodic(_heartbeatInterval, (_) {
+      if (!isConnected) return;
+
+      final now = DateTime.now();
+      final timeSincePong = now.difference(_lastPong!);
+
+      if (timeSincePong > (_heartbeatInterval + _pongTimeout)) {
+        AppLogger.log('[WebSocket] Heartbeat timeout. Connection is stale.');
+        disconnect();
+        return;
+      }
+
+      _socket!.emit('ping');
+    });
+  }
+
+  void _stopHeartbeat() {
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = null;
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────

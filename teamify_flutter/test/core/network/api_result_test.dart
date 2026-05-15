@@ -18,13 +18,13 @@ void main() {
       // This is the P0 bug — guard() wraps void functions as
       // ApiResult.success(null). Before the fix, when() would fall
       // through to the failure branch.
-      final result = ApiResult<void>.success(null as dynamic);
+      final result = ApiResult<dynamic>.success(null);
       expect(result.isSuccess, isTrue);
       expect(result.error, isNull);
     });
 
     test('when() routes void success to success branch', () {
-      final result = ApiResult<void>.success(null as dynamic);
+      final result = ApiResult<dynamic>.success(null);
       final got = result.when(
         success: (_) => 'OK',
         failure: (e) => 'FAIL: $e',

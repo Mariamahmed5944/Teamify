@@ -2,18 +2,47 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme.dart';
 import '../../core/routes.dart';
+import '../../core/session/session_controller.dart';
 import '../../data/repositories/app_repositories.dart';
 import '../../data/models/models.dart';
 import '../../models/models.dart';
 import '../../widgets/widgets.dart';
 
-// ── Local chat data (no backend endpoint for chat rooms / messages) ──────────
-const _localChatRooms = <ChatRoom>[
-  ChatRoom(id: '1', name: 'Website Redesign', lastMessage: 'Alice: Updated wireframes!', time: '10:30 AM', initials: 'WR', unread: 3, isGroup: true),
-  ChatRoom(id: '2', name: 'John Doe', lastMessage: 'Can you review the PR?', time: '9:15 AM', initials: 'JD', unread: 1, isGroup: false),
-  ChatRoom(id: '3', name: 'AI Planner Team', lastMessage: 'Mike: Model is ready!', time: 'Yesterday', initials: 'AP', unread: 0, isGroup: true),
-  ChatRoom(id: '4', name: 'Lisa Park', lastMessage: 'Designs sent to Figma.', time: 'Yesterday', initials: 'LP', unread: 0, isGroup: false),
-];
+ChatRoom _chatRoomFromApi(Map<String, dynamic> json) {
+  final name = json['name']?.toString().trim();
+  final displayName =
+      (name != null && name.isNotEmpty) ? name : 'Chat ${json['id']}';
+  final last = json['last_message'];
+  var lastMessage = 'No messages yet';
+  var time = '';
+  if (last is Map<String, dynamic>) {
+    lastMessage = last['content']?.toString() ?? lastMessage;
+    final sender = last['sender_name']?.toString();
+    if (sender != null && sender.isNotEmpty) {
+      lastMessage = '$sender: $lastMessage';
+    }
+    final created = last['created_at']?.toString() ?? '';
+    if (created.isNotEmpty) {
+      time = created.contains('T')
+          ? created.split('T').last.split('.').first
+          : created;
+    }
+  }
+  final parts =
+      displayName.split(' ').where((part) => part.isNotEmpty).toList();
+  final initials = parts
+      .take(2)
+      .map((part) => part[0].toUpperCase())
+      .join();
+  return ChatRoom(
+    id: json['id'].toString(),
+    name: displayName,
+    lastMessage: lastMessage,
+    time: time.isNotEmpty ? time : '—',
+    initials: initials.isNotEmpty ? initials : 'CH',
+    isGroup: json['is_group'] == true,
+  );
+}
 
 const _localGroupMessages = <ChatMessage>[
   ChatMessage(id: '1', senderId: '5', senderName: 'Mariam Kamel', senderInitials: 'MK', message: 'Hey team, just uploaded the latest wireframes. Take a look when you get a chance!', time: '9:30 AM', isMe: false),
@@ -27,6 +56,66 @@ const _localGroupMessages = <ChatMessage>[
 // ── Chat List ─────────────────────────────────────────────────────────────────
 class ChatListScreen extends StatelessWidget {
   const ChatListScreen({super.key});
+
+  Widget _roomTile(BuildContext context, ChatRoom r) {
+    return TCard(
+      margin: const EdgeInsets.only(bottom: 10),
+      onTap: () => Navigator.pushNamed(
+        context,
+        r.isGroup ? R.groupChat : R.directChat,
+        arguments: r,
+      ),
+      child: Row(children: [
+        TAvatar(
+          initials: r.initials,
+          radius: 24,
+          bg: r.isGroup ? AppColors.primary : AppColors.accent,
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      r.name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Text(
+                    r.time,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 2),
+              Text(
+                r.lastMessage,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ]),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -36,108 +125,24 @@ class ChatListScreen extends StatelessWidget {
             style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
-              icon: const Icon(Icons.edit_outlined),
-              onPressed: () {
-                showModalBottomSheet(
-                    context: context,
-                    shape: const RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.vertical(top: Radius.circular(20))),
-                    builder: (ctx) => Container(
-                          padding: const EdgeInsets.all(20),
-                          child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Text('New Message',
-                                    style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold)),
-                                const SizedBox(height: 16),
-                                ...[
-                                  'Alice Smith',
-                                  'John Doe',
-                                  'Mike Kumar',
-                                  'Lisa Park'
-                                ].map((name) => ListTile(
-                                      leading: TAvatar(
-                                          initials: name
-                                              .split(' ')
-                                              .map((e) => e[0])
-                                              .join(),
-                                          radius: 18),
-                                      title: Text(name),
-                                      onTap: () {
-                                        Navigator.pop(context);
-                                        Navigator.pushNamed(
-                                            context, R.directChat);
-                                      },
-                                    )),
-                              ]),
-                        ));
-              })
+            icon: const Icon(Icons.edit_outlined),
+            onPressed: () => Navigator.pushNamed(context, R.directChat),
+          ),
         ],
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: _localChatRooms.length,
-        itemBuilder: (_, i) {
-          final r = _localChatRooms[i];
-          return TCard(
-            margin: const EdgeInsets.only(bottom: 10),
-            onTap: () => Navigator.pushNamed(
-                context, r.isGroup ? R.groupChat : R.directChat,
-                arguments: r),
-            child: Row(children: [
-              Stack(children: [
-                TAvatar(
-                    initials: r.initials,
-                    radius: 24,
-                    bg: r.isGroup ? AppColors.primary : AppColors.accent),
-                if (r.unread > 0)
-                  Positioned(
-                      top: 0,
-                      right: 0,
-                      child: Container(
-                        width: 16,
-                        height: 16,
-                        decoration: const BoxDecoration(
-                            color: Colors.red, shape: BoxShape.circle),
-                        child: Center(
-                            child: Text('${r.unread}',
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.bold))),
-                      )),
-              ]),
-              const SizedBox(width: 12),
-              Expanded(
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                    Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(r.name,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.textPrimary)),
-                          Text(r.time,
-                              style: const TextStyle(
-                                  fontSize: 11,
-                                  color: AppColors.textSecondary)),
-                        ]),
-                    const SizedBox(height: 2),
-                    Text(r.lastMessage,
-                        style: const TextStyle(
-                            fontSize: 12, color: AppColors.textSecondary),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis),
-                  ])),
-            ]),
-          );
-        },
+      body: RepositoryLoader<List<ChatRoom>>(
+        load: () => context
+            .read<AppRepositories>()
+            .chat
+            .listRooms()
+            .then((rooms) => rooms.map(_chatRoomFromApi).toList()),
+        isEmpty: (rooms) => rooms.isEmpty,
+        emptyMessage: 'No conversations yet',
+        builder: (context, rooms) => ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: rooms.length,
+          itemBuilder: (_, i) => _roomTile(context, rooms[i]),
+        ),
       ),
       bottomNavigationBar:
           TBottomNav(current: 3, onTap: (i) => handleFreelancerNav(context, i)),
@@ -155,32 +160,92 @@ class GroupChatScreen extends StatefulWidget {
 class _GroupChatScreenState extends State<GroupChatScreen> {
   final _ctrl = TextEditingController();
   final List<Map<String, dynamic>> _msgs = [];
+  List<ChatMessage> _history = [];
+  bool _loadingHistory = false;
+  String? _roomId;
+  String _roomName = 'Group Chat';
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadRoom());
+  }
+
+  Future<void> _loadRoom() async {
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is! ChatRoom) return;
+    setState(() {
+      _roomId = args.id;
+      _roomName = args.name;
+      _loadingHistory = true;
+    });
+    try {
+      final raw = await context.read<AppRepositories>().chat.getMessages(args.id);
+      if (!mounted) return;
+      final session = context.read<SessionController>();
+      final myId = session.currentUser?.id;
+      setState(() {
+        _history = raw.map((m) {
+          final senderId = m['sender_id']?.toString() ?? '';
+          final senderName = m['sender_name']?.toString() ?? 'User';
+          final created = m['created_at']?.toString() ?? '';
+          final time = created.contains('T')
+              ? created.split('T').last.split('.').first
+              : created;
+          return ChatMessage(
+            id: m['id']?.toString() ?? '',
+            senderId: senderId,
+            senderName: senderName,
+            senderInitials: senderName.isNotEmpty
+                ? senderName.split(' ').map((p) => p[0]).take(2).join()
+                : 'U',
+            message: m['content']?.toString() ?? '',
+            time: time.isNotEmpty ? time : '—',
+            isMe: myId != null && senderId == myId,
+          );
+        }).toList();
+        _loadingHistory = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loadingHistory = false);
+    }
+  }
 
   void _send() {
     if (_ctrl.text.trim().isEmpty) return;
     setState(() {
-      _msgs.add({'text': _ctrl.text, 'isMe': true, 'time': '2:55 PM'});
+      _msgs.add({'text': _ctrl.text, 'isMe': true, 'time': 'Now'});
       _ctrl.clear();
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final msgs = [..._localGroupMessages, ..._msgs.map((m) => _FakeMsg(m))];
+    final msgs = [
+      ...(_roomId != null ? _history : _localGroupMessages),
+      ..._msgs.map((m) => _FakeMsg(m)),
+    ];
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios, size: 18),
             onPressed: () => Navigator.pop(context)),
-        title: const Row(children: [
-          TAvatar(initials: 'WD', radius: 18),
-          SizedBox(width: 8),
+        title: Row(children: [
+          TAvatar(
+            initials: _roomName.isNotEmpty ? _roomName[0] : 'G',
+            radius: 18,
+          ),
+          const SizedBox(width: 8),
           Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Group Chat',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-            Text('Tab here for group info',
-                style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+            Text(_roomName,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+            Text(
+              _loadingHistory ? 'Loading messages…' : 'Tap here for group info',
+              style: const TextStyle(
+                  fontSize: 11, color: AppColors.textSecondary),
+            ),
           ]),
         ]),
         actions: [

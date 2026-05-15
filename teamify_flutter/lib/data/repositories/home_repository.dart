@@ -13,4 +13,10 @@ class HomeRepository {
     final response = await _client.get<Map<String, dynamic>>('/api/dashboard');
     return responseMap(response.data);
   }
+
+  /// GET /api/health — backend connectivity check.
+  Future<Map<String, dynamic>> checkHealth() async {
+    final response = await _client.get<Map<String, dynamic>>('/api/health');
+    return responseMap(response.data);
+  }
 }

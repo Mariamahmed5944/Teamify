@@ -15,12 +15,19 @@ class CacheManager {
   /// Guards against concurrent `openBox` calls for the same name.
   final Map<String, Future<Box<dynamic>>> _openingBoxes = {};
 
+  Future<void>? _initFuture;
+
   /// Call once at app startup (before runApp).
-  Future<void> init() async {
-    if (_initialized) return;
+  Future<void> init() {
+    if (_initialized) return Future.value();
+    return _initFuture ??= _doInit();
+  }
+
+  Future<void> _doInit() async {
     await Hive.initFlutter();
     await Hive.openBox<String>(_metaBoxName);
     _initialized = true;
+    _initFuture = null;
   }
 
   /// Test-only setter for [_initialized]. Allows test subclasses to bypass
@@ -55,8 +62,12 @@ class CacheManager {
     if (!_initialized) return;
     final box = await openBox<String>(boxName);
     final encoded = convert.jsonEncode(items);
+    final tempKey = 'temp_$key';
+    await box.put(tempKey, encoded);
     await box.put(key, encoded);
+    await box.delete(tempKey);
     await _setTimestamp(boxName, key);
+    await enforceMaxSize(boxName);
   }
 
   /// Store a single JSON-serializable map under [key] in [boxName].
@@ -68,8 +79,12 @@ class CacheManager {
     if (!_initialized) return;
     final box = await openBox<String>(boxName);
     final encoded = convert.jsonEncode(data);
+    final tempKey = 'temp_$key';
+    await box.put(tempKey, encoded);
     await box.put(key, encoded);
+    await box.delete(tempKey);
     await _setTimestamp(boxName, key);
+    await enforceMaxSize(boxName);
   }
 
   /// Retrieve a cached list, or null if missing / expired.
@@ -79,7 +94,7 @@ class CacheManager {
     Duration maxAge = const Duration(minutes: 10),
   }) async {
     if (!_initialized) return null;
-    if (_isExpired(boxName, key, maxAge)) return null;
+    if (isExpired(boxName, key, maxAge)) return null;
     try {
       final box = await openBox<String>(boxName);
       final raw = box.get(key);
@@ -103,7 +118,7 @@ class CacheManager {
     Duration maxAge = const Duration(minutes: 10),
   }) async {
     if (!_initialized) return null;
-    if (_isExpired(boxName, key, maxAge)) return null;
+    if (isExpired(boxName, key, maxAge)) return null;
     try {
       final box = await openBox<String>(boxName);
       final raw = box.get(key);
@@ -153,7 +168,7 @@ class CacheManager {
 
   // ── Helpers ────────────────────────────────────────────────────────────
 
-  bool _isExpired(String boxName, String key, Duration maxAge) {
+  bool isExpired(String boxName, String key, Duration maxAge) {
     if (!Hive.isBoxOpen(_metaBoxName)) return true;
     final meta = Hive.box<String>(_metaBoxName);
     final tsStr = meta.get('${boxName}_${key}_ts');
@@ -161,6 +176,107 @@ class CacheManager {
     final ts = DateTime.tryParse(tsStr);
     if (ts == null) return true;
     return DateTime.now().difference(ts) > maxAge;
+  }
+
+  // ── Pagination Cache Segmentation ───────────────────────────────────────
+
+  /// Stores a specific page of a paginated list
+  Future<void> putPagedList(
+    String boxName,
+    String keyPrefix,
+    int page,
+    List<Map<String, dynamic>> items,
+  ) async {
+    await putList(boxName, '${keyPrefix}_page_$page', items);
+    
+    // Update the metadata for total pages tracked
+    if (!_initialized) return;
+    final meta = Hive.box<String>(_metaBoxName);
+    final totalStr = meta.get('${boxName}_${keyPrefix}_pages');
+    final currentMax = totalStr != null ? int.tryParse(totalStr) ?? 0 : 0;
+    if (page > currentMax) {
+      await meta.put('${boxName}_${keyPrefix}_pages', page.toString());
+    }
+  }
+
+  /// Retrieves a specific page of a paginated list
+  Future<List<dynamic>?> getPagedList(
+    String boxName,
+    String keyPrefix,
+    int page, {
+    Duration maxAge = const Duration(minutes: 10),
+  }) async {
+    return getList(boxName, '${keyPrefix}_page_$page', maxAge: maxAge);
+  }
+
+  /// Clears all pages for a paginated list
+  Future<void> invalidatePagedList(String boxName, String keyPrefix) async {
+    if (!_initialized) return;
+    final meta = Hive.box<String>(_metaBoxName);
+    final totalStr = meta.get('${boxName}_${keyPrefix}_pages');
+    final totalPages = totalStr != null ? int.tryParse(totalStr) ?? 0 : 0;
+
+    for (var i = 1; i <= totalPages; i++) {
+      await invalidate(boxName, '${keyPrefix}_page_$i');
+    }
+    await meta.delete('${boxName}_${keyPrefix}_pages');
+  }
+
+  // ── Advanced Cache Hardening ───────────────────────────────────────────
+
+  /// Enforce LRU eviction if a box exceeds a given size
+  Future<void> enforceMaxSize(String boxName, {int maxItems = 100}) async {
+    if (!_initialized) return;
+    final box = await openBox<String>(boxName);
+    if (box.length <= maxItems) return;
+
+    final meta = Hive.box<String>(_metaBoxName);
+    
+    // Build a list of (key, timestamp)
+    final entries = <MapEntry<String, DateTime>>[];
+    for (final key in box.keys) {
+      final tsStr = meta.get('${boxName}_${key}_ts');
+      if (tsStr != null) {
+        final ts = DateTime.tryParse(tsStr) ?? DateTime.fromMillisecondsSinceEpoch(0);
+        entries.add(MapEntry(key.toString(), ts));
+      } else {
+        entries.add(MapEntry(key.toString(), DateTime.fromMillisecondsSinceEpoch(0)));
+      }
+    }
+
+    // Sort by oldest first
+    entries.sort((a, b) => a.value.compareTo(b.value));
+
+    // Remove oldest entries until we're under the limit
+    final toRemove = entries.take(box.length - maxItems).map((e) => e.key).toList();
+    for (final key in toRemove) {
+      await box.delete(key);
+      await meta.delete('${boxName}_${key}_ts');
+    }
+  }
+
+  /// Clean up metadata for keys that no longer exist
+  Future<void> cleanupOrphans(String boxName) async {
+    if (!_initialized) return;
+    final box = await openBox<String>(boxName);
+    final meta = Hive.box<String>(_metaBoxName);
+
+    final prefix = '${boxName}_';
+    final keysToDelete = <dynamic>[];
+
+    for (final metaKey in meta.keys) {
+      final keyStr = metaKey.toString();
+      if (keyStr.startsWith(prefix) && keyStr.endsWith('_ts')) {
+        final actualKey = keyStr.substring(prefix.length, keyStr.length - 3);
+        if (!box.containsKey(actualKey)) {
+          keysToDelete.add(metaKey);
+        }
+      }
+    }
+
+    for (final metaKey in keysToDelete) {
+      await meta.delete(metaKey);
+    }
   }
 
   Future<void> _setTimestamp(String boxName, String key) async {

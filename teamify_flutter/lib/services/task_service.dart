@@ -4,6 +4,8 @@ import '../../core/network/service_error_handler.dart';
 import '../../data/models/models.dart';
 import '../../data/repositories/task_repository.dart';
 import '../../data/repositories/comment_repository.dart';
+import '../../core/network/request_deduplicator.dart';
+import '../../core/cache/swr_helper.dart';
 
 /// Service layer for task management.
 ///
@@ -24,35 +26,39 @@ class TaskService with ServiceErrorHandler {
     required CacheManager cache,
   })  : _repo = repo,
         _comments = comments,
-        _cache = cache;
+        _cache = cache {
+      _swr = SwrHelper(_cache);
+    }
+
+  final RequestDeduplicator _dedup = RequestDeduplicator();
+  late final SwrHelper _swr;
 
   // ── Cached list ────────────────────────────────────────────────────────
 
   Future<ApiResult<List<ApiTask>>> listTasks({
     required String projectId,
     bool forceRefresh = false,
+    void Function(List<ApiTask>)? onRefreshed,
   }) =>
-      guard(() async {
-        if (!forceRefresh) {
-          final cached = await _cache.getList(_box, 'project_$projectId');
-          if (cached != null) {
-            return cached.map(ApiTask.fromJson).toList();
-          }
-        }
+      _dedup.deduplicate('list_tasks_$projectId', () => guard(() async {
+            if (forceRefresh) {
+              final tasks = await _repo.listTasks(projectId: projectId);
+              await _cache.putList(_box, 'project_$projectId', tasks.map((t) => t.toJson()).toList());
+              return tasks;
+            }
 
-        final tasks = await _repo.listTasks(projectId: projectId);
-
-        await _cache.putList(
-          _box,
-          'project_$projectId',
-          tasks.map((t) => t.toJson()).toList(),
-        );
-
-        return tasks;
-      });
+            return _swr.withSwrList<ApiTask>(
+              boxName: _box,
+              key: 'project_$projectId',
+              fetcher: () => _repo.listTasks(projectId: projectId),
+              fromJson: ApiTask.fromJson,
+              toJson: (t) => t.toJson(),
+              onRefreshed: onRefreshed,
+            ).then((res) => res.isSuccess ? res.data! : throw Exception(res.error));
+          }));
 
   Future<ApiResult<ApiTask>> getTask(String id) =>
-      guardWithRetry(() => _repo.getTask(id));
+      _dedup.deduplicate('get_task_$id', () => guardWithRetry(() => _repo.getTask(id)));
 
   // ── CRUD ──────────────────────────────────────────────────────────────
 

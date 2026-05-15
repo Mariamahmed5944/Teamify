@@ -1,0 +1,7 @@
+{
+  "venvPath": "teamify_flask_backend",
+  "venv": ".venv",
+  "extraPaths": [
+    "teamify_flask_backend"
+  ]
+}

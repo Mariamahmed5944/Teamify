@@ -13,6 +13,7 @@ class ApiException implements Exception {
 
   bool get isPendingApproval => code == 'Account Pending Approval';
   bool get isUnauthorized => statusCode == 401;
+  bool get isCancelled => message == 'Request cancelled';
 
   @override
   String toString() => message;

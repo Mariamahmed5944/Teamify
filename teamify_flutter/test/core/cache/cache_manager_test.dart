@@ -132,7 +132,7 @@ void main() {
       final result = await cache.getList('data', 'key');
       expect(result, isNotNull);
       expect(result!.first['name'], 'مريم');
-      expect(result!.first['emoji'], '🚀');
+      expect(result.first['emoji'], '🚀');
     });
 
     test('corrupted data returns null instead of crashing', () async {

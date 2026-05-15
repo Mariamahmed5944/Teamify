@@ -1,0 +1,13 @@
+{
+    "python.defaultInterpreterPath": "${workspaceFolder}/teamify_flask_backend/.venv/Scripts/python.exe",
+    "python.pythonPath": "${workspaceFolder}/teamify_flask_backend/.venv/Scripts/python.exe",
+    "python.analysis.extraPaths": [
+        "${workspaceFolder}/teamify_flask_backend/.venv/Lib/site-packages",
+        "${workspaceFolder}/teamify_flask_backend"
+    ],
+    "python.testing.pytestArgs": [
+        "teamify_flask_backend/tests"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true
+}

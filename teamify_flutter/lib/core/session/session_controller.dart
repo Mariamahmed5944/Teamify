@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../data/models/models.dart';
 import '../../data/repositories/auth_repository.dart';
+import 'disposable_registry.dart';
 
 enum SessionStatus {
   unknown,
@@ -93,6 +94,7 @@ class SessionController extends ChangeNotifier {
     await _authRepository.logout();
     currentUser = null;
     status = SessionStatus.unauthenticated;
+    globalDisposableRegistry.disposeAll();
     notifyListeners();
   }
 }
