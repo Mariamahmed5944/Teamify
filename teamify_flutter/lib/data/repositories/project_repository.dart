@@ -2,6 +2,35 @@ import '../../core/network/api_client.dart';
 import '../models/models.dart';
 import 'repository_helpers.dart';
 
+/// Lightweight DTO for users returnable in the available-members list.
+class AvailableMember {
+  final String id;
+  final String name;
+  final String displayName;
+  final String email;
+  final String userType;
+
+  const AvailableMember({
+    required this.id,
+    required this.name,
+    required this.displayName,
+    required this.email,
+    required this.userType,
+  });
+
+  factory AvailableMember.fromJson(Map<String, dynamic> json) {
+    final name = (json['name'] as String?)?.trim() ?? '';
+    final displayName = (json['display_name'] as String?)?.trim() ?? name;
+    return AvailableMember(
+      id: json['id']?.toString() ?? '',
+      name: name.isNotEmpty ? name : displayName,
+      displayName: displayName,
+      email: (json['email'] as String?) ?? '',
+      userType: (json['user_type'] as String?) ?? 'freelancer',
+    );
+  }
+}
+
 class ProjectRepository {
   final ApiClient _client;
 
@@ -38,7 +67,7 @@ class ProjectRepository {
   // PUT /api/projects/<id>
   Future<ApiProject> updateProject(
       String id, Map<String, dynamic> payload) async {
-    final response = await _client.patch<Map<String, dynamic>>(
+    final response = await _client.put<Map<String, dynamic>>(
       '/api/projects/$id',
       data: payload,
     );
@@ -108,5 +137,60 @@ class ProjectRepository {
       {required String projectId, required String userId}) async {
     await _client
         .delete<dynamic>('/api/projects/$projectId/members/$userId');
+  }
+
+  // GET /api/projects/invitations
+  Future<List<Map<String, dynamic>>> listMyInvitations({
+    String status = 'pending',
+  }) async {
+    final response = await _client.get<dynamic>(
+      '/api/projects/invitations',
+      queryParameters: {if (status.isNotEmpty) 'status': status},
+    );
+    return responseList(response.data, ['invitations', 'data'])
+        .whereType<Map<String, dynamic>>()
+        .toList();
+  }
+
+  // POST /api/projects/invitations/<id>/accept
+  Future<Map<String, dynamic>> acceptInvitation(String invitationId) async {
+    final response = await _client.post<Map<String, dynamic>>(
+      '/api/projects/invitations/$invitationId/accept',
+    );
+    return responseMap(response.data);
+  }
+
+  // POST /api/projects/invitations/<id>/decline
+  Future<void> declineInvitation(String invitationId) async {
+    await _client.post<dynamic>(
+      '/api/projects/invitations/$invitationId/decline',
+    );
+  }
+
+  // GET /api/projects/available-members (also /api/users/available-members)
+  Future<List<AvailableMember>> getAvailableMembers({String search = ''}) async {
+    final params = {if (search.isNotEmpty) 'search': search};
+    try {
+      final response = await _client.get<dynamic>(
+        '/api/projects/available-members',
+        queryParameters: params,
+      );
+      return _parseAvailableMembers(response.data);
+    } catch (_) {
+      final response = await _client.get<dynamic>(
+        '/api/users/available-members',
+        queryParameters: params,
+      );
+      return _parseAvailableMembers(response.data);
+    }
+  }
+
+  List<AvailableMember> _parseAvailableMembers(dynamic raw) {
+    final data = responseMap(raw);
+    final list = (data['users'] as List?)?.cast<dynamic>() ?? [];
+    return list
+        .whereType<Map<String, dynamic>>()
+        .map(AvailableMember.fromJson)
+        .toList();
   }
 }

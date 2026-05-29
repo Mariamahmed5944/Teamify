@@ -25,6 +25,23 @@ class AIRepository {
     return responseMap(response.data);
   }
 
+  /// POST /api/ai/feedback-assist — draft peer-feedback text
+  Future<Map<String, dynamic>> feedbackAssist({
+    required int rating,
+    String teammateName = '',
+    String projectName = '',
+  }) async {
+    final response = await _client.post<Map<String, dynamic>>(
+      '/api/ai/feedback-assist',
+      data: {
+        'rating': rating,
+        'teammate_name': teammateName,
+        'project_name': projectName,
+      },
+    );
+    return responseMap(response.data);
+  }
+
   Future<Map<String, dynamic>> assignMember(String projectId) async {
     final response = await _client.post<Map<String, dynamic>>(
       '/api/ai/assign',
@@ -81,6 +98,13 @@ class AIRepository {
     return responseMap(response.data);
   }
 
+  Future<Map<String, dynamic>> getDelayModelStatus() async {
+    final response = await _client.get<Map<String, dynamic>>(
+      '/api/ai/delay-model/status',
+    );
+    return responseMap(response.data);
+  }
+
   Future<Map<String, dynamic>> workload({String? userId}) async {
     final response = await _client.get<Map<String, dynamic>>(
       '/api/ai/workload',
@@ -118,24 +142,37 @@ class AIRepository {
   }
 
   Future<Map<String, dynamic>> recommendTeammates(
-      Map<String, dynamic> userStats) async {
+    Map<String, dynamic> userStats, {
+    int topN = 5,
+  }) async {
     final response = await _client.post<Map<String, dynamic>>(
       '/api/ai/recommend-teammates',
-      data: {'user_stats': userStats},
+      data: {
+        'user_stats': userStats,
+        'top_n': topN,
+      },
     );
     return responseMap(response.data);
   }
 
-  /// POST /api/ai/transcribe — speech-to-text via Whisper
-  Future<Map<String, dynamic>> transcribe(List<int> audioBytes,
-      {String filename = 'audio.wav'}) async {
+  /// POST /api/ai/transcribe — speech-to-text via Whisper STT microservice
+  Future<Map<String, dynamic>> transcribe(
+    List<int> audioBytes, {
+    String filename = 'audio.wav',
+    String language = 'en',
+  }) async {
     final formData = FormData.fromMap({
-      'file': MultipartFile.fromBytes(audioBytes, filename: filename),
+      'audio': MultipartFile.fromBytes(audioBytes, filename: filename),
     });
     final response = await _client.post<Map<String, dynamic>>(
       '/api/ai/transcribe',
       data: formData,
-      options: Options(contentType: 'multipart/form-data'),
+      queryParameters: {'language': language},
+      options: Options(
+        contentType: 'multipart/form-data',
+        sendTimeout: const Duration(seconds: 120),
+        receiveTimeout: const Duration(seconds: 120),
+      ),
     );
     return responseMap(response.data);
   }
@@ -150,10 +187,49 @@ class AIRepository {
     return responseMap(response.data);
   }
 
+  /// GET /api/ai/mentor/insights/<id> — combined hub payload (one ML run)
+  Future<Map<String, dynamic>> mentorInsights(String userId) async {
+    final response = await _client.get<Map<String, dynamic>>(
+      '/api/ai/mentor/insights/$userId',
+    );
+    return responseMap(response.data);
+  }
+
   /// GET /api/ai/mentor/analyse/<id> — full mentor analysis
   Future<Map<String, dynamic>> mentorAnalyse(String userId) async {
     final response = await _client.get<Map<String, dynamic>>(
       '/api/ai/mentor/analyse/$userId',
+    );
+    return responseMap(response.data);
+  }
+
+  /// GET /api/ai/mentor/chat/history
+  Future<List<Map<String, dynamic>>> mentorChatHistory({int limit = 50}) async {
+    final response = await _client.get<dynamic>(
+      '/api/ai/mentor/chat/history',
+      queryParameters: {'limit': limit},
+    );
+    return responseList(response.data, ['messages', 'data'])
+        .cast<Map<String, dynamic>>();
+  }
+
+  /// POST /api/ai/mentor/chat — conversational AI mentor
+  ///
+  /// [question]   — the user's message
+  /// [history]    — previous turns [{role, content}]
+  /// [taskContext] — optional active task context
+  Future<Map<String, dynamic>> mentorChat({
+    required String question,
+    List<Map<String, dynamic>> history = const [],
+    Map<String, dynamic>? taskContext,
+  }) async {
+    final response = await _client.post<Map<String, dynamic>>(
+      '/api/ai/mentor/chat',
+      data: {
+        'question': question,
+        'history': history,
+        if (taskContext != null) 'task_context': taskContext,
+      },
     );
     return responseMap(response.data);
   }

@@ -207,9 +207,13 @@ def recommend_teammates(user_stats: dict, top_n: int = 5) -> list:
             scored.append({
                 "user_id": u.id,
                 "display_name": u.display_name,
+                "full_name": u.full_name,
+                "user_type": u.user_type,
+                "professional_field": u.professional_field,
                 "similarity_score": round(similarity, 4),
+                "match_percent": round(similarity * 100, 1),
                 "experience_level": u.experience_level,
-                "skills": (u.skills or [])[:5],
+                "skills": (u.skills or [])[:8],
             })
 
         scored.sort(key=lambda x: x["similarity_score"], reverse=True)

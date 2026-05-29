@@ -25,6 +25,9 @@ class Notification(db.Model):
         db.Index("ix_notif_user_created", "user_id", "created_at"),
     )
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
     def to_dict(self):
         return {
             "id": self.id,

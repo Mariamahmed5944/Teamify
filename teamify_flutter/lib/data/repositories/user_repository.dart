@@ -39,6 +39,8 @@ class UserRepository {
     final response =
         await _client.get<Map<String, dynamic>>('/api/users/$id/profile');
     final data = responseMap(response.data);
+    final profile = responseMap(data['profile']);
+    if (profile.isNotEmpty) return ApiUser.fromJson(profile);
     final user = responseMap(data['user']);
     return ApiUser.fromJson(user.isNotEmpty ? user : data);
   }

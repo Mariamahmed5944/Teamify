@@ -10,12 +10,11 @@ void main() {
       'email': 'matti@example.com',
       'role': 'member',
       'user_type': 'freelancer',
-      'account_status': 'pending',
       'skills': ['Flutter', 'Dart'],
     });
 
     expect(user.id, '42');
-    expect(user.isPending, isTrue);
+    expect(user.isPending, isFalse);
     expect(user.displayRole, 'Freelancer');
     expect(user.skills, ['Flutter', 'Dart']);
   });

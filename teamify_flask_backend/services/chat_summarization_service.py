@@ -95,14 +95,15 @@ class ChatSummarizerModel:
             ],
             reverse=True,
         )
-        key_points = [s for _, s in scored[:top_n]]
+        key_points = [s for _, s in scored[:top_n] if len(s.strip()) >= 4]
 
-        return {
+        result = {
             "participants":  self.get_participants(text),
             "key_points":    key_points,
             "action_items":  self.extract_action_items(text),
             "word_count":    len(text.split()),
         }
+        return _enrich_result(result, text)
 
     def run(self, text: str, top_n: int = 3) -> dict:
         return self.summarize(text, top_n=top_n)
@@ -217,7 +218,80 @@ def _score_sentences(sentences: list, top_n: int) -> list:
         scored.append((score, s))
 
     scored.sort(reverse=True)
-    return [s for _, s in scored[:top_n]]
+    return [s for _, s in scored[:top_n] if len(s.strip()) >= 4]
+
+
+def _parse_transcript_lines(text: str) -> list:
+    """Parse 'Speaker: message' lines from a meeting transcript."""
+    lines = []
+    for line in text.strip().split("\n"):
+        line = line.strip()
+        if ":" not in line:
+            continue
+        speaker, content = line.split(":", 1)
+        speaker = speaker.strip()
+        content = content.strip()
+        if speaker and content:
+            lines.append({"speaker": speaker, "content": content})
+    return lines
+
+
+def _build_summary_text(
+    text: str,
+    key_points: list,
+    participants: list,
+    action_items: list,
+) -> str:
+    """Build a readable paragraph summary for the meeting summary UI."""
+    transcript_lines = _parse_transcript_lines(text)
+    utterances = [ln["content"] for ln in transcript_lines]
+
+    if not utterances and not key_points:
+        return "No speech or chat content was captured in this meeting."
+
+    who = ", ".join(participants[:5]) if participants else "Participants"
+
+    substantive = [kp for kp in key_points if len(str(kp).strip()) >= 12]
+    if substantive:
+        body = ". ".join(k.rstrip(".") for k in substantive)
+        summary = f"In this meeting, {who} discussed: {body}."
+    elif utterances:
+        spoken = "; ".join(utterances[:10])
+        summary = (
+            f"{who} spoke during this session. "
+            f"Transcribed speech: \"{spoken}\"."
+        )
+    else:
+        body = ". ".join(str(k).rstrip(".") for k in key_points)
+        summary = f"{who} covered: {body}."
+
+    if action_items:
+        actions = "; ".join(
+            f"{ai.get('person', 'Someone')} will {ai.get('action', '').lstrip('will ')}"
+            for ai in action_items[:3]
+            if ai.get("action")
+        )
+        if actions:
+            summary += f" Action items: {actions}."
+
+    return summary
+
+
+def _enrich_result(result: dict, text: str) -> dict:
+    """Attach narrative summary and formatted speech transcript lines."""
+    transcript_lines = _parse_transcript_lines(text)
+    key_points = [
+        kp for kp in result.get("key_points", []) if len(str(kp).strip()) >= 4
+    ]
+    participants = result.get("participants") or []
+    action_items = result.get("action_items") or []
+
+    result["key_points"] = key_points
+    result["summary"] = _build_summary_text(text, key_points, participants, action_items)
+    result["speech_transcript"] = [
+        f"{ln['speaker']}: {ln['content']}" for ln in transcript_lines
+    ]
+    return result
 
 
 def _extract_action_items(text: str) -> list:
@@ -239,12 +313,13 @@ def _builtin_summarize(text: str, top_n: int) -> dict:
     sentences = _extract_sentences(text)
     key_points = _score_sentences(sentences, top_n)
     action_items = _extract_action_items(text)
-    return {
+    result = {
         "participants": participants,
         "key_points": key_points,
         "action_items": action_items,
         "word_count": len(text.split()),
     }
+    return _enrich_result(result, text)
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
@@ -271,14 +346,14 @@ def summarize_chat(text: str, top_n: int = 3) -> dict:
         error          (str, only on failure)
     """
     if not text or not text.strip():
-        return {
+        return _enrich_result({
             "participants": [],
             "key_points": [],
             "action_items": [],
             "word_count": 0,
             "source": "fallback",
             "error": "Empty text provided",
-        }
+        }, text)
 
     model = _load_model()
 
@@ -287,7 +362,7 @@ def summarize_chat(text: str, top_n: int = 3) -> dict:
         if model is not None and hasattr(model, "summarize"):
             result = model.summarize(text, top_n=top_n)
             result["source"] = "ml_model"
-            return result
+            return _enrich_result(result, text)
 
         # Otherwise use the built-in algorithm (same logic as notebook)
         source = "ml_model" if model is not None else "built_in"
@@ -297,11 +372,11 @@ def summarize_chat(text: str, top_n: int = 3) -> dict:
 
     except Exception as exc:
         logger.error("Chat summarization failed: %s", exc, exc_info=True)
-        return {
+        return _enrich_result({
             "participants": [],
             "key_points": [],
             "action_items": [],
             "word_count": 0,
             "source": "fallback",
             "error": str(exc),
-        }
+        }, text)

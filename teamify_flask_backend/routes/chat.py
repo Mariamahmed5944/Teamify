@@ -1,15 +1,96 @@
 """REST endpoints for chat rooms and message history."""
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity
 
 from middleware.auth import auth_required
 from models import db
 from models.chat import ChatRoom, ChatRoomMember, Message
+from models.meeting_session import MeetingSession
+from models.project import Project
+from models.project_member import ProjectMember
 from models.user import User
+from services.chat_room_service import (
+    add_room_member,
+    ensure_project_chat_room,
+    sync_all_project_rooms_for_user,
+    sync_project_members_to_room,
+)
 
 chat_bp = Blueprint("chat", __name__, url_prefix="/api/chat")
+
+
+def _transcript_to_text(transcript: list) -> str:
+    lines = []
+    for item in transcript or []:
+        if not isinstance(item, dict):
+            continue
+        name = (item.get("sender_name") or item.get("sender") or "User").strip()
+        content = (item.get("content") or item.get("text") or "").strip()
+        if content:
+            lines.append(f"{name}: {content}")
+    return "\n".join(lines)
+
+
+def _summarize_meeting_transcript(transcript: list) -> dict:
+    text = _transcript_to_text(transcript)
+    speech_lines = []
+    for item in transcript or []:
+        if isinstance(item, dict) and item.get("source") == "speech":
+            name = (item.get("sender_name") or "User").strip()
+            content = (item.get("content") or "").strip()
+            if content:
+                speech_lines.append(f"{name}: {content}")
+
+    if not text.strip():
+        return {
+            "summary": "No speech or chat content was captured in this meeting.",
+            "key_points": [],
+            "action_items": [],
+            "speech_transcript": speech_lines,
+            "participants": [],
+        }
+
+    from services.chat_summarization_service import summarize_chat
+
+    result = summarize_chat(text, top_n=6)
+    if speech_lines and not result.get("speech_transcript"):
+        result["speech_transcript"] = speech_lines
+    return result
+
+
+def _ensure_session_summary(session: MeetingSession) -> None:
+    """Compute and persist AI summary when a session ended with transcript data."""
+    if session.is_active:
+        return
+    if session.ai_summary and session.ai_summary.get("summary"):
+        return
+    summary = _summarize_meeting_transcript(session.transcript or [])
+    if summary:
+        session.ai_summary = summary
+        db.session.commit()
+
+
+def _room_channel(room_id: int) -> str:
+    return f"chat_{room_id}"
+
+
+def _broadcast_message(msg: Message) -> None:
+    """Push a persisted message to connected WebSocket clients in the room."""
+    try:
+        from app import socketio
+
+        socketio.emit(
+            "receive_message",
+            msg.to_dict(),
+            to=_room_channel(msg.room_id),
+        )
+    except Exception:
+        # REST path must succeed even if no WS clients are connected.
+        pass
 
 
 # ── List rooms the current user belongs to ────────────────────────────────────
@@ -33,6 +114,9 @@ def list_rooms():
                 type: object
     """
     user_id = int(get_jwt_identity())
+    sync_all_project_rooms_for_user(user_id)
+    db.session.commit()
+
     memberships = ChatRoomMember.query.filter_by(user_id=user_id).all()
     room_ids = [m.room_id for m in memberships]
 
@@ -76,28 +160,118 @@ def create_room():
     user_id = int(get_jwt_identity())
     data = request.get_json(silent=True) or {}
 
+    name = (data.get("name") or "").strip()
+    if not name:
+        return jsonify({"error": "name is required"}), 400
+
+    project_id = data.get("project_id")
+    if project_id is not None:
+        try:
+            project_id = int(project_id)
+        except (TypeError, ValueError):
+            return jsonify({"error": "project_id must be an integer"}), 400
+
+        project = db.session.get(Project, project_id)
+        if not project:
+            return jsonify({"error": "Project not found"}), 404
+
+        is_member = (
+            project.user_id == user_id
+            or ProjectMember.query.filter_by(
+                project_id=project_id, user_id=user_id
+            ).first()
+            is not None
+        )
+        if not is_member:
+            return jsonify({"error": "You are not a member of this project"}), 403
+
+        room = ensure_project_chat_room(project, user_id)
+        if name and room.name != name:
+            room.name = name
+        db.session.commit()
+        return jsonify({
+            "message": "Project team chat ready",
+            "room": room.to_dict(),
+        }), 200
+
     room = ChatRoom(
-        name=data.get("name"),
-        project_id=data.get("project_id"),
+        name=name,
+        project_id=project_id,
         is_group=data.get("is_group", False),
     )
     db.session.add(room)
     db.session.flush()  # get room.id
 
     # Add creator
-    db.session.add(ChatRoomMember(room_id=room.id, user_id=user_id))
+    add_room_member(room.id, user_id)
 
-    # Add extra members
-    for mid in data.get("member_ids", []):
+    if project_id is not None:
+        sync_project_members_to_room(room.id, project_id)
+
+    # Add extra members (accept member_ids or members from clients)
+    extra_ids = data.get("member_ids") or data.get("members") or []
+    for mid in extra_ids:
         try:
             mid = int(mid)
         except (ValueError, TypeError):
             continue
-        if mid != user_id and User.query.filter_by(id=mid).first():
-            db.session.add(ChatRoomMember(room_id=room.id, user_id=mid))
+        if User.query.filter_by(id=mid).first():
+            add_room_member(room.id, mid)
 
     db.session.commit()
     return jsonify({"message": "Room created", "room": room.to_dict()}), 201
+
+
+# ── Get a single room with member profiles ────────────────────────────────────
+@chat_bp.route("/rooms/<int:room_id>", methods=["GET"])
+@auth_required
+def get_room(room_id):
+    """
+    Fetch one chat room and its members (for meeting / participant UIs).
+    ---
+    tags: [Chat]
+    security: [{Bearer: []}]
+    parameters:
+      - {in: path, name: room_id, type: integer, required: true}
+    responses:
+      200:
+        description: Room and members
+      403:
+        description: Not a member
+      404:
+        description: Room not found
+    """
+    user_id = int(get_jwt_identity())
+
+    room = db.session.get(ChatRoom, room_id)
+    if not room:
+        return jsonify({"error": "Room not found"}), 404
+
+    membership = ChatRoomMember.query.filter_by(
+        room_id=room_id, user_id=user_id
+    ).first()
+    if not membership:
+        return jsonify({"error": "You are not a member of this room"}), 403
+
+    members = []
+    for m in ChatRoomMember.query.filter_by(room_id=room_id).all():
+        user = db.session.get(User, m.user_id)
+        if not user:
+            continue
+        members.append({
+            "id": user.id,
+            "user_id": user.id,
+            "display_name": user.full_name or user.display_name or user.email,
+            "full_name": user.full_name or "",
+            "email": user.email,
+            "user_type": user.user_type or "",
+            "joined_at": m.joined_at.isoformat() if m.joined_at else None,
+        })
+
+    return jsonify({
+        "room": room.to_dict(include_last_message=True),
+        "members": members,
+    }), 200
 
 
 # ── Get message history for a room ────────────────────────────────────────────
@@ -151,3 +325,161 @@ def get_messages(room_id):
         "total": pagination.total,
         "pages": pagination.pages,
     }), 200
+
+
+# ── Send a message (REST fallback when WebSocket unavailable) ─────────────────
+@chat_bp.route("/rooms/<int:room_id>/messages", methods=["POST"])
+@auth_required
+def send_message(room_id):
+    """
+    Persist a chat message via REST (fallback for clients without WebSocket).
+    ---
+    tags: [Chat]
+    security: [{Bearer: []}]
+    parameters:
+      - {in: path, name: room_id, type: integer, required: true}
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required: [content]
+          properties:
+            content: {type: string}
+            idempotency_key: {type: string}
+    responses:
+      201:
+        description: Message created
+      403:
+        description: Not a member
+      404:
+        description: Room not found
+    """
+    user_id = int(get_jwt_identity())
+
+    room = db.session.get(ChatRoom, room_id)
+    if not room:
+        return jsonify({"error": "Room not found"}), 404
+
+    membership = ChatRoomMember.query.filter_by(
+        room_id=room_id, user_id=user_id
+    ).first()
+    if not membership:
+        return jsonify({"error": "You are not a member of this room"}), 403
+
+    data = request.get_json(silent=True) or {}
+    content = (data.get("content") or "").strip()
+    if not content:
+        return jsonify({"error": "content is required"}), 400
+
+    msg = Message(room_id=room_id, sender_id=user_id, content=content)
+    db.session.add(msg)
+    db.session.commit()
+
+    _broadcast_message(msg)
+
+    return jsonify({"message": "Message sent", "data": msg.to_dict()}), 201
+
+
+def _require_room_member(user_id: int, room_id: int):
+    """Return (room, membership) or (None, error_response)."""
+    room = db.session.get(ChatRoom, room_id)
+    if not room:
+        return None, None, (jsonify({"error": "Room not found"}), 404)
+    membership = ChatRoomMember.query.filter_by(
+        room_id=room_id, user_id=user_id
+    ).first()
+    if not membership:
+        return room, None, (jsonify({"error": "You are not a member of this room"}), 403)
+    return room, membership, None
+
+
+# ── Meeting sessions (persisted transcript) ───────────────────────────────────
+@chat_bp.route("/rooms/<int:room_id>/meetings/start", methods=["POST"])
+@auth_required
+def start_meeting_session(room_id):
+    """Start a persisted meeting session for this chat room."""
+    user_id = int(get_jwt_identity())
+    room, _, err = _require_room_member(user_id, room_id)
+    if err:
+        return err
+    if room is None:
+        return jsonify({"error": "Room not found"}), 404
+
+    active = MeetingSession.query.filter_by(room_id=room_id, is_active=True).first()
+    if active:
+        return jsonify({"session": active.to_dict()}), 200
+
+    session = MeetingSession(
+        room_id=room_id,
+        project_id=room.project_id,
+        started_by=user_id,
+        is_active=True,
+        transcript=[],
+        participant_ids=[user_id],
+    )
+    db.session.add(session)
+    db.session.commit()
+    return jsonify({"session": session.to_dict()}), 201
+
+
+@chat_bp.route("/rooms/<int:room_id>/meetings/<int:session_id>", methods=["GET"])
+@auth_required
+def get_meeting_session(room_id, session_id):
+    """Fetch a saved meeting session (transcript, duration, participants)."""
+    user_id = int(get_jwt_identity())
+    _, _, err = _require_room_member(user_id, room_id)
+    if err:
+        return err
+
+    session = MeetingSession.query.filter_by(id=session_id, room_id=room_id).first()
+    if not session:
+        return jsonify({"error": "Meeting session not found"}), 404
+
+    _ensure_session_summary(session)
+    return jsonify({"session": session.to_dict()}), 200
+
+
+@chat_bp.route("/rooms/<int:room_id>/meetings/<int:session_id>/stop", methods=["POST"])
+@auth_required
+def stop_meeting_session(room_id, session_id):
+    """End a meeting session and persist the captured chat transcript."""
+    user_id = int(get_jwt_identity())
+    _, _, err = _require_room_member(user_id, room_id)
+    if err:
+        return err
+
+    session = MeetingSession.query.filter_by(id=session_id, room_id=room_id).first()
+    if not session:
+        return jsonify({"error": "Meeting session not found"}), 404
+    if not session.is_active:
+        return jsonify({"session": session.to_dict()}), 200
+
+    data = request.get_json(silent=True) or {}
+    transcript = data.get("transcript")
+    if transcript is None:
+        transcript = []
+    if not isinstance(transcript, list):
+        return jsonify({"error": "transcript must be a list"}), 400
+
+    participant_ids = data.get("participant_ids") or []
+    if not isinstance(participant_ids, list):
+        return jsonify({"error": "participant_ids must be a list"}), 400
+
+    now = datetime.now(timezone.utc)
+    session.ended_at = now
+    session.is_active = False
+    session.transcript = transcript
+    session.participant_ids = [int(x) for x in participant_ids if str(x).isdigit()]
+    if session.started_at:
+        started = session.started_at
+        if started.tzinfo is None:
+            started = started.replace(tzinfo=timezone.utc)
+        session.duration_seconds = max(0, int((now - started).total_seconds()))
+
+    summary = _summarize_meeting_transcript(transcript)
+    if summary:
+        session.ai_summary = summary
+
+    db.session.commit()
+    return jsonify({"session": session.to_dict()}), 200

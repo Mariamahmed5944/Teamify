@@ -1,6 +1,5 @@
 import 'dart:async';
 
-
 import 'package:flutter/foundation.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 
@@ -13,8 +12,10 @@ enum SocketEvent {
   connected,
   disconnected,
   chatMessage,
+  meetingPresence,
   notification,
   taskUpdate,
+  projectUpdate,
 }
 
 /// Payload delivered with every [SocketEvent].
@@ -27,13 +28,35 @@ class SocketPayload {
 
 /// Centralized WebSocket manager with auto-reconnect and event streaming.
 ///
+/// Design decisions
+/// ----------------
+/// * Transport = websocket-only: We skip the polling→websocket upgrade step
+///   entirely.  The backend now runs under gevent which handles raw WebSocket
+///   upgrades at the WSGI layer, so polling is never needed.  Forcing
+///   `websocket` also eliminates the 500-on-upgrade class of errors that the
+///   Werkzeug-threading combo caused.
+///
+/// * No manual ping/pong: Socket.IO's engine.io layer already does heartbeats
+///   (ping_interval=25s, ping_timeout=60s on the server).  Sending a custom
+///   `ping` event on top of that is redundant and can confuse reconnect timing.
+///
+/// * Fresh token on reconnect: Rather than mutating socket options (which is
+///   unreliable in socket_io_client v3), we dispose the old socket and create
+///   a new one with the fresh token.  This guarantees the auth handshake
+///   always uses a valid JWT.
+///
+/// * Reconnect cap + exponential backoff: Caps at [_maxReconnects] attempts
+///   with [_baseDelay] × 2^attempt ms delay, preventing infinite loops when
+///   the server is genuinely down or the token is permanently invalid.
+///
 /// Usage:
 /// ```dart
 /// final ws = WebSocketManager(tokenStorage);
 /// ws.stream.listen((payload) { ... });
 /// await ws.connect();
-/// ws.joinRoom('room_123');
-/// ws.sendMessage('room_123', 'Hello!');
+/// ws.joinRoom('42');
+/// ws.sendMessage('42', 'Hello!');
+/// await ws.dispose();
 /// ```
 class WebSocketManager {
   final TokenStorage _tokenStorage;
@@ -41,14 +64,12 @@ class WebSocketManager {
   io.Socket? _socket;
   bool _disposed = false;
   bool _isConnecting = false;
+
   int _reconnectAttempts = 0;
-  static const _maxReconnectAttempts = 10;
-  
-  // Health Monitoring
-  Timer? _heartbeatTimer;
-  DateTime? _lastPong;
-  static const _heartbeatInterval = Duration(seconds: 15);
-  static const _pongTimeout = Duration(seconds: 10);
+  static const int _maxReconnects = 8;
+  static const Duration _baseDelay = Duration(milliseconds: 1000);
+
+  Timer? _reconnectTimer;
 
   final _controller = StreamController<SocketPayload>.broadcast();
 
@@ -60,89 +81,47 @@ class WebSocketManager {
 
   WebSocketManager(this._tokenStorage);
 
+  // ---------------------------------------------------------------------------
+  // Public API
+  // ---------------------------------------------------------------------------
+
   /// Establish a Socket.IO connection authenticated via JWT.
+  ///
+  /// Safe to call multiple times — returns immediately if already connecting
+  /// or connected.
   Future<void> connect() async {
     if (_disposed || _isConnecting || isConnected) return;
     _isConnecting = true;
 
     try {
-
-    final token = await _tokenStorage.readAccessToken();
-    if (token == null || token.isEmpty) return;
-
-    _socket?.dispose();
-    _socket = io.io(
-      AppConfig.apiBaseUrl,
-      io.OptionBuilder()
-          .setTransports(['websocket'])
-          .setExtraHeaders({'Authorization': 'Bearer $token'})
-          .setAuth({'token': token})
-          .enableAutoConnect()
-          .enableReconnection()
-          .setReconnectionDelay(1000)
-          .setReconnectionAttempts(_maxReconnectAttempts)
-          .build(),
-    );
-
-    _socket!.onConnect((_) {
-      _reconnectAttempts = 0;
-      debugPrint('[WS] Connected');
-      _emit(SocketEvent.connected);
-      _startHeartbeat();
-    });
-
-    _socket!.onDisconnect((_) {
-      debugPrint('[WS] Disconnected');
-      _emit(SocketEvent.disconnected);
-    });
-
-    _socket!.onReconnectAttempt((_) async {
-      _reconnectAttempts++;
-      debugPrint('[WS] Reconnect attempt $_reconnectAttempts');
-      // Read fresh token for reconnect (old one may have been refreshed)
-      final freshToken = await _tokenStorage.readAccessToken();
-      if (freshToken != null && freshToken.isNotEmpty) {
-        _socket?.io.options?['extraHeaders'] = {
-          'Authorization': 'Bearer $freshToken'
-        };
-        _socket?.io.options?['auth'] = {'token': freshToken};
+      final token = await _tokenStorage.readAccessToken();
+      if (token == null || token.isEmpty) {
+        debugPrint('[WS] No access token — aborting connect');
+        return;
       }
-    });
 
-    _socket!.onReconnectFailed((_) {
-      debugPrint('[WS] Reconnect failed after $_maxReconnectAttempts attempts');
-      _emit(SocketEvent.disconnected, {'reason': 'reconnect_failed'});
-      disconnect(); // Clean up the dead socket
-    });
+      // Dispose stale socket before creating a new one.
+      _destroySocket();
 
-    _socket!.on('pong', (_) {
-      _lastPong = DateTime.now();
-    });
+      _socket = io.io(
+        AppConfig.apiBaseUrl,
+        io.OptionBuilder()
+            // Force WebSocket transport — skip the polling→upgrade dance.
+            // The gevent backend handles raw WS upgrades natively.
+            .setTransports(['websocket'])
+            // Pass JWT in both the auth dict (preferred by Socket.IO v4)
+            // and extra headers (fallback for some proxy configurations).
+            .setAuth({'token': token})
+            .setExtraHeaders({'Authorization': 'Bearer $token'})
+            // Disable socket_io_client's built-in reconnection so WE control
+            // the retry loop with fresh tokens each time.
+            .disableAutoConnect()
+            .disableReconnection()
+            .build(),
+      );
 
-    // ── Chat events ──────────────────────────────────────────────────────
-    _socket!.on('new_message', (data) {
-      _emit(SocketEvent.chatMessage, _asMap(data));
-    });
-
-    _socket!.on('message', (data) {
-      _emit(SocketEvent.chatMessage, _asMap(data));
-    });
-
-    // ── Notification events ──────────────────────────────────────────────
-    _socket!.on('notification', (data) {
-      _emit(SocketEvent.notification, _asMap(data));
-    });
-
-    // ── Task events ──────────────────────────────────────────────────────
-    _socket!.on('task_update', (data) {
-      _emit(SocketEvent.taskUpdate, _asMap(data));
-    });
-
-    _socket!.on('task_status_changed', (data) {
-      _emit(SocketEvent.taskUpdate, _asMap(data));
-    });
-
-    _socket!.connect();
+      _attachHandlers();
+      _socket!.connect();
     } finally {
       _isConnecting = false;
     }
@@ -150,65 +129,188 @@ class WebSocketManager {
 
   /// Join a chat room.
   void joinRoom(String roomId) {
-    _socket?.emit('join_chat', {'room_id': roomId});
+    if (!isConnected) return;
+    _socket?.emit('join_chat', {'room_id': int.tryParse(roomId) ?? roomId});
   }
 
   /// Leave a chat room.
   void leaveRoom(String roomId) {
-    _socket?.emit('leave_chat', {'room_id': roomId});
+    if (!isConnected) return;
+    _socket?.emit('leave_chat', {'room_id': int.tryParse(roomId) ?? roomId});
+  }
+
+  /// Join live meeting presence for a chat room.
+  void joinMeeting(String roomId) {
+    if (!isConnected) return;
+    final id = int.tryParse(roomId);
+    if (id == null) return;
+    _socket?.emit('join_meeting', {'room_id': id});
+  }
+
+  /// Leave live meeting presence.
+  void leaveMeeting(String roomId) {
+    if (!isConnected) return;
+    final id = int.tryParse(roomId);
+    if (id == null) return;
+    _socket?.emit('leave_meeting', {'room_id': id});
   }
 
   /// Send a chat message to a room.
   void sendMessage(String roomId, String content) {
+    if (!isConnected) return;
     _socket?.emit('send_message', {
-      'room_id': roomId,
+      'room_id': int.tryParse(roomId) ?? roomId,
       'content': content,
     });
   }
 
-  /// Disconnect and clean up.
+  /// Disconnect cleanly (preserves the ability to reconnect later).
   void disconnect() {
-    _stopHeartbeat();
-    _socket?.disconnect();
-    _socket?.dispose();
-    _socket = null;
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
+    _destroySocket();
   }
 
   /// Permanently dispose — no reconnect possible after this.
-  void dispose() {
-    _stopHeartbeat();
+  Future<void> dispose() async {
     _disposed = true;
     disconnect();
-    _controller.close();
+    await _controller.close();
   }
 
-  // ── Health Monitoring ────────────────────────────────────────────────────
-  
-  void _startHeartbeat() {
-    _stopHeartbeat();
-    _lastPong = DateTime.now();
-    _heartbeatTimer = Timer.periodic(_heartbeatInterval, (_) {
-      if (!isConnected) return;
+  // ---------------------------------------------------------------------------
+  // Internal helpers
+  // ---------------------------------------------------------------------------
 
-      final now = DateTime.now();
-      final timeSincePong = now.difference(_lastPong!);
+  void _attachHandlers() {
+    final socket = _socket!;
 
-      if (timeSincePong > (_heartbeatInterval + _pongTimeout)) {
-        AppLogger.log('[WebSocket] Heartbeat timeout. Connection is stale.');
-        disconnect();
-        return;
+    socket.onConnect((_) {
+      _reconnectAttempts = 0;
+      debugPrint('[WS] ✓ Connected');
+      _emit(SocketEvent.connected);
+    });
+
+    socket.onDisconnect((reason) {
+      debugPrint('[WS] ✗ Disconnected — reason: $reason');
+      _emit(SocketEvent.disconnected, {'reason': reason?.toString() ?? ''});
+
+      // Only auto-reconnect for recoverable disconnect reasons.
+      // 'io server disconnect' means the server explicitly kicked us
+      // (e.g. bad JWT) — do not loop.
+      final shouldRetry = reason != 'io server disconnect';
+      if (shouldRetry && !_disposed) {
+        _scheduleReconnect();
       }
+    });
 
-      _socket!.emit('ping');
+    socket.onConnectError((err) {
+      debugPrint('[WS] Connection error: $err');
+      if (!_disposed) _scheduleReconnect();
+    });
+
+    // ── Chat events ──────────────────────────────────────────────────────
+    socket.on('receive_message', (data) {
+      _emit(SocketEvent.chatMessage, _asMap(data));
+    });
+
+    // Legacy event name support
+    socket.on('new_message', (data) {
+      _emit(SocketEvent.chatMessage, _asMap(data));
+    });
+
+    socket.on('message', (data) {
+      _emit(SocketEvent.chatMessage, _asMap(data));
+    });
+
+    socket.on('meeting_presence', (data) {
+      _emit(SocketEvent.meetingPresence, _asMap(data));
+    });
+
+    // ── Notification events ──────────────────────────────────────────────
+    // Backend emits 'new_notification' from create_notification() helper.
+    socket.on('new_notification', (data) {
+      _emit(SocketEvent.notification, _asMap(data));
+    });
+    // Legacy alias
+    socket.on('notification', (data) {
+      _emit(SocketEvent.notification, _asMap(data));
+    });
+
+    // ── Task events ──────────────────────────────────────────────────────
+    socket.on('task_update', (data) {
+      _emit(SocketEvent.taskUpdate, _asMap(data));
+    });
+
+    socket.on('task_status_changed', (data) {
+      _emit(SocketEvent.taskUpdate, _asMap(data));
+    });
+
+    // ── Project events ────────────────────────────────────────────────
+    socket.on('project_member_added', (data) {
+      _emit(SocketEvent.projectUpdate, _asMap(data));
+    });
+
+    socket.on('project_member_removed', (data) {
+      _emit(SocketEvent.projectUpdate, _asMap(data));
     });
   }
 
-  void _stopHeartbeat() {
-    _heartbeatTimer?.cancel();
-    _heartbeatTimer = null;
+  void _destroySocket() {
+    try {
+      // socket_io_client v3: off() requires an event name.
+      // Unregister every event we attached in _attachHandlers() so that
+      // no listener closure can fire after the socket is gone.
+      for (final event in const [
+        'connect',
+        'disconnect',
+        'connect_error',
+        'receive_message',
+        'new_message',
+        'message',
+        'new_notification',
+        'notification',
+        'task_update',
+        'task_status_changed',
+        'project_member_added',
+        'project_member_removed',
+      ]) {
+        _socket?.off(event);
+      }
+      _socket?.disconnect();
+      _socket?.dispose(); // releases remaining internal references
+    } catch (_) {
+      // Best-effort cleanup — ignore errors on a dead socket
+    }
+    _socket = null;
   }
 
-  // ── Helpers ──────────────────────────────────────────────────────────────
+  void _scheduleReconnect() {
+    if (_disposed) return;
+    if (_reconnectAttempts >= _maxReconnects) {
+      debugPrint('[WS] Max reconnect attempts ($_maxReconnects) reached — giving up');
+      AppLogger.log('[WebSocket] Reconnect loop terminated after $_maxReconnects attempts');
+      _emit(SocketEvent.disconnected, {'reason': 'reconnect_exhausted'});
+      return;
+    }
+
+    // Exponential backoff capped at 30 s
+    final delayMs = (_baseDelay.inMilliseconds * (1 << _reconnectAttempts)).clamp(
+      _baseDelay.inMilliseconds,
+      30000,
+    );
+    _reconnectAttempts++;
+    debugPrint('[WS] Reconnect attempt $_reconnectAttempts in ${delayMs}ms');
+
+    _reconnectTimer?.cancel();
+    _reconnectTimer = Timer(Duration(milliseconds: delayMs), () async {
+      if (_disposed) return;
+      // Always fetch a fresh token — the old one might have expired while
+      // we were offline, causing the server to reject and immediately
+      // disconnect us → triggering another reconnect loop.
+      await connect();
+    });
+  }
 
   void _emit(SocketEvent event, [Map<String, dynamic> data = const {}]) {
     if (!_controller.isClosed) {

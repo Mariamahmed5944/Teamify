@@ -1,8 +1,14 @@
+from __future__ import annotations
+
+import logging
+
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import get_jwt_identity
 from middleware.auth import auth_required
 from models import db
 from models.notification import Notification
+
+logger = logging.getLogger(__name__)
 
 notifications_bp = Blueprint("notifications", __name__, url_prefix="/api/notifications")
 
@@ -201,8 +207,21 @@ def mark_all_read():
 
 # ─── Helper: create notification (used by other routes) ──────────────────────
 
-def create_notification(user_id, notif_type, title, body=None, entity_type=None, entity_id=None):
-    """Helper function to create a notification from any route."""
+def create_notification(
+    user_id: int,
+    notif_type: str,
+    title: str,
+    body: str | None = None,
+    entity_type: str | None = None,
+    entity_id: int | None = None,
+) -> Notification:
+    """
+    Persist a Notification row AND emit a real-time Socket.IO event to the
+    user's personal room (``user_<user_id>``).
+
+    The caller is responsible for calling ``db.session.commit()`` after this
+    function returns (or the caller can rely on an enclosing commit).
+    """
     notif = Notification(
         user_id=user_id,
         type=notif_type,
@@ -212,4 +231,34 @@ def create_notification(user_id, notif_type, title, body=None, entity_type=None,
         entity_id=entity_id,
     )
     db.session.add(notif)
+
+    # Flush so notif.id is populated before we serialise
+    try:
+        db.session.flush()
+    except Exception:
+        pass  # caller's commit will surface the error
+
+    # Emit real-time event to the user's personal Socket.IO room
+    _emit_notification(user_id, notif)
+
     return notif
+
+
+def _emit_notification(user_id: int, notif: Notification) -> None:
+    """Push ``new_notification`` to the user's personal room. Never raises."""
+    try:
+        from app import socketio
+        unread_count = Notification.query.filter_by(
+            user_id=user_id, is_read=False
+        ).count()
+        payload = {
+            **notif.to_dict(),
+            "unread_count": unread_count,
+        }
+        socketio.emit("new_notification", payload, to=f"user_{user_id}")
+        logger.debug(
+            "Emitted new_notification to user_%s id=%s", user_id, notif.id
+        )
+    except Exception as exc:
+        # Non-fatal — the notification is already saved in DB
+        logger.warning("Failed to emit new_notification for user %s: %s", user_id, exc)

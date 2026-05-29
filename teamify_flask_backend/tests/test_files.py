@@ -1,10 +1,18 @@
 """
 Tests for Files blueprint (/api/files/*).
 Endpoints: POST upload, GET /<id> download
+
+Security tests:
+- Blocked extensions (.exe, .sh, .bat, .js, .apk, …)
+- Blocked magic bytes (MZ PE, ELF, shebang)
+- Spoofed MIME type detection
+- Filename sanitization
+- 10 MB size limit
 """
 import io
 from unittest.mock import patch, MagicMock
 import pytest
+from routes.files import _sanitize_filename, _is_blocked_extension, _has_blocked_magic
 from tests.conftest import (
     ADMIN_USER_ID, MEMBER_USER_ID, GUEST_USER_ID,
     FILE_ID, NONEXISTENT_ID,
@@ -180,3 +188,129 @@ class TestUploadFileSecurity:
         headers = {"Authorization": member_headers["Authorization"]}
         r = client.post(self.URL, headers=headers, data=data, content_type="multipart/form-data")
         assert r.status_code == 201
+
+
+# ── Unit tests: security helpers (no HTTP, no mocking needed) ─────────────────
+
+class TestFileSecurityHelpers:
+    """Pure-unit tests for the security validation helpers in routes/files.py."""
+
+    # ── _sanitize_filename ──────────────────────────────────────────────────
+
+    def test_sanitize_normal_filename(self):
+        assert _sanitize_filename("report.pdf") == "report.pdf"
+
+    def test_sanitize_strips_path_traversal(self):
+        result = _sanitize_filename("../../etc/passwd")
+        assert ".." not in result
+        assert "/" not in result
+
+    def test_sanitize_strips_null_bytes(self):
+        result = _sanitize_filename("file\x00.txt")
+        assert "\x00" not in result
+
+    def test_sanitize_replaces_spaces(self):
+        result = _sanitize_filename("my report 2026.pdf")
+        assert " " not in result
+
+    def test_sanitize_empty_produces_upload(self):
+        assert _sanitize_filename("") == "upload"
+
+    def test_sanitize_pure_dots_produces_upload(self):
+        assert _sanitize_filename("...") in ("upload", "")
+
+    # ── _is_blocked_extension ──────────────────────────────────────────────
+
+    @pytest.mark.parametrize("fname", [
+        "virus.exe", "script.sh", "dropper.bat", "payload.js",
+        "app.apk", "mal.cmd", "evil.ps1", "worm.vbs", "lib.dll",
+    ])
+    def test_blocked_extensions_detected(self, fname):
+        assert _is_blocked_extension(fname) is True
+
+    @pytest.mark.parametrize("fname", [
+        "photo.png", "report.pdf", "data.csv", "notes.txt",
+        "archive.zip", "doc.docx",
+    ])
+    def test_allowed_extensions_not_blocked(self, fname):
+        assert _is_blocked_extension(fname) is False
+
+    def test_extension_check_is_case_insensitive(self):
+        assert _is_blocked_extension("SETUP.EXE") is True
+        assert _is_blocked_extension("Photo.PNG") is False
+
+    # ── _has_blocked_magic ─────────────────────────────────────────────────
+
+    def test_pe_exe_magic_blocked(self):
+        # Windows PE header starts with b"MZ"
+        assert _has_blocked_magic(b"MZ\x90\x00" + b"\x00" * 100) is True
+
+    def test_elf_magic_blocked(self):
+        # Linux ELF header
+        assert _has_blocked_magic(b"\x7fELF\x02\x01\x01" + b"\x00" * 100) is True
+
+    def test_shebang_blocked(self):
+        assert _has_blocked_magic(b"#!/bin/bash\necho hi") is True
+        assert _has_blocked_magic(b"#!/usr/bin/env python3\n") is True
+
+    def test_png_magic_allowed(self):
+        assert _has_blocked_magic(b"\x89PNG\r\n\x1a\n" + b"\x00" * 100) is False
+
+    def test_pdf_magic_allowed(self):
+        assert _has_blocked_magic(b"%PDF-1.4\n" + b"x" * 100) is False
+
+    def test_plain_text_allowed(self):
+        assert _has_blocked_magic(b"Hello world, this is a text file.") is False
+
+
+class TestUploadSecurityEndpoints:
+    """HTTP-level security tests for POST /api/files."""
+
+    URL = "/api/files"
+
+    def test_exe_extension_rejected_415(self, client, member_headers):
+        data = {"file": (io.BytesIO(b"MZ fake exe"), "malware.exe")}
+        r = client.post(self.URL,
+                        headers={"Authorization": member_headers["Authorization"]},
+                        data=data, content_type="multipart/form-data")
+        assert r.status_code == 415
+        assert "exe" in r.get_json().get("error", "").lower()
+
+    def test_sh_extension_rejected_415(self, client, member_headers):
+        data = {"file": (io.BytesIO(b"#!/bin/sh\nrm -rf /"), "hack.sh")}
+        r = client.post(self.URL,
+                        headers={"Authorization": member_headers["Authorization"]},
+                        data=data, content_type="multipart/form-data")
+        assert r.status_code == 415
+
+    def test_bat_extension_rejected_415(self, client, member_headers):
+        data = {"file": (io.BytesIO(b"del /f /q *"), "destroy.bat")}
+        r = client.post(self.URL,
+                        headers={"Authorization": member_headers["Authorization"]},
+                        data=data, content_type="multipart/form-data")
+        assert r.status_code == 415
+
+    def test_apk_extension_rejected_415(self, client, member_headers):
+        data = {"file": (io.BytesIO(b"PK\x03\x04android"), "app.apk")}
+        r = client.post(self.URL,
+                        headers={"Authorization": member_headers["Authorization"]},
+                        data=data, content_type="multipart/form-data")
+        assert r.status_code == 415
+
+    def test_spoofed_mime_exe_rejected(self, client, member_headers):
+        """An .exe disguised as image/png must be blocked by magic-byte check."""
+        exe_bytes = b"MZ\x90\x00" + b"\x00" * 200
+        data = {"file": (io.BytesIO(exe_bytes), "photo.png")}
+        r = client.post(self.URL,
+                        headers={"Authorization": member_headers["Authorization"]},
+                        data=data, content_type="multipart/form-data")
+        # Should be rejected — magic bytes say MZ (PE executable)
+        assert r.status_code == 415
+
+    def test_oversized_file_rejected_413(self, client, member_headers):
+        big = io.BytesIO(b"A" * (11 * 1024 * 1024))  # 11 MB
+        data = {"file": (big, "big.txt")}
+        r = client.post(self.URL,
+                        headers={"Authorization": member_headers["Authorization"]},
+                        data=data, content_type="multipart/form-data")
+        assert r.status_code in (413, 400)  # Flask may intercept at 413 itself

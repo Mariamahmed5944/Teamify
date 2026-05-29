@@ -4,7 +4,7 @@ from middleware.auth import auth_required
 from models import db
 from models.user import User
 from models.project import Project
-from models.project_member import ProjectMember
+from services.project_access import accessible_projects_query
 from sqlalchemy import or_, func
 
 search_bp = Blueprint("search", __name__, url_prefix="/api/search")
@@ -93,6 +93,9 @@ def search_users():
                 User.display_name.ilike(pattern),
                 User.full_name.ilike(pattern),
                 User.email.ilike(pattern),
+                User.professional_field.ilike(pattern),
+                User.major.ilike(pattern),
+                func.cast(User.skills, db.String).ilike(pattern),
             )
         )
 
@@ -182,37 +185,24 @@ def search_projects():
     page = max(1, int(request.args.get("page", 1)))
     per_page = min(int(request.args.get("per_page", 20)), 100)
 
-    # Only return projects the user has access to
-    user = User.query.get(user_id)
-
-    if user and user.role == "admin":
-        query = Project.query
-    else:
-        member_project_ids = [
-            pm.project_id for pm in ProjectMember.query.filter_by(user_id=user_id).all()
-        ]
-        query = Project.query.filter(
-            or_(
-                Project.user_id == user_id,
-                Project.id.in_(member_project_ids) if member_project_ids else False,
-            )
-        )
+    from models.project import Project as _RealProject
+    query = accessible_projects_query(user_id)
 
     if q:
         pattern = f"%{q}%"
         query = query.filter(
             or_(
-                Project.name.ilike(pattern),
-                Project.description.ilike(pattern),
+                _RealProject.name.ilike(pattern),
+                _RealProject.description.ilike(pattern),
             )
         )
 
     if status:
-        query = query.filter(Project.status == status)
+        query = query.filter(_RealProject.status == status)
 
     pagination = (
         query
-        .order_by(Project.updated_at.desc())
+        .order_by(_RealProject.updated_at.desc())
         .paginate(page=page, per_page=per_page, error_out=False)
     )
 

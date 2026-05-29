@@ -42,7 +42,19 @@ class Feedback(db.Model):
     reviewer = db.relationship("User", foreign_keys=[reviewer_id], backref="given_feedbacks")
     project = db.relationship("Project", backref="feedbacks")
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
     def to_dict(self) -> dict:
+        reviewer_name = "Anonymous"
+        if self.reviewer_id and self.reviewer:
+            reviewer_name = (
+                self.reviewer.full_name
+                or self.reviewer.display_name
+                or self.reviewer.email
+                or reviewer_name
+            )
+        project_name = self.project.name if self.project else None
         return {
             "id": self.id,
             "user_id": self.user_id,
@@ -53,6 +65,11 @@ class Feedback(db.Model):
             "feedback_text": self.feedback_text,
             "avg_rating": self.avg_rating,
             "created_at": self.created_at.isoformat() if self.created_at else None,
+            "reviewer_name": reviewer_name,
+            "author_name": reviewer_name,
+            "rating": self.avg_rating,
+            "content": self.feedback_text or "",
+            "project_name": project_name,
         }
 
     def __repr__(self) -> str:

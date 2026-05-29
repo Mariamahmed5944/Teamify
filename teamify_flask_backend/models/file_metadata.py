@@ -13,6 +13,12 @@ class FileMetadata(db.Model):
         nullable=False,
         index=True,
     )
+    project_id = db.Column(
+        db.Integer,
+        db.ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
     original_filename = db.Column(db.String(255), nullable=False)
     mime_type = db.Column(db.String(127), nullable=False)
     size_bytes = db.Column(db.BigInteger, nullable=False)
@@ -24,10 +30,14 @@ class FileMetadata(db.Model):
         default=lambda: datetime.now(timezone.utc),
     )
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
     def to_dict(self) -> dict:
         return {
             "id": self.id,
             "owner_id": self.owner_id,
+            "project_id": self.project_id,
             "filename": self.original_filename,
             "mime_type": self.mime_type,
             "size_bytes": self.size_bytes,

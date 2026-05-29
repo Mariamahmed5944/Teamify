@@ -1,6 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../core/theme.dart';
 import '../core/routes.dart';
+import '../services/app_services.dart';
+import '../core/network/api_result.dart';
 
 // ── TCard ─────────────────────────────────────────────────────────────────────
 class TCard extends StatelessWidget {
@@ -19,15 +24,13 @@ class TCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
+    final card = Container(
         margin: margin,
         padding: padding ?? const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: color ?? AppColors.white,
+          color: color ?? Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: Theme.of(context).dividerColor),
           boxShadow: [
             BoxShadow(
                 color: Colors.black.withValues(alpha: 0.04),
@@ -36,6 +39,16 @@ class TCard extends StatelessWidget {
           ],
         ),
         child: child,
+      );
+
+    if (onTap == null) return card;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: card,
       ),
     );
   }
@@ -105,18 +118,28 @@ class TAvatar extends StatelessWidget {
   final String initials;
   final double radius;
   final Color? bg;
-  const TAvatar({super.key, required this.initials, this.radius = 22, this.bg});
+  final ImageProvider? backgroundImage;
+  const TAvatar({
+    super.key,
+    required this.initials,
+    this.radius = 22,
+    this.bg,
+    this.backgroundImage,
+  });
 
   @override
   Widget build(BuildContext context) {
     return CircleAvatar(
       radius: radius,
       backgroundColor: bg ?? AppColors.primary,
-      child: Text(initials,
-          style: TextStyle(
-              color: Colors.white,
-              fontSize: radius * 0.65,
-              fontWeight: FontWeight.bold)),
+      backgroundImage: backgroundImage,
+      child: backgroundImage == null
+          ? Text(initials,
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: radius * 0.65,
+                  fontWeight: FontWeight.bold))
+          : null,
     );
   }
 }
@@ -520,5 +543,234 @@ class _RepositoryLoaderState<T> extends State<RepositoryLoader<T>> {
         return widget.builder(context, data);
       },
     );
+  }
+}
+
+// ── SyncStatusBadge ───────────────────────────────────────────────────────────
+/// Wraps [child] and overlays a small cloud-off indicator when
+/// [isPendingSync] is true (i.e. the entity was queued offline and
+/// hasn't been confirmed by the server yet).
+///
+/// Usage:
+/// ```dart
+/// SyncStatusBadge(
+///   isPendingSync: result.isPendingSync,
+///   child: TaskCard(task: task),
+/// )
+/// ```
+class SyncStatusBadge extends StatelessWidget {
+  final Widget child;
+  final bool isPendingSync;
+
+  const SyncStatusBadge({
+    super.key,
+    required this.child,
+    this.isPendingSync = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (!isPendingSync) return child;
+
+    return Stack(
+      children: [
+        Opacity(opacity: 0.65, child: child),
+        Positioned(
+          top: 6,
+          right: 6,
+          child: Tooltip(
+            message: 'Pending sync — will upload when back online',
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade700,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.cloud_off_rounded,
+                size: 12,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── SyncErrorBanner ───────────────────────────────────────────────────────────
+/// An app-bar-level dismissible banner that surfaces queue health to the user.
+///
+/// Show it at the top of any [Scaffold] body when [queueDepth] > 0 or
+/// [permanentFailures] > 0.
+///
+/// ```dart
+/// body: Column(children: [
+///   SyncErrorBanner(
+///     queueDepth: 3,
+///     permanentFailures: 1,
+///     onRetry: () => context.read<OfflineManager>().replayQueue(),
+///   ),
+///   Expanded(child: ...),
+/// ]),
+/// ```
+class SyncErrorBanner extends StatefulWidget {
+  final int queueDepth;
+  final int permanentFailures;
+  final VoidCallback? onRetry;
+
+  const SyncErrorBanner({
+    super.key,
+    required this.queueDepth,
+    this.permanentFailures = 0,
+    this.onRetry,
+  });
+
+  @override
+  State<SyncErrorBanner> createState() => _SyncErrorBannerState();
+}
+
+class _SyncErrorBannerState extends State<SyncErrorBanner> {
+  bool _dismissed = false;
+
+  @override
+  void didUpdateWidget(SyncErrorBanner old) {
+    super.didUpdateWidget(old);
+    // Re-show if queue grew
+    if (widget.queueDepth > old.queueDepth) {
+      _dismissed = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_dismissed) return const SizedBox.shrink();
+
+    final hasPermanent = widget.permanentFailures > 0;
+    final bannerColor =
+        hasPermanent ? Colors.red.shade700 : Colors.orange.shade700;
+    final icon =
+        hasPermanent ? Icons.error_outline_rounded : Icons.cloud_sync_rounded;
+
+    String message;
+    if (hasPermanent) {
+      message =
+          '${widget.permanentFailures} action(s) failed permanently. '
+          '${widget.queueDepth} pending.';
+    } else {
+      message =
+          '${widget.queueDepth} action(s) queued — syncing when online…';
+    }
+
+    return AnimatedSlide(
+      offset: Offset.zero,
+      duration: const Duration(milliseconds: 300),
+      child: Container(
+        color: bannerColor,
+        padding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(
+          children: [
+            Icon(icon, color: Colors.white, size: 18),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500),
+              ),
+            ),
+            if (widget.onRetry != null && !hasPermanent)
+              TextButton(
+                onPressed: widget.onRetry,
+                style: TextButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 8)),
+                child: const Text('Retry',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            IconButton(
+              icon: const Icon(Icons.close, color: Colors.white, size: 18),
+              padding: EdgeInsets.zero,
+              onPressed: () => setState(() => _dismissed = true),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Notification Badge ────────────────────────────────────────────────────────
+class NotificationBadgeWidget extends StatefulWidget {
+  const NotificationBadgeWidget({super.key});
+
+  @override
+  State<NotificationBadgeWidget> createState() =>
+      _NotificationBadgeWidgetState();
+}
+
+class _NotificationBadgeWidgetState extends State<NotificationBadgeWidget> {
+  int _count = 0;
+  StreamSubscription<int>? _sub;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _sub ??= context
+        .read<AppServices>()
+        .notifications
+        .unreadCountStream
+        .listen((count) {
+      if (mounted) setState(() => _count = count);
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _refresh());
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _refresh() async {
+    try {
+      final count = await context
+          .read<AppServices>()
+          .notifications
+          .getUnreadCount()
+          .unwrap();
+      if (mounted) setState(() => _count = count);
+    } catch (_) {
+      // Hide badge when count cannot be loaded.
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_count <= 0) return const SizedBox.shrink();
+    return Positioned(
+        top: 8,
+        right: 8,
+        child: Container(
+            padding: const EdgeInsets.all(4),
+            decoration: const BoxDecoration(
+                color: Colors.red, shape: BoxShape.circle),
+            constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+            child: Center(
+                child: Text(
+                    _count > 99 ? '99+' : '$_count',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold)))));
   }
 }

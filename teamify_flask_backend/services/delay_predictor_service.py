@@ -235,7 +235,7 @@ def predict_delay_probability(task_features: dict) -> dict:
         }
 
 
-def predict_task_delay(task_data: dict, user_data: dict = None) -> dict:
+def predict_task_delay(task_data: dict, user_data: dict | None = None) -> dict:
     """
     Compatibility wrapper used by routes/ai.py.
     Merges task_data and user_data dicts, maps field name aliases,
@@ -277,43 +277,82 @@ def predict_task_delay(task_data: dict, user_data: dict = None) -> dict:
     }
 
 
-def build_task_features_from_orm(task, assignee=None) -> dict:
-    """
-    Build the feature dict for predict_delay_probability from SQLAlchemy ORM objects.
-
-    Parameters
-    ----------
-    task : Task ORM object
-    assignee : User ORM object (optional)
-    """
-    features: dict = {
-        "estimated_duration_days": task.estimated_duration_days or 7,
-        "progress_percent": task.progress_percent or 0.0,
-        "priority_level": task.priority_level or 2,
-        "complexity_level": task.complexity_level or 2,
-        "num_subtasks": task.num_subtasks or 0,
-        "status": task.status or "pending",
-        "days_since_start": task.days_since_start,
-        "days_remaining": task.days_remaining if task.days_remaining is not None else 7,
-        "expected_progress_percent": task.expected_progress_percent,
-        "progress_gap": task.progress_gap,
+def get_delay_model_status() -> dict:
+    """Report whether Delay_Predictor.pkl is loaded and ready."""
+    model = _load_model()
+    return {
+        "model_available": model is not None,
+        "model_name": "Delay_Predictor",
+        "model_path": os.path.abspath(_MODEL_PATH),
+        "feature_count": len(_FEATURE_COLS),
+        "error": _model_load_error,
     }
 
+
+def _hydrate_task_fields_from_db(task) -> None:
+    """Fill missing ML inputs from real task columns (in-memory only)."""
+    from datetime import date
+
+    if not task.start_date and task.created_at:
+        task.start_date = task.created_at.date()
+
+    if not task.estimated_duration_days or task.estimated_duration_days < 1:
+        if task.deadline_days and task.deadline_days > 0:
+            task.estimated_duration_days = int(task.deadline_days)
+        elif task.due_date:
+            start = task.start_date or date.today()
+            task.estimated_duration_days = max((task.due_date - start).days, 1)
+        else:
+            task.estimated_duration_days = 7
+
+    if task.priority:
+        mapped = _PRIORITY_MAP.get(str(task.priority).lower())
+        if mapped is not None:
+            task.priority_level = mapped
+
+    if task.status == "done":
+        task.progress_percent = max(float(task.progress_percent or 0), 100.0)
+    elif task.status == "in_progress" and (task.progress_percent or 0) <= 0:
+        task.progress_percent = 25.0
+
+
+def build_task_features_from_orm(task, assignee=None) -> dict:
+    """
+    Build ML feature dict from live Task/User ORM rows (database-backed).
+    """
+    from models.project import Project
+    from services.ai_features import get_member_features, get_task_features
+    from services.ai_service import get_user_workload
+
+    _hydrate_task_fields_from_db(task)
+
+    project = Project.query.get(task.project_id) if task.project_id else None
+    features = get_task_features(task)
+    features["status"] = task.status or "pending"
+
+    days_rem = task.days_remaining
+    features["days_remaining"] = days_rem if days_rem is not None else 7
+
     if assignee is not None:
-        active_task_count = len(
-            [t for t in (assignee.assigned_tasks or []) if t.status != "done"]
+        mf = (
+            get_member_features(assignee, project)
+            if project is not None
+            else get_member_features(assignee)
         )
-        max_allowed = assignee.max_allowed_tasks or 5
+        active = get_user_workload(assignee.id)
+        max_allowed = int(assignee.max_allowed_tasks or 5)
+        quality = float(mf.get("quality_score") or getattr(assignee, "quality_score", 0.75) or 0.75)
+        attendance = float(mf.get("attendance_rate") or getattr(assignee, "attendance_rate", 0.75) or 0.75)
         features.update({
-            "member_experience_years": assignee.member_experience_years or 0,
-            "member_on_time_rate": assignee.member_on_time_rate or 0.75,
-            "member_avg_delay_days": assignee.member_avg_delay_days or 0.0,
+            "member_experience_years": int(assignee.member_experience_years or 0),
+            "member_on_time_rate": float(assignee.member_on_time_rate or 0.75),
+            "member_avg_delay_days": float(assignee.member_avg_delay_days or 0.0),
             "max_allowed_tasks": max_allowed,
-            "member_current_tasks": active_task_count,
-            "workload_ratio": min(active_task_count / max(max_allowed, 1), 1.0),
-            "projects_completed": getattr(assignee, "tasks_completed", 5),
-            "technical_skill": int((assignee.quality_score or 0.75) * 100),
-            "communication_skill": int((assignee.attendance_rate or 0.75) * 100),
+            "member_current_tasks": active,
+            "workload_ratio": min(active / max(max_allowed, 1), 1.0),
+            "projects_completed": int(getattr(assignee, "tasks_completed", 0) or 0),
+            "technical_skill": int(quality * 100),
+            "communication_skill": int(attendance * 100),
         })
     else:
         features.update({
@@ -321,9 +360,9 @@ def build_task_features_from_orm(task, assignee=None) -> dict:
             "member_on_time_rate": 0.75,
             "member_avg_delay_days": 3.0,
             "max_allowed_tasks": 5,
-            "member_current_tasks": 2,
-            "workload_ratio": 0.4,
-            "projects_completed": 5,
+            "member_current_tasks": 0,
+            "workload_ratio": 0.0,
+            "projects_completed": 0,
             "technical_skill": 75,
             "communication_skill": 75,
         })

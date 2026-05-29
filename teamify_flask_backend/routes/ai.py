@@ -9,9 +9,16 @@ Endpoints:
   GET  /api/ai/mentor-report/<user_id>
   GET  /api/ai/predict-rating/<user_id>
   POST /api/ai/recommend-teammates
+  GET  /api/ai/mentor/insights/<user_id>   — Flutter AI Hub (single ML run)
+  GET  /api/ai/mentor/analyse/<user_id>
+  GET  /api/ai/mentor/performance/<user_id>
+  GET  /api/ai/mentor/courses/<user_id>
+  GET  /api/ai/mentor/chat/history
+  POST /api/ai/mentor/chat
 """
 import os
 import logging
+from typing import Any, cast
 
 import requests
 from flask import Blueprint, request, jsonify, current_app
@@ -21,10 +28,14 @@ from middleware.auth import auth_required
 from services.delay_predictor_service import predict_task_delay
 from services.task_pipeline_service import classify_task, assign_best_members
 from services.chat_summarization_service import summarize_chat
-from services.ai_mentor_service import generate_mentor_report
+from services.ai_mentor_service import (
+    generate_mentor_report,
+    get_db_performance_snapshot,
+    generate_feedback_draft,
+)
 from services.profile_rating_service import predict_user_rating, recommend_teammates
 from services.anomaly_service_ml import detect_anomaly
-from services.cv_builder_service import build_cv_for_user
+from services.cv_builder_service import build_cv_for_user, persist_cv_from_ai_build
 from services.ai_service import (
     auto_assign,
     suggest_priority,
@@ -78,40 +89,13 @@ def api_predict_delay(task_id):
     if not task:
         return jsonify({"error": "Task not found"}), 404
 
-    task_data = {
-        "estimated_duration_days": task.estimated_duration_days or 5,
-        "progress_percent": task.progress_percent or 0,
-        "priority_level": task.priority_level or 2,
-        "complexity_level": task.complexity_level or 3,
-        "num_subtasks": task.num_subtasks or 0,
-        "days_since_start": task.days_since_start or 0,
-        "days_remaining": task.days_remaining or 0,
-        "expected_progress_percent": task.expected_progress_percent or 0,
-        "progress_gap": task.progress_gap or 0,
-    }
+    from services.ai_service import predict_delay as predict_delay_service
 
-    user_data = {}
-    if task.assigned_to:
-        user = db.session.get(User, task.assigned_to)
-        if user:
-            user_data = {
-                "experience_years": getattr(user, "experience_years", 2),
-                "on_time_rate": 0.9,
-                "avg_delay_days": 0,
-                "max_allowed_tasks": 5,
-                "current_tasks": 1,
-                "projects_completed": getattr(user, "projects_completed", 1),
-                "technical_skill": 3,
-                "communication_skill": 3,
-            }
+    result = predict_delay_service(task_id=task_id)
+    if result.get("error"):
+        return jsonify({"error": result["error"]}), 404
 
-    result = predict_task_delay(task_data, user_data)
-    # Store delay risk back on the task
-    task.ai_delay_risk = result.get("risk_level")
-    from models import db
-    db.session.commit()
-
-    return jsonify({"task_id": task_id, **result}), 200
+    return jsonify(result), 200
 
 
 # ─── Classify Task ────────────────────────────────────────────────────────────
@@ -147,6 +131,28 @@ def api_classify_task():
         return jsonify({"error": "text field is required"}), 400
 
     result = classify_task(text)
+    return jsonify(result), 200
+
+
+# ─── Feedback assist ─────────────────────────────────────────────────────────
+
+@ai_bp.route("/feedback-assist", methods=["POST"])
+@auth_required
+def api_feedback_assist():
+    """Generate a draft peer-feedback comment from rating and context."""
+    data = request.get_json(silent=True) or {}
+    try:
+        rating = int(data.get("rating", 0))
+    except (TypeError, ValueError):
+        return jsonify({"error": "rating must be an integer between 1 and 5"}), 400
+    if not 1 <= rating <= 5:
+        return jsonify({"error": "rating must be between 1 and 5"}), 400
+
+    result = generate_feedback_draft(
+        rating=rating,
+        teammate_name=(data.get("teammate_name") or data.get("member_name") or "").strip(),
+        project_name=(data.get("project_name") or "").strip(),
+    )
     return jsonify(result), 200
 
 
@@ -247,20 +253,41 @@ def api_transcribe():
       502:
         description: STT service unavailable
     """
-    audio_file = request.files.get("audio")
+    audio_file = request.files.get("audio") or request.files.get("file")
     if not audio_file:
         return jsonify({"error": "No audio file provided"}), 400
 
-    stt_url = os.getenv("STT_SERVICE_URL", "http://localhost:8000") + "/transcribe"
+    language = request.args.get("language", "en")
+    task = request.args.get("task", "transcribe")
+    stt_base = os.getenv("STT_SERVICE_URL", "http://localhost:8000").rstrip("/")
+    stt_url = f"{stt_base}/transcribe"
+    filename = audio_file.filename or "audio.wav"
+    mimetype = audio_file.mimetype or "application/octet-stream"
+    if filename.endswith(".webm") and mimetype == "application/octet-stream":
+        mimetype = "audio/webm"
+    audio_bytes = audio_file.read()
+    if not audio_bytes:
+        return jsonify({"error": "Empty audio file"}), 400
     try:
         resp = requests.post(
             stt_url,
-            files={"file": (audio_file.filename, audio_file.stream, audio_file.mimetype)},
-            timeout=30
+            files={"file": (filename, audio_bytes, mimetype)},
+            params={"language": language, "task": task},
+            timeout=120,
         )
-        return jsonify(resp.json()), resp.status_code
+        try:
+            body = resp.json()
+        except Exception:
+            body = {"error": resp.text or "STT returned non-JSON response"}
+        if resp.status_code >= 400:
+            return jsonify(body), resp.status_code
+        return jsonify(body), 200
     except requests.exceptions.ConnectionError:
-        return jsonify({"error": "STT microservice is not running. Start it with: uvicorn app:app --port 8000"}), 502
+        return jsonify({
+            "error": "STT microservice is not running",
+            "hint": "Start Whisper STT: cd teamify_flask_backend/ml_models && uvicorn run:app --host 127.0.0.1 --port 8000",
+            "success": False,
+        }), 502
     except requests.exceptions.Timeout:
         return jsonify({"error": "STT service timed out"}), 504
     except Exception as exc:
@@ -315,31 +342,13 @@ def api_predict_rating(user_id):
         description: Predicted rating
     """
     from models.user import User
-    from models import db
+    from services.ai_mentor_service import build_user_ml_stats
 
     user = db.session.get(User, user_id)
     if not user:
         return jsonify({"error": "User not found"}), 404
 
-    def _safe(attr, default):
-        """Return scalar attribute value; fall back to default for methods/None."""
-        val = getattr(user, attr, default)
-        return default if callable(val) or val is None else val
-
-    # Build stats from the user model — fill defaults for missing/method fields
-    user_stats = {
-        "tasks_assigned":   _safe("tasks_assigned",   10),
-        "tasks_completed":  _safe("tasks_completed",   7),
-        "overdue_tasks":    _safe("overdue_tasks",      1),
-        "quality_score":    _safe("quality_score",    3.5),
-        "teamwork_score":   _safe("teamwork_score",   3.5),
-        "attendance_rate":  _safe("attendance_rate",  0.9),
-        "skill_match_score":_safe("skill_match_score",0.7),
-        "avg_rating":       _safe("avg_rating",       3.5),
-        "availability_score":_safe("availability_score",0.8),
-        "project_similarity":_safe("project_similarity",0.6),
-    }
-
+    user_stats = build_user_ml_stats(user_id)
     rating_result = predict_user_rating(user_stats)
     teammates = recommend_teammates(user_stats, top_n=3)
 
@@ -380,8 +389,10 @@ def api_recommend_teammates():
     data = request.get_json(silent=True) or {}
     user_stats = data.get("user_stats", {})
     top_n = int(data.get("top_n", 5))
+    current_id = int(get_jwt_identity())
 
-    teammates = recommend_teammates(user_stats, top_n=top_n)
+    teammates = recommend_teammates(user_stats, top_n=top_n + 3)
+    teammates = [t for t in teammates if int(t.get("user_id", 0)) != current_id][:top_n]
     return jsonify({"recommendations": teammates}), 200
 
 
@@ -643,12 +654,24 @@ def api_delay():
             return jsonify({"error": "Not a project member"}), 403
         result = predict_delay(task_id=int(task_id))
     else:
-        role = get_project_role(current_user_id, int(project_id))
+        if project_id is None:
+            return jsonify({"error": "project_id is required"}), 400
+        pid = int(project_id)
+        role = get_project_role(current_user_id, pid)
         if not role:
             return jsonify({"error": "Not a project member"}), 403
-        result = predict_delay(project_id=int(project_id))
+        result = predict_delay(project_id=pid)
 
     return jsonify(result), 200
+
+
+@ai_bp.route("/delay-model/status", methods=["GET"])
+@auth_required
+def api_delay_model_status():
+    """Whether the trained Delay_Predictor.pkl model is loaded."""
+    from services.delay_predictor_service import get_delay_model_status
+
+    return jsonify(get_delay_model_status()), 200
 
 
 # ─── GET /api/ai/workload ─────────────────────────────────────────────────────
@@ -771,11 +794,16 @@ def api_mentor_performance(user_id: int):
     if current_user.role != "admin" and current_user_id != user_id:
         return jsonify({"error": "Forbidden"}), 403
 
-    report = generate_mentor_report(user_id)
+    try:
+        report = generate_mentor_report(user_id)
+    except Exception as exc:
+        logger.exception("mentor performance failed for user %s", user_id)
+        return jsonify({"error": "Mentor analysis failed", "detail": str(exc)}), 500
+
     if "error" in report:
         return jsonify(report), 404
 
-    progress = report.get("career_progress", {})
+    snapshot = report.get("performance_snapshot") or get_db_performance_snapshot(user_id)
     weaknesses = report.get("weaknesses", [])
     ai_tip = (
         weaknesses[0]["message"]
@@ -783,11 +811,21 @@ def api_mentor_performance(user_id: int):
         else "Keep up the great work — no critical issues detected."
     )
 
+    history = snapshot.get("history", [])
+    trend = "stable"
+    if len(history) >= 2:
+        trend = "up" if history[-1]["score"] > history[-2]["score"] else (
+            "down" if history[-1]["score"] < history[-2]["score"] else "stable"
+        )
+
     return jsonify({
-        "scores": progress.get("breakdown", {}),
-        "overall": progress.get("score", 0),
+        "scores": snapshot.get("scores", {}),
+        "overall": snapshot.get("overall", 0),
+        "history": history,
         "ai_tip": ai_tip,
-        "trend": "stable",
+        "trend": trend,
+        "feedback_count": snapshot.get("feedback_count", 0),
+        "rating_count": snapshot.get("rating_count", 0),
     }), 200
 
 
@@ -825,11 +863,17 @@ def api_mentor_courses(user_id: int):
     if current_user.role != "admin" and current_user_id != user_id:
         return jsonify({"error": "Forbidden"}), 403
 
-    report = generate_mentor_report(user_id)
+    try:
+        report = generate_mentor_report(user_id)
+    except Exception as exc:
+        logger.exception("mentor courses failed for user %s", user_id)
+        return jsonify({"error": "Mentor analysis failed", "detail": str(exc)}), 500
+
     if "error" in report:
         return jsonify(report), 404
 
-    return jsonify({"recommended_courses": report.get("top_courses", [])}), 200
+    courses = report.get("top_courses", [])
+    return jsonify({"recommended_courses": courses, "courses": courses}), 200
 
 
 # ─── POST /api/ai/chat/summarize ─────────────────────────────────────────────
@@ -897,6 +941,72 @@ def api_chat_summarize():
     return jsonify(result), 200
 
 
+# ─── GET /api/ai/mentor/insights/<user_id> (single call for Flutter hub) ─────
+
+@ai_bp.route("/mentor/insights/<int:user_id>", methods=["GET"])
+@auth_required
+def api_mentor_insights(user_id: int):
+    """
+    One-shot mentor dashboard payload for the AI Career Mentor hub.
+    Avoids three parallel /analyse + /performance + /courses calls.
+    """
+    from models.user import User
+
+    current_user_id = int(get_jwt_identity())
+    current_user = db.session.get(User, current_user_id)
+    if not current_user:
+        return jsonify({"error": "User not found"}), 404
+    if current_user.role != "admin" and current_user_id != user_id:
+        return jsonify({"error": "Forbidden"}), 403
+
+    try:
+        report = generate_mentor_report(user_id)
+    except Exception as exc:
+        logger.exception("mentor insights failed for user %s", user_id)
+        return jsonify({
+            "error": "Mentor analysis failed",
+            "detail": str(exc),
+        }), 500
+
+    if "error" in report:
+        return jsonify(report), 404
+
+    snapshot = report.get("performance_snapshot") or get_db_performance_snapshot(user_id)
+    weaknesses = report.get("weaknesses") or []
+    ai_tip = (
+        weaknesses[0]["message"]
+        if weaknesses and isinstance(weaknesses[0], dict)
+        else "Keep up the great work — no critical issues detected."
+    )
+    history = snapshot.get("history", [])
+    trend = "stable"
+    if len(history) >= 2:
+        trend = "up" if history[-1]["score"] > history[-2]["score"] else (
+            "down" if history[-1]["score"] < history[-2]["score"] else "stable"
+        )
+
+    courses = report.get("top_courses") or []
+    return jsonify({
+        "analysis": report,
+        "profile": report.get("user_profile") or {},
+        "generated_at": report.get("generated_at"),
+        "performance": {
+            "scores": snapshot.get("scores", {}),
+            "overall": snapshot.get("overall", 0),
+            "history": history,
+            "ai_tip": ai_tip,
+            "trend": trend,
+            "feedback_count": snapshot.get("feedback_count", 0),
+            "rating_count": snapshot.get("rating_count", 0),
+        },
+        "courses": {
+            "courses": courses,
+            "recommended_courses": courses,
+        },
+        "ml": report.get("ml_rating") or {},
+    }), 200
+
+
 # ─── GET /api/ai/mentor/analyse/<user_id> ────────────────────────────────────
 
 @ai_bp.route("/mentor/analyse/<int:target_user_id>", methods=["GET"])
@@ -962,18 +1072,25 @@ def api_mentor_analyse(target_user_id: int):
             "detail": "You are not authorized to view this user's analysis",
         }), 403
 
-    result = generate_mentor_report(target_user_id)
+    try:
+        result = generate_mentor_report(target_user_id)
+    except Exception as exc:
+        logger.exception("mentor analyse failed for user %s", target_user_id)
+        return jsonify({"error": "Mentor analysis failed", "detail": str(exc)}), 500
 
     if "error" in result:
         return jsonify(result), 404
 
-    from services.audit_log_service import log_ai_event
-    log_ai_event(
-        "MENTOR_ANALYSE",
-        user_id=current_user_id,
-        ip=request.remote_addr or "unknown",
-        details={"target_user_id": target_user_id},
-    )
+    try:
+        from services.audit_log_service import log_ai_event
+        log_ai_event(
+            "MENTOR_ANALYSE",
+            user_id=current_user_id,
+            ip=request.remote_addr or "unknown",
+            details={"target_user_id": target_user_id},
+        )
+    except Exception:
+        logger.warning("audit log skipped for MENTOR_ANALYSE", exc_info=True)
 
     return jsonify(result), 200
 
@@ -1054,9 +1171,11 @@ def api_cv_build():
 
     current_user_id = int(get_jwt_identity())
 
-    body = request.get_json(silent=True, force=True) or {}
+    body = request.get_json(silent=True, force=True)
+    if not isinstance(body, dict):
+        body = {}
     try:
-        data = cv_build_schema.load(body)
+        data = cast(dict[str, Any], cv_build_schema.load(body))
     except MarshmallowError as exc:
         return jsonify({"error": "Validation failed", "details": exc.messages}), 400
 
@@ -1077,6 +1196,13 @@ def api_cv_build():
         status_code = 404 if "not found" in result["error"].lower() else 500
         return jsonify(result), status_code
 
+    try:
+        persist_cv_from_ai_build(target_id, result)
+    except Exception:
+        current_app.logger.exception(
+            "Failed to persist AI CV for user %s", target_id
+        )
+
     from services.audit_log_service import log_ai_event
     log_ai_event(
         "CV_BUILD",
@@ -1086,3 +1212,287 @@ def api_cv_build():
     )
 
     return jsonify(result), 200
+
+
+# ─── GET /api/ai/mentor/chat/history ──────────────────────────────────────────
+
+@ai_bp.route("/mentor/chat/history", methods=["GET"])
+@auth_required
+def api_mentor_chat_history():
+    """Return persisted mentor chat messages for the current user."""
+    from models.mentor_chat_message import MentorChatMessage
+
+    user_id = int(get_jwt_identity())
+    limit = min(request.args.get("limit", 50, type=int), 100)
+    rows = (
+        MentorChatMessage.query.filter_by(user_id=user_id)
+        .order_by(MentorChatMessage.created_at.asc())
+        .limit(limit)
+        .all()
+    )
+    return jsonify({"messages": [m.to_dict() for m in rows]}), 200
+
+
+# ─── POST /api/ai/mentor/chat ─────────────────────────────────────────────────
+
+@ai_bp.route("/mentor/chat", methods=["POST"])
+@auth_required
+def api_mentor_chat():
+    """
+    AI Career Mentor conversational chat.
+
+    Generates a personalised reply using the caller's live data (tasks,
+    skills, performance, project history) and the supplied conversation
+    history.  Falls back to a rule-based reply when the Claude API is
+    unavailable or not configured.
+    ---
+    tags:
+      - AI
+    security:
+      - Bearer: []
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required: [question]
+          properties:
+            question:
+              type: string
+              description: The user's question to the AI mentor
+            history:
+              type: array
+              description: Previous messages in the conversation
+              items:
+                type: object
+                properties:
+                  role:
+                    type: string
+                    enum: [user, assistant]
+                  content:
+                    type: string
+            task_context:
+              type: object
+              description: Optional current task context
+            user_context:
+              type: object
+              description: Optional extra user context
+    responses:
+      200:
+        description: AI mentor reply
+        schema:
+          type: object
+          properties:
+            reply:
+              type: string
+            suggestions:
+              type: array
+              items:
+                type: string
+      400:
+        description: Missing question
+      404:
+        description: User not found
+    """
+    from models.mentor_chat_message import MentorChatMessage
+    from models.user import User
+    from services.ai_mentor_service import generate_mentor_report, generate_mentor_chat_reply
+
+    current_user_id = int(get_jwt_identity())
+    user = db.session.get(User, current_user_id)
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    body: dict[str, Any] = request.get_json(silent=True, force=True) or {}
+    question: str = (body.get("question") or "").strip()
+    if not question:
+        return jsonify({"error": "question is required"}), 400
+
+    history: list[dict[str, Any]] = body.get("history") or []
+
+    try:
+        mentor_data = generate_mentor_report(current_user_id)
+    except Exception as exc:
+        logger.exception("mentor chat context failed for user %s", current_user_id)
+        return jsonify({"error": "Mentor analysis failed", "detail": str(exc)}), 500
+
+    if "error" in mentor_data:
+        return jsonify(mentor_data), 404
+
+    db.session.add(
+        MentorChatMessage(user_id=current_user_id, role="user", content=question)
+    )
+
+    ml_meta: dict[str, Any] = {}
+    suggestions: list[str] = []
+
+    # ── Optional Claude layer (enriched with ML stats) ───────────────────
+    anthropic_key: str = current_app.config.get("ANTHROPIC_API_KEY", "")
+    ml_rating = mentor_data.get("ml_rating") or {}
+    career_progress = mentor_data.get("career_progress") or {}
+    reply_text: str = ""
+
+    if anthropic_key:
+        try:
+            import anthropic  # type: ignore[import-untyped]
+
+            weaknesses = mentor_data.get("weaknesses") or []
+            strengths = mentor_data.get("strengths") or []
+            top_courses = (mentor_data.get("top_courses") or [])[:3]
+            skill_gaps = [
+                str(w.get("area"))
+                for w in weaknesses
+                if isinstance(w, dict) and w.get("area")
+            ]
+            strength_list = [
+                str(s.get("area"))
+                for s in strengths
+                if isinstance(s, dict) and s.get("area")
+            ]
+            current_level = career_progress.get("level", "Developer")
+            career_score = career_progress.get("score", 0)
+            pred = ml_rating.get("predicted_rating", 3.0)
+
+            system_prompt = (
+                f"You are an expert AI Career Mentor helping {user.display_name or user.full_name}.\n"
+                f"ML model rating: {pred}/5 ({ml_rating.get('percentile_label', 'Good')}).\n"
+                f"Level={current_level}, career_score={career_score:.0f}/100.\n"
+                f"Skill gaps: {', '.join(skill_gaps) or 'none'}.\n"
+                f"Strengths: {', '.join(strength_list) or 'none'}.\n"
+                f"Courses: {', '.join(c.get('title', '') for c in top_courses)}.\n"
+                "Give specific, actionable advice. Be concise (2-3 paragraphs max)."
+            )
+
+            messages: list[dict[str, Any]] = []
+            for h in history[-10:]:
+                role = h.get("role")
+                content = h.get("content")
+                if role in ("user", "assistant") and content:
+                    messages.append({"role": role, "content": str(content)})
+            messages.append({"role": "user", "content": question})
+
+            client = anthropic.Anthropic(api_key=anthropic_key)
+            message = client.messages.create(
+                model="claude-3-haiku-20240307",
+                max_tokens=512,
+                system=system_prompt,
+                messages=messages,
+            )
+            reply_text = message.content[0].text if message.content else ""
+            ml_meta = {
+                "source": ml_rating.get("source", "formula"),
+                "predicted_rating": ml_rating.get("predicted_rating"),
+                "performance_label": ml_rating.get("percentile_label"),
+                "career_score": career_score,
+                "career_level": current_level,
+                "model": "Profiles&AI Rating/teamify_model.pkl",
+                "llm": "claude-3-haiku",
+            }
+            if skill_gaps:
+                suggestions.append(f"How do I improve my {skill_gaps[0]}?")
+            if top_courses:
+                suggestions.append(f"Tell me about '{top_courses[0].get('title', '')}'")
+            suggestions.append("What should I focus on this week?")
+        except Exception as exc:
+            logger.warning("Claude API call failed: %s — using ML mentor", exc)
+            reply_text = ""
+
+    if not reply_text:
+        reply_text, suggestions, ml_meta = generate_mentor_chat_reply(
+            current_user_id, question, mentor_data
+        )
+    elif not ml_meta:
+        ml_meta = {
+            "source": ml_rating.get("source", "formula"),
+            "predicted_rating": ml_rating.get("predicted_rating"),
+            "performance_label": ml_rating.get("percentile_label"),
+            "career_score": career_progress.get("score", 0),
+            "career_level": career_progress.get("level", "Developer"),
+            "model": "Profiles&AI Rating/teamify_model.pkl",
+        }
+
+    db.session.add(
+        MentorChatMessage(
+            user_id=current_user_id, role="assistant", content=reply_text
+        )
+    )
+    db.session.commit()
+
+    return jsonify({
+        "reply": reply_text,
+        "suggestions": suggestions[:3],
+        "ml": ml_meta,
+    }), 200
+
+
+def _rule_based_mentor_reply(
+    question: str,
+    level: str,
+    skill_gaps: list[str],
+    strengths: list[str],
+    score: float,
+    courses: list[dict[str, Any]],
+) -> str:
+    """
+    Deterministic mentor reply built from the user's live profile data.
+    Used when Claude is unavailable.
+    """
+    q_lower = question.lower()
+
+    # Routing by intent
+    if any(kw in q_lower for kw in ("focus", "improve", "next", "should i")):
+        if skill_gaps:
+            gap = skill_gaps[0]
+            course_hint = ""
+            for c in courses:
+                if gap.lower() in (c.get("skills_covered") or "").lower():
+                    course_hint = f" I recommend '{c['title']}' on {c.get('platform', 'online')}."
+                    break
+            return (
+                f"Based on your profile, the highest-impact area to improve is **{gap}**."
+                f"{course_hint} "
+                f"Your current level is {level} with a career score of {score:.0f}/100. "
+                "Consistent daily practice and working on real projects will accelerate your growth."
+            )
+        return (
+            f"You are currently at {level} level with a score of {score:.0f}/100. "
+            "Keep completing tasks on time and collaborating effectively with your team — "
+            "those are the fastest paths to the next level."
+        )
+
+    if any(kw in q_lower for kw in ("promot", "level up", "senior", "lead")):
+        return (
+            f"To advance from {level}, focus on: "
+            f"{', '.join(skill_gaps[:3]) if skill_gaps else 'deepening your technical skills'}. "
+            "Demonstrate leadership by mentoring juniors and driving project outcomes. "
+            f"Your current score is {score:.0f}/100 — aim for 75+ to be considered for promotion."
+        )
+
+    if any(kw in q_lower for kw in ("course", "learn", "study", "recommend")):
+        if courses:
+            titles = ", ".join(f"'{c.get('title', '')}' ({c.get('platform', '')})"
+                               for c in courses)
+            return (
+                f"Based on your skill gaps ({', '.join(skill_gaps[:3]) or 'general areas'}), "
+                f"I recommend: {titles}. "
+                "Start with the one most relevant to your current project challenges."
+            )
+        return "Keep building your skills through hands-on projects and structured courses online."
+
+    if any(kw in q_lower for kw in ("strength", "good at", "what am i")):
+        if strengths:
+            return (
+                f"Your key strengths are: {', '.join(strengths[:3])}. "
+                "Leverage these in high-visibility projects to build your reputation. "
+                "Pair them with your areas for improvement to become well-rounded."
+            )
+        return "You are building strong fundamentals. Keep delivering quality work consistently."
+
+    # Default fallback
+    return (
+        f"Great question! At your {level} level (score: {score:.0f}/100), "
+        "focus on consistency, communication, and continuous learning. "
+        f"Your top areas to develop are: {', '.join(skill_gaps[:3]) or 'technical depth'}. "
+        "Would you like specific advice on any of these?"
+    )

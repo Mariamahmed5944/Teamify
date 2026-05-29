@@ -168,8 +168,14 @@ def _build_user_data(user: Any) -> dict:
         # Technologies: collect unique ai_skills from all tasks in the project
         tech_set: set[str] = set()
         for task in getattr(proj, "tasks", []):
-            if task.ai_skills:
-                tech_set.update(task.ai_skills)
+            raw_skills = getattr(task, "ai_skills", None)
+            if raw_skills:
+                if isinstance(raw_skills, list):
+                    tech_set.update(str(s).strip() for s in raw_skills if str(s).strip())
+                elif isinstance(raw_skills, str):
+                    s = raw_skills.strip()
+                    if s:
+                        tech_set.add(s)
 
         # For owned projects also seed with the user's profile skills
         if getattr(pm, "role", "") == "owner":
@@ -275,11 +281,25 @@ def _fallback_cv(user_data: dict) -> dict:
     metrics = user_data.get("metrics", {})
     projs   = user_data.get("projects", [])
 
+    def _tech_labels(raw) -> list[str]:
+        if raw is None:
+            return []
+        if isinstance(raw, str):
+            s = raw.strip()
+            if not s:
+                return []
+            if "," in s:
+                return [p.strip() for p in s.split(",") if p.strip()]
+            return [s]
+        if isinstance(raw, list):
+            return [str(t).strip() for t in raw if str(t).strip()]
+        return []
+
     # Collect unique technologies from projects preserving order
     seen_tech: list[str] = []
     seen_set:  set[str]  = set()
     for p in projs:
-        for t in p.get("technologies", []):
+        for t in _tech_labels(p.get("technologies", [])):
             if t not in seen_set:
                 seen_tech.append(t)
                 seen_set.add(t)
@@ -370,3 +390,64 @@ def build_cv_for_user(user_id: int) -> dict:
 
     # ── Heuristic fallback ────────────────────────────────────────────────────
     return _fallback_cv(user_data)
+
+
+def persist_cv_from_ai_build(user_id: int, ai_result: dict) -> None:
+    """Upsert the user's saved CV row from an AI build result (no Marshmallow)."""
+    from models import db  # noqa: PLC0415
+    from models.cv import CV  # noqa: PLC0415
+    from models.user import User  # noqa: PLC0415
+
+    user = db.session.get(User, user_id)
+    if not user:
+        return
+
+    skills: list[dict] = []
+    skills_raw = ai_result.get("skills") or {}
+    if isinstance(skills_raw, dict):
+        names = (skills_raw.get("technical") or []) + (skills_raw.get("soft") or [])
+    elif isinstance(skills_raw, list):
+        names = skills_raw
+    else:
+        names = []
+    for name in names:
+        label = str(name).strip()
+        if label:
+            skills.append({"name": label, "level": "Intermediate"})
+
+    projects: list[dict] = []
+    for entry in ai_result.get("projects") or []:
+        if not isinstance(entry, dict):
+            continue
+        bullets = entry.get("bullets") or []
+        desc = (
+            "\n".join(str(b) for b in bullets)
+            if bullets
+            else str(entry.get("description") or "")
+        )
+        projects.append({
+            "name": str(entry.get("title") or entry.get("name") or "Project"),
+            "description": desc,
+            "role": str(entry.get("role") or ""),
+        })
+
+    personal_info = {
+        "full_name": (
+            getattr(user, "full_name", None)
+            or getattr(user, "display_name", None)
+            or "User"
+        ),
+        "email": getattr(user, "email", "") or "",
+    }
+
+    cv = CV.query.filter_by(user_id=user_id).first()
+    if cv is None:
+        cv = CV(user_id=user_id)
+        db.session.add(cv)
+
+    cv.personal_info = personal_info
+    cv.summary = ai_result.get("summary") or ""
+    cv.skills = skills
+    cv.projects = projects
+    cv.experience = []
+    db.session.commit()

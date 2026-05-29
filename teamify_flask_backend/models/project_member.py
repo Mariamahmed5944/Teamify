@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from models import db
 
 
@@ -19,6 +20,11 @@ class ProjectMember(db.Model):
     )
     # "owner" or "member"
     role = db.Column(db.String(20), nullable=False, default="member")
+    joined_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+    )
 
     __table_args__ = (
         db.UniqueConstraint("project_id", "user_id", name="uq_project_member"),
@@ -27,12 +33,16 @@ class ProjectMember(db.Model):
         db.Index("ix_pm_user_id", "user_id"),
     )
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
     def to_dict(self):
         return {
             "id": self.id,
             "project_id": self.project_id,
             "user_id": self.user_id,
             "role": self.role,
+            "joined_at": self.joined_at.isoformat() if self.joined_at else None,
         }
 
     def __repr__(self):

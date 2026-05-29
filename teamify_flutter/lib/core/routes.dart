@@ -102,9 +102,21 @@ class R {
   static const askAI = '/ask-ai';
   static const notifications = '/notifications';
   static const settings = '/settings';
+  static const privacyPolicy = '/privacy-policy';
   static const addUser = '/add-user';
   static const adminUserDetails = '/admin-user-details';
   static const editRolePermissions = '/admin-edit-role-permissions';
+  
+  static const adminDashboard = '/admin-dashboard';
+  static const adminProjects = '/admin-projects';
+  static const adminTasks = '/admin-tasks';
+  static const adminAi = '/admin-ai';
+  static const adminDisputes = '/admin-disputes';
+  static const adminNotifications = '/admin-notifications';
+  static const adminFiles = '/admin-files';
+  static const adminLogs = '/admin-logs';
+  static const adminSecurity = '/admin-security';
+  static const adminSettings = '/admin-settings';
   static const mentorMain = '/mentor-main';
   static const addTask = '/add-task';
   static const teamsList = '/teams-list';

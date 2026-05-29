@@ -130,7 +130,17 @@ class TestSkillWhitelist:
         data = dict(VALID_CV)
         data["skills"] = [{"name": "python", "level": "Expert"}]
         result = cv_create_schema.load(data)
-        assert result["skills"][0]["name"] == "python"
+        assert result["skills"][0]["name"] == "Python"
+
+    def test_soft_skill_with_ampersand_accepted(self, app):
+        from validators.cv_validator import cv_create_schema
+        data = dict(VALID_CV)
+        data["skills"] = [
+            {"name": "Reliability & Consistency", "level": "Intermediate"},
+            {"name": "Teamwork & Synergy", "level": "Intermediate"},
+        ]
+        result = cv_create_schema.load(data)
+        assert len(result["skills"]) == 2
 
     def test_xss_in_skill_name_stripped(self, app):
         from validators.cv_validator import cv_create_schema

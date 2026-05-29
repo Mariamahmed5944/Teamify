@@ -44,6 +44,9 @@ class CV(db.Model):
     # Back-reference to owner
     owner = db.relationship("User", backref=db.backref("cv", uselist=False))
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
     def to_dict(self, public_only: bool = False) -> dict:
         """Serialize CV. When public_only=True (guest view), strip sensitive sections."""
         if public_only:

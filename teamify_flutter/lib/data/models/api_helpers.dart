@@ -51,3 +51,21 @@ List<Map<String, dynamic>> asMapList(dynamic value) {
   }
   return const [];
 }
+
+/// Human-readable relative time from an ISO-8601 timestamp.
+String formatRelativeTime(String isoString) {
+  if (isoString.isEmpty) return '';
+  final dt = DateTime.tryParse(isoString);
+  if (dt == null) return isoString.replaceFirst('T', ' ').split('.').first;
+  final local = dt.toLocal();
+  final diff = DateTime.now().difference(local);
+  if (diff.inMinutes < 1) return 'Just now';
+  if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+  if (diff.inHours < 24) return '${diff.inHours}h ago';
+  if (diff.inDays < 7) return '${diff.inDays}d ago';
+  const months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+  return '${months[local.month - 1]} ${local.day}, ${local.year}';
+}

@@ -60,6 +60,9 @@ class Rating(db.Model):
     rater   = db.relationship("User", foreign_keys=[rater_id],   backref="given_ratings")
     project = db.relationship("Project", backref="ratings")
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
     def to_dict(self) -> dict:
         return {
             "id":         self.id,

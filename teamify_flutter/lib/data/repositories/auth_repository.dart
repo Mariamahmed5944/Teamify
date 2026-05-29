@@ -38,9 +38,16 @@ class AuthRepository {
       data: {'email': email, 'password': password},
       options: Options(extra: {'skipAuth': true}),
     );
-    await _saveTokens(response.data);
-    final user = _extractUser(response.data);
-    return AuthResult(user: user, message: asString(response.data?['message']));
+    final payload = responseMap(response.data);
+    await _saveTokens(payload.isEmpty ? null : payload);
+    var user = _extractUser(payload.isEmpty ? null : payload);
+    if (user == null && await hasSavedSession()) {
+      user = await me();
+    }
+    return AuthResult(
+      user: user,
+      message: asString(payload['message']),
+    );
   }
 
   Future<AuthResult> register({
@@ -117,7 +124,7 @@ class AuthRepository {
   Future<void> resetPassword(String token, String newPassword) async {
     await _client.post<dynamic>(
       '/api/auth/reset-password',
-      data: {'token': token, 'new_password': newPassword},
+      data: {'reset_token': token, 'new_password': newPassword},
       options: Options(extra: {'skipAuth': true}),
     );
   }
@@ -142,10 +149,13 @@ class AuthRepository {
   }
 
   /// POST /api/auth/github
-  Future<AuthResult> loginWithGithub(String code) async {
+  Future<AuthResult> loginWithGithub(String code, {String? userType}) async {
     final response = await _client.post<Map<String, dynamic>>(
       '/api/auth/github',
-      data: {'code': code},
+      data: {
+        'code': code,
+        if (userType != null) 'user_type': userType,
+      },
       options: Options(extra: {'skipAuth': true}),
     );
     await _saveTokens(response.data);
@@ -183,9 +193,13 @@ class AuthRepository {
   // ── Private helpers ───────────────────────────────────────────────────────
 
   Future<void> _saveTokens(Map<String, dynamic>? data) async {
-    final access = data?['access_token']?.toString();
-    final refresh = data?['refresh_token']?.toString();
-    if (access != null && refresh != null) {
+    if (data == null) return;
+    final access = data['access_token']?.toString();
+    final refresh = data['refresh_token']?.toString();
+    if (access != null &&
+        access.isNotEmpty &&
+        refresh != null &&
+        refresh.isNotEmpty) {
       await _tokenStorage.saveTokens(
           accessToken: access, refreshToken: refresh);
     }

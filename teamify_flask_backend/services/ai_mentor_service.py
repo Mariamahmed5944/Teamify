@@ -20,7 +20,7 @@ from __future__ import annotations
 import logging
 import os
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
@@ -85,17 +85,37 @@ SKILL_DEMAND = {
     "Git": 0.70, "Microservices": 0.93, "Unit Testing": 0.78,
 }
 
+def _course_enroll_url(platform: str, title: str) -> str:
+    from urllib.parse import quote_plus
+
+    q = quote_plus(title)
+    platform_l = (platform or "").lower()
+    if "coursera" in platform_l:
+        return f"https://www.coursera.org/search?query={q}"
+    if "udemy" in platform_l:
+        return f"https://www.udemy.com/courses/search/?q={q}"
+    if "cloud guru" in platform_l or "acloud" in platform_l:
+        return f"https://learn.acloud.guru/catalog?query={q}"
+    if "youtube" in platform_l:
+        return f"https://www.youtube.com/results?search_query={q}"
+    if "pluralsight" in platform_l:
+        return f"https://www.pluralsight.com/search?q={q}"
+    if "frontend masters" in platform_l:
+        return f"https://frontendmasters.com/search/?q={q}"
+    return f"https://www.google.com/search?q={q}+online+course"
+
+
 COURSE_CATALOG = [
-    {"title": "System Design for Developers",  "platform": "Coursera",    "skills_covered": "Microservices|System Design", "rating": "4.8", "duration_hrs": "24", "market_demand": 0.95},
-    {"title": "Microservices Architecture",    "platform": "Coursera",    "skills_covered": "AWS|Microservices",           "rating": "4.8", "duration_hrs": "35", "market_demand": 0.93},
-    {"title": "AWS Certified Developer",       "platform": "A Cloud Guru","skills_covered": "CI/CD|AWS",                  "rating": "4.7", "duration_hrs": "40", "market_demand": 0.90},
-    {"title": "Docker & Kubernetes Mastery",   "platform": "Udemy",       "skills_covered": "CI/CD|Docker",               "rating": "4.6", "duration_hrs": "20", "market_demand": 0.88},
-    {"title": "CI/CD with GitHub Actions",     "platform": "A Cloud Guru","skills_covered": "CI/CD",                      "rating": "4.6", "duration_hrs": "15", "market_demand": 0.88},
-    {"title": "React - The Complete Guide",    "platform": "Udemy",       "skills_covered": "React|TypeScript",           "rating": "4.7", "duration_hrs": "45", "market_demand": 0.87},
-    {"title": "FastAPI Full Course",           "platform": "YouTube",     "skills_covered": "FastAPI|REST APIs",          "rating": "4.5", "duration_hrs": "10", "market_demand": 0.78},
-    {"title": "PostgreSQL Performance Tuning", "platform": "Pluralsight", "skills_covered": "PostgreSQL|SQL",             "rating": "4.4", "duration_hrs": "12", "market_demand": 0.75},
-    {"title": "Python Testing with pytest",    "platform": "Pragmatic",   "skills_covered": "Unit Testing",               "rating": "4.5", "duration_hrs": "8",  "market_demand": 0.78},
-    {"title": "GraphQL in Production",         "platform": "Frontend Masters", "skills_covered": "GraphQL",              "rating": "4.6", "duration_hrs": "6",  "market_demand": 0.80},
+    {"id": "system-design-dev", "title": "System Design for Developers",  "platform": "Coursera",    "skills_covered": "Microservices|System Design", "rating": "4.8", "duration_hrs": "24", "market_demand": 0.95},
+    {"id": "microservices-arch", "title": "Microservices Architecture",    "platform": "Coursera",    "skills_covered": "AWS|Microservices",           "rating": "4.8", "duration_hrs": "35", "market_demand": 0.93},
+    {"id": "aws-certified-dev", "title": "AWS Certified Developer",       "platform": "A Cloud Guru","skills_covered": "CI/CD|AWS",                  "rating": "4.7", "duration_hrs": "40", "market_demand": 0.90},
+    {"id": "docker-k8s", "title": "Docker & Kubernetes Mastery",   "platform": "Udemy",       "skills_covered": "CI/CD|Docker",               "rating": "4.6", "duration_hrs": "20", "market_demand": 0.88},
+    {"id": "cicd-gha", "title": "CI/CD with GitHub Actions",     "platform": "A Cloud Guru","skills_covered": "CI/CD",                      "rating": "4.6", "duration_hrs": "15", "market_demand": 0.88},
+    {"id": "react-complete", "title": "React - The Complete Guide",    "platform": "Udemy",       "skills_covered": "React|TypeScript",           "rating": "4.7", "duration_hrs": "45", "market_demand": 0.87},
+    {"id": "fastapi-full", "title": "FastAPI Full Course",           "platform": "YouTube",     "skills_covered": "FastAPI|REST APIs",          "rating": "4.5", "duration_hrs": "10", "market_demand": 0.78},
+    {"id": "postgres-tuning", "title": "PostgreSQL Performance Tuning", "platform": "Pluralsight", "skills_covered": "PostgreSQL|SQL",             "rating": "4.4", "duration_hrs": "12", "market_demand": 0.75},
+    {"id": "pytest", "title": "Python Testing with pytest",    "platform": "Pragmatic",   "skills_covered": "Unit Testing",               "rating": "4.5", "duration_hrs": "8",  "market_demand": 0.78},
+    {"id": "graphql-prod", "title": "GraphQL in Production",         "platform": "Frontend Masters", "skills_covered": "GraphQL",              "rating": "4.6", "duration_hrs": "6",  "market_demand": 0.80},
 ]
 
 POS_WORDS = {"great", "excellent", "good", "reliable", "delivers", "communicates",
@@ -150,8 +170,8 @@ def _compute_career_score(user, tasks, feedback_sentiment: float = 0.5) -> dict:
     }
 
 
-def _detect_weaknesses(user) -> list:
-    perf = {
+def _detect_weaknesses(user, perf_scores: Optional[dict] = None) -> list:
+    perf = perf_scores or {
         "commitment": (user.member_on_time_rate or 0.75) * 100,
         "teamwork":   (user.teamwork_score if hasattr(user, "teamwork_score") else 0.75) * 100,
         "quality":    (user.quality_score if hasattr(user, "quality_score") else 0.75) * 100,
@@ -174,10 +194,15 @@ def _detect_weaknesses(user) -> list:
     return sorted(results, key=lambda x: 0 if x["severity"] == "high" else 1)
 
 
-def _detect_strengths(user) -> list:
-    perf = {
+def _detect_strengths(user, perf_scores: Optional[dict] = None) -> list:
+    base = perf_scores or {
         "commitment": (user.member_on_time_rate or 0.75) * 100,
         "quality":    (user.quality_score if hasattr(user, "quality_score") else 0.75) * 100,
+    }
+    perf = {
+        "commitment": base.get("commitment", 75),
+        "quality": base.get("quality", 75),
+        "teamwork": base.get("teamwork", 75),
     }
     strengths = []
     for m, score in perf.items():
@@ -197,16 +222,42 @@ def _detect_skill_gaps(user) -> dict:
     target = LEVEL_NEXT.get(career_level, "Senior Developer")
     req = ROLE_REQUIREMENTS.get(target, {})
     required = set(req.get("skills", []))
-    min_prof = req.get("min_prof", 3)
     user_skills = set(s for s in (user.skills or []))
     owned = user_skills & required
     missing = sorted(required - owned, key=lambda s: SKILL_DEMAND.get(s, 0.5), reverse=True)
     gap_pct = round(len(missing) / max(len(required), 1) * 100, 1)
+
+    skill_details: list[dict[str, Any]] = []
+    n_miss = max(len(missing), 1)
+    for i, skill in enumerate(missing):
+        demand = SKILL_DEMAND.get(skill, 0.5)
+        priority = round(min(98, 55 + demand * 43 - i * (40 / n_miss)), 1)
+        skill_details.append({
+            "name": skill,
+            "owned": False,
+            "gap_score": priority,
+            "market_demand": round(demand * 100, 1),
+            "severity": "high" if i == 0 else "medium",
+            "message": f"Required for {target}",
+        })
+    for skill in sorted(owned):
+        demand = SKILL_DEMAND.get(skill, 0.5)
+        skill_details.append({
+            "name": skill,
+            "owned": True,
+            "gap_score": 100.0,
+            "market_demand": round(demand * 100, 1),
+            "severity": "owned",
+            "message": "Listed on your profile",
+        })
+
     return {
         "target_role":     target,
+        "current_level":   career_level,
         "required_skills": sorted(required),
         "owned_skills":    sorted(owned),
         "missing_skills":  missing,
+        "skill_details":   skill_details,
         "gap_pct":         gap_pct,
         "priority_skill":  missing[0] if missing else None,
     }
@@ -221,7 +272,12 @@ def _analyse_feedback(feedback_rows) -> dict:
 
     scores = []
     for row in feedback_rows:
-        text = (getattr(row, "comment", None) or getattr(row, "text", None) or "").lower()
+        text = (
+            getattr(row, "feedback_text", None)
+            or getattr(row, "comment", None)
+            or getattr(row, "text", None)
+            or ""
+        ).lower()
         sentiment = getattr(row, "sentiment", None)
         if sentiment == "positive":
             scores.append(0.85)
@@ -240,7 +296,12 @@ def _analyse_feedback(feedback_rows) -> dict:
                  "documentation", "testing", "reliability", "leadership"]
     word_freq: dict = defaultdict(int)
     for row in feedback_rows:
-        text = (getattr(row, "comment", None) or getattr(row, "text", None) or "").lower()
+        text = (
+            getattr(row, "feedback_text", None)
+            or getattr(row, "comment", None)
+            or getattr(row, "text", None)
+            or ""
+        ).lower()
         for kw in career_kw:
             if kw in text:
                 word_freq[kw] += 1
@@ -332,11 +393,92 @@ def _recommend_courses(gaps, top_n=5) -> list:
         demand = float(c["market_demand"])
         relevance = gap_match * 0.50 + rating_norm * 0.30 + demand * 0.20
         recs.append({
-            "title": c["title"], "platform": c["platform"],
-            "relevance": round(relevance, 3), "fills": sorted(overlap),
-            "rating": c["rating"], "hours": c["duration_hrs"],
+            "id": c.get("id", ""),
+            "title": c["title"],
+            "platform": c["platform"],
+            "url": _course_enroll_url(c["platform"], c["title"]),
+            "relevance": round(relevance, 3),
+            "fills": sorted(overlap),
+            "rating": c["rating"],
+            "hours": c["duration_hrs"],
+            "duration": f"{c['duration_hrs']} hrs",
+            "level": "Recommended",
         })
     return sorted(recs, key=lambda x: x["relevance"], reverse=True)[:top_n]
+
+
+# ── DB-backed performance snapshot ────────────────────────────────────────────
+
+def get_db_performance_snapshot(user_id: int) -> dict:
+    """Aggregate commitment/teamwork/quality and history from Feedback + Rating rows."""
+    from collections import defaultdict
+
+    from models import db
+    from models.feedback import Feedback
+    from models.rating import Rating
+    from models.user import User
+
+    user = db.session.get(User, user_id)
+    feedbacks = (
+        Feedback.query.filter_by(user_id=user_id)
+        .order_by(Feedback.created_at.asc())
+        .all()
+    )
+    ratings = (
+        Rating.query.filter_by(ratee_id=user_id)
+        .order_by(Rating.created_at.asc())
+        .all()
+    )
+
+    def _avg(vals: list[float]) -> Optional[float]:
+        return round(sum(vals) / len(vals), 1) if vals else None
+
+    quality_vals = [f.quality_score * 20 for f in feedbacks if f.quality_score is not None]
+    teamwork_vals = [f.teamwork_score * 20 for f in feedbacks if f.teamwork_score is not None]
+    rating_vals = [r.score * 20 for r in ratings]
+
+    commitment = round((user.member_on_time_rate or 0.75) * 100, 1) if user else 75.0
+    quality = _avg(quality_vals) or _avg(rating_vals)
+    teamwork = _avg(teamwork_vals) or quality
+
+    scores = {
+        "commitment": commitment,
+        "teamwork": teamwork if teamwork is not None else commitment,
+        "quality": quality if quality is not None else teamwork if teamwork is not None else commitment,
+    }
+    overall = round(sum(scores.values()) / 3, 1)
+
+    by_month: dict[str, list[float]] = defaultdict(list)
+    for fb in feedbacks:
+        if not fb.created_at:
+            continue
+        pts: list[float] = []
+        if fb.quality_score is not None:
+            pts.append(fb.quality_score * 20)
+        if fb.teamwork_score is not None:
+            pts.append(fb.teamwork_score * 20)
+        if fb.avg_rating is not None:
+            pts.append(fb.avg_rating * 20)
+        if pts:
+            by_month[fb.created_at.strftime("%Y-%m")].append(sum(pts) / len(pts))
+
+    for rating in ratings:
+        if not rating.created_at:
+            continue
+        by_month[rating.created_at.strftime("%Y-%m")].append(rating.score * 20)
+
+    history = [
+        {"period": period, "score": round(sum(vals) / len(vals), 1)}
+        for period, vals in sorted(by_month.items())
+    ][-12:]
+
+    return {
+        "scores": scores,
+        "overall": overall,
+        "history": history,
+        "feedback_count": len(feedbacks),
+        "rating_count": len(ratings),
+    }
 
 
 # ── Public API ─────────────────────────────────────────────────────────────────
@@ -356,29 +498,69 @@ def generate_mentor_report(user_id: int) -> dict:
     if not user:
         return {"error": f"User {user_id} not found"}
 
-    tasks = Task.query.filter_by(assigned_to=user_id).all()
-    feedback_rows = []
     try:
-        feedback_rows = Feedback.query.filter_by(reviewee_id=user_id).all()
+        tasks = Task.query.filter_by(assigned_to=user_id).all()
     except Exception:
-        try:
-            feedback_rows = Feedback.query.filter_by(recipient_id=user_id).all()
-        except Exception:
-            feedback_rows = []
+        tasks = []
+    try:
+        feedback_rows = Feedback.query.filter_by(user_id=user_id).all()
+    except Exception:
+        feedback_rows = []
 
+    try:
+        perf_snapshot = get_db_performance_snapshot(user_id)
+    except Exception:
+        perf_snapshot = {
+            "scores": {"commitment": 75, "teamwork": 75, "quality": 75},
+            "overall": 75,
+            "history": [],
+            "feedback_count": 0,
+            "rating_count": 0,
+        }
     nlp = _analyse_feedback(feedback_rows)
     scores = _compute_career_score(user, tasks, nlp["avg_sentiment_score"])
-    weaknesses = _detect_weaknesses(user)
-    strengths = _detect_strengths(user)
+    if perf_snapshot["feedback_count"] or perf_snapshot["rating_count"]:
+        scores["total_score"] = perf_snapshot["overall"]
+        scores["breakdown"]["performance_avg"] = perf_snapshot["overall"]
+
+    weaknesses = _detect_weaknesses(user, perf_snapshot["scores"])
+    strengths = _detect_strengths(user, perf_snapshot["scores"])
     gaps = _detect_skill_gaps(user)
     report = _generate_report(user, scores, weaknesses, strengths, nlp, gaps)
     course_recs = _recommend_courses(gaps)
+
+    done = [t for t in tasks if getattr(t, "status", None) == "done"]
+    user_profile = {
+        "skills": list(user.skills or []),
+        "experience_level": user.experience_level,
+        "professional_field": getattr(user, "professional_field", None),
+        "member_experience_years": getattr(user, "member_experience_years", None),
+        "availability": getattr(user, "availability", None),
+        "tasks_assigned": len(tasks),
+        "tasks_completed": len(done),
+        "feedback_count": perf_snapshot.get("feedback_count", 0),
+        "rating_count": perf_snapshot.get("rating_count", 0),
+    }
+
+    if not perf_snapshot.get("history") and scores["total_score"]:
+        perf_snapshot = {
+            **perf_snapshot,
+            "history": [{
+                "period": datetime.now(timezone.utc).strftime("%Y-%m"),
+                "score": scores["total_score"],
+            }],
+        }
+
+    summary = report.split("##")[1].strip() if "##" in report else report[:280]
 
     return {
         "user_id": user_id,
         "user_name": user.display_name,
         "career_level": getattr(user, "career_level", user.experience_level or "Junior Developer"),
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "summary": summary,
+        "user_profile": user_profile,
+        "overall_score": scores["total_score"],
         "career_progress": {
             "score":          scores["total_score"],
             "level":          scores["level"],
@@ -391,4 +573,301 @@ def generate_mentor_report(user_id: int) -> dict:
         "feedback_nlp":  nlp,
         "top_courses":   course_recs,
         "mentor_report": report,
+        "performance_snapshot": perf_snapshot,
+        "ml_rating": _safe_ml_rating(user_id),
     }
+
+
+def _safe_ml_rating(user_id: int) -> dict:
+    try:
+        return _predict_ml_rating_for_user(user_id)
+    except Exception as exc:
+        logger.warning("ML rating skipped for user %s: %s", user_id, exc)
+        return {
+            "predicted_rating": 3.0,
+            "performance_label": "Good",
+            "percentile_label": "Good",
+            "source": "default",
+        }
+
+
+def build_user_ml_stats(user_id: int) -> dict:
+    """Build feature dict for Profiles&AI Rating teamify_model.pkl from live DB."""
+    from models import db
+    from models.feedback import Feedback
+    from models.rating import Rating
+    from models.task import Task
+    from models.user import User
+
+    user = db.session.get(User, user_id)
+    if not user:
+        return {}
+
+    tasks = Task.query.filter_by(assigned_to=user_id).all()
+    assigned = len(tasks)
+    completed = sum(1 for t in tasks if (t.status or "").lower() == "done")
+    now = datetime.now(timezone.utc)
+    overdue = 0
+    for t in tasks:
+        if (t.status or "").lower() == "done":
+            continue
+        due = getattr(t, "due_date", None)
+        if due is not None:
+            if isinstance(due, date) and not isinstance(due, datetime):
+                due_dt = datetime.combine(due, datetime.min.time(), tzinfo=timezone.utc)
+            elif isinstance(due, datetime):
+                due_dt = due if due.tzinfo else due.replace(tzinfo=timezone.utc)
+            else:
+                continue
+            if due_dt < now:
+                overdue += 1
+
+    feedbacks = Feedback.query.filter_by(user_id=user_id).all()
+    ratings = Rating.query.filter_by(ratee_id=user_id).all()
+
+    q_scores = [f.quality_score for f in feedbacks if f.quality_score is not None]
+    t_scores = [f.teamwork_score for f in feedbacks if f.teamwork_score is not None]
+    r_scores = [r.score for r in ratings]
+
+    quality = round(sum(q_scores) / len(q_scores), 2) if q_scores else 3.5
+    teamwork = round(sum(t_scores) / len(t_scores), 2) if t_scores else 3.5
+    avg_rating = round(sum(r_scores) / len(r_scores), 2) if r_scores else 3.5
+    skills = user.skills or []
+
+    return {
+        "tasks_assigned": assigned or max(completed, 1),
+        "tasks_completed": completed,
+        "overdue_tasks": overdue,
+        "quality_score": quality,
+        "teamwork_score": teamwork,
+        "attendance_rate": float(user.member_on_time_rate or 0.85),
+        "skill_match_score": min(len(skills) / 8.0, 1.0),
+        "avg_rating": avg_rating,
+        "availability_score": 0.85,
+        "project_similarity": 0.65,
+    }
+
+
+def _predict_ml_rating_for_user(user_id: int) -> dict:
+    from services.profile_rating_service import predict_user_rating
+
+    stats = build_user_ml_stats(user_id)
+    if not stats:
+        return {"predicted_rating": 3.0, "performance_label": "Good", "source": "default"}
+    return predict_user_rating(stats)
+
+
+def _areas_from_report(mentor_data: dict) -> tuple[list[str], list[str], list[dict], str, float]:
+    strengths_raw = mentor_data.get("strengths") or []
+    courses = mentor_data.get("top_courses") or []
+    progress = mentor_data.get("career_progress") or {}
+    level = progress.get("level", "Developer")
+    score = float(
+        mentor_data.get("overall_score")
+        or progress.get("score", 0)
+    )
+
+    gaps_data = mentor_data.get("skill_gaps") or {}
+    skill_gaps = list(gaps_data.get("missing_skills") or [])
+    if not skill_gaps:
+        skill_gaps = [
+            str(d.get("name"))
+            for d in (gaps_data.get("skill_details") or [])
+            if isinstance(d, dict) and d.get("name") and not d.get("owned")
+        ]
+
+    strength_list = [
+        s.get("area") for s in strengths_raw
+        if isinstance(s, dict) and s.get("area")
+    ]
+    return skill_gaps, strength_list, courses, level, score
+
+
+def generate_feedback_draft(
+    *,
+    rating: int,
+    teammate_name: str = "your teammate",
+    project_name: str = "the project",
+) -> dict:
+    """Build peer-feedback comment text from rating and context (no external API)."""
+    name = (teammate_name or "your teammate").strip()
+    project = (project_name or "the project").strip()
+    r = max(1, min(5, int(rating)))
+
+    drafts = {
+        1: (
+            f"Working with {name} on {project} was difficult. Communication was inconsistent "
+            f"and deadlines were often missed. Clearer updates and more reliable follow-through "
+            f"would help the team."
+        ),
+        2: (
+            f"{name} contributed to {project}, but there is room to improve collaboration. "
+            f"Tasks were sometimes delayed and expectations were not always clear. "
+            f"More proactive communication would make a big difference."
+        ),
+        3: (
+            f"{name} was a solid teammate on {project}. They completed assigned work and "
+            f"participated in discussions. With sharper prioritization and faster responses, "
+            f"they could have an even stronger impact."
+        ),
+        4: (
+            f"{name} was a strong collaborator on {project}. They delivered quality work, "
+            f"communicated well, and supported the team during key milestones. "
+            f"Their reliability made the project smoother."
+        ),
+        5: (
+            f"{name} was an outstanding partner on {project}. They consistently delivered "
+            f"high-quality work, communicated clearly, and proactively helped unblock the team. "
+            f"I would gladly work with them again."
+        ),
+    }
+    draft = drafts[r]
+    tip = (
+        "Consider mentioning specific achievements or areas for improvement "
+        "to make your feedback more actionable."
+    )
+    return {"draft": draft, "suggestion": tip}
+
+
+def generate_mentor_chat_reply(
+    user_id: int,
+    question: str,
+    mentor_data: dict,
+) -> tuple[str, list[str], dict]:
+    """
+    ML-backed mentor reply using teamify_model.pkl + career report from DB.
+    Returns (reply_text, suggestions, ml_metadata).
+    """
+    ml = mentor_data.get("ml_rating") or _predict_ml_rating_for_user(user_id)
+    skill_gaps, strength_list, courses, level, career_score = _areas_from_report(mentor_data)
+    name = mentor_data.get("user_name") or "there"
+    q_lower = question.lower().strip()
+
+    reply = _ml_intent_reply(
+        q_lower, name, level, career_score, skill_gaps, strength_list, courses, ml, mentor_data
+    )
+
+    suggestions: list[str] = []
+    if skill_gaps:
+        suggestions.append(f"How do I improve my {skill_gaps[0]}?")
+    if courses:
+        suggestions.append(f"Tell me about '{courses[0].get('title', '')}'")
+    if ml.get("source") == "ml_model":
+        suggestions.append("What does my ML performance rating mean?")
+    suggestions.append("What should I focus on this week?")
+
+    meta = {
+        "source": ml.get("source", "formula"),
+        "predicted_rating": ml.get("predicted_rating"),
+        "performance_label": ml.get("percentile_label") or ml.get("performance_label"),
+        "career_score": career_score,
+        "career_level": level,
+        "model": "Profiles&AI Rating/teamify_model.pkl",
+    }
+    return reply, suggestions[:3], meta
+
+
+def _ml_intent_reply(
+    q_lower: str,
+    name: str,
+    level: str,
+    career_score: float,
+    skill_gaps: list[str],
+    strengths: list[str],
+    courses: list[dict],
+    ml: dict,
+    mentor_data: dict,
+) -> str:
+    pred = float(ml.get("predicted_rating") or 3.0)
+    label = ml.get("percentile_label") or ml.get("performance_label") or "Good"
+    ml_tag = (
+        f"Our ML model (teamify_model.pkl) rates your performance **{pred:.1f}/5** ({label})."
+        if ml.get("source") == "ml_model"
+        else f"Your estimated performance is **{pred:.1f}/5** ({label})."
+    )
+
+    if any(g in q_lower for g in ("hi", "hello", "hey", "allo", "salut", "bonjour", "good morning", "good evening")):
+        gaps_txt = ", ".join(skill_gaps[:2]) if skill_gaps else "building core skills"
+        return (
+            f"Hi {name}! I'm your AI Career Mentor, powered by Teamify's ML rating model.\n\n"
+            f"{ml_tag} You're at **{level}** with a career score of **{career_score:.0f}/100**.\n"
+            f"Top focus areas: {gaps_txt}. Ask me about courses, promotion, or your skill gaps."
+        )
+
+    if any(kw in q_lower for kw in ("rating", "score", "performance", "how am i", "doing")):
+        snap = mentor_data.get("performance_snapshot") or {}
+        sc = snap.get("scores") or {}
+        return (
+            f"{ml_tag}\n\n"
+            f"Career score: **{career_score:.0f}/100** ({level}).\n"
+            f"From your database records — Commitment: **{sc.get('commitment', career_score):.0f}**, "
+            f"Teamwork: **{sc.get('teamwork', career_score):.0f}**, "
+            f"Quality: **{sc.get('quality', career_score):.0f}**.\n"
+            f"Peer feedback entries: {snap.get('feedback_count', 0)}, "
+            f"ratings: {snap.get('rating_count', 0)}."
+        )
+
+    if any(kw in q_lower for kw in ("ml", "model", "predict")):
+        return (
+            f"Teamify uses **GradientBoosting** in `ml_models/Profiles&AI Rating/teamify_model.pkl` "
+            f"trained on profile features (tasks, quality, teamwork, attendance, ratings).\n\n"
+            f"{ml_tag} Career score from your live tasks and feedback: **{career_score:.0f}/100**."
+        )
+
+    if any(kw in q_lower for kw in ("course", "learn", "study", "recommend")):
+        if courses:
+            lines = [
+                f"• **{c.get('title', 'Course')}** ({c.get('platform', 'Online')}, "
+                f"{c.get('hours', '?')} hrs, relevance {c.get('relevance', '—')})"
+                for c in courses[:4]
+            ]
+            return (
+                f"Based on your skill gaps ({', '.join(skill_gaps[:3]) or 'profile'}), "
+                f"the ML mentor recommends:\n" + "\n".join(lines) + f"\n\n{ml_tag}"
+            )
+        return f"I don't have course matches yet — add skills to your profile. {ml_tag}"
+
+    if any(kw in q_lower for kw in ("focus", "improve", "next", "should i", "gap")):
+        if skill_gaps:
+            w_msgs = [
+                w.get("message", "") for w in (mentor_data.get("weaknesses") or [])
+                if isinstance(w, dict) and w.get("area") in skill_gaps[:2]
+            ]
+            detail = w_msgs[0] if w_msgs else f"Strengthen {skill_gaps[0]} through deliberate practice."
+            return (
+                f"Priority focus: **{skill_gaps[0]}**. {detail}\n\n"
+                f"{ml_tag} Target **75+** career score for your next level ({level})."
+            )
+        return (
+            f"Keep completing tasks on time and collect peer feedback to refine your ML rating. {ml_tag}"
+        )
+
+    if any(kw in q_lower for kw in ("promot", "level up", "senior", "lead")):
+        target = (mentor_data.get("skill_gaps") or {}).get("target_role", "next role")
+        return (
+            f"To move from **{level}** toward **{target}**, close gaps in "
+            f"{', '.join(skill_gaps[:3]) or 'technical leadership'}.\n\n"
+            f"{ml_tag} Aim for career score **75+** (currently {career_score:.0f})."
+        )
+
+    if any(kw in q_lower for kw in ("strength", "good at")):
+        if strengths:
+            return (
+                f"Your strengths: **{', '.join(strengths[:3])}**. "
+                f"Use them on visible project work.\n\n{ml_tag}"
+            )
+        return f"Strengths are still forming — deliver consistently to build your ML profile. {ml_tag}"
+
+    if len(q_lower) <= 4:
+        return (
+            f"I heard you! Ask something specific — e.g. courses, promotion, or your ML rating.\n\n"
+            f"{ml_tag} Career level: **{level}**."
+        )
+
+    return (
+        f"Here's personalized guidance for **{name}**:\n\n"
+        f"{ml_tag} Level: **{level}**, career score **{career_score:.0f}/100**.\n"
+        f"Develop: {', '.join(skill_gaps[:3]) or 'technical depth'}. "
+        f"Strengths: {', '.join(strengths[:3]) or 'emerging'}.\n\n"
+        f"Try: \"Recommend courses\", \"What's my ML rating?\", or \"What should I focus on?\""
+    )

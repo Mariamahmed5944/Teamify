@@ -28,11 +28,14 @@ class TaskComment(db.Model):
         default=lambda: datetime.now(timezone.utc),
     )
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
     # ─── Transparent encrypt/decrypt ─────────────────────────────────────────
 
     @property
     def content(self) -> str:
-        return decrypt_text(self._content_encrypted)
+        return decrypt_text(self._content_encrypted) or ""
 
     @content.setter
     def content(self, value: str) -> None:

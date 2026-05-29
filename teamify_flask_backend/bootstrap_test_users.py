@@ -42,21 +42,21 @@ except ImportError:
 try:
     # Check if admin_master exists
     row = session.execute(
-        text("SELECT id, role, account_status FROM users WHERE email = :e"),
+        text("SELECT id, role FROM users WHERE email = :e"),
         {"e": "admin@teamify.com"}
     ).fetchone()
 
     if row:
         uid = row[0]
-        if row[1] != "admin" or row[2] != "approved":
+        if row[1] != "admin":
             session.execute(
-                text("UPDATE users SET role='admin', account_status='approved' WHERE id=:i"),
+                text("UPDATE users SET role='admin' WHERE id=:i"),
                 {"i": uid}
             )
             session.commit()
-            print(f"[bootstrap] Promoted existing user id={uid} to admin/approved")
+            print(f"[bootstrap] Promoted existing user id={uid} to admin")
         else:
-            print(f"[bootstrap] admin@teamify.com already admin/approved  id={uid}")
+            print(f"[bootstrap] admin@teamify.com already admin  id={uid}")
     else:
         # Insert new admin user
         pw_hash = _hash("Password123!")
@@ -64,10 +64,10 @@ try:
             text("""
                 INSERT INTO users
                     (display_name, full_name, email, password,
-                     role, user_type, account_status)
+                     role, user_type)
                 VALUES
                     ('admin_master', 'System Admin', 'admin@teamify.com', :pw,
-                     'admin', 'freelancer', 'approved')
+                     'admin', 'freelancer')
                 RETURNING id
             """),
             {"pw": pw_hash}

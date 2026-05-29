@@ -47,6 +47,9 @@ class Task(db.Model):
         db.Index("ix_tasks_assigned_to", "assigned_to"),
     )
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
     # ─── AI Calculated Properties ────────────────────────────────────────────
 
     @property

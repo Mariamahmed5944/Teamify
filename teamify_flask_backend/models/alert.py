@@ -27,6 +27,9 @@ class Alert(db.Model):
         db.Index("ix_alerts_resolved_time", "resolved", "timestamp"),
     )
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
     def to_dict(self) -> dict:
         return {
             "id": self.id,

@@ -23,6 +23,11 @@ class UserModel {
 // ── Task ──────────────────────────────────────────────────────────────────────
 class TaskModel {
   final String id, title, assignee, assigneeInitials, status, priority, dueDate;
+  final String description;
+  final String assigneeId;
+  final String assigneeEmail;
+  final String assigneeDisplayName;
+
   const TaskModel({
     required this.id,
     required this.title,
@@ -31,12 +36,20 @@ class TaskModel {
     required this.status,
     required this.priority,
     required this.dueDate,
+    this.description = '',
+    this.assigneeId = '',
+    this.assigneeEmail = '',
+    this.assigneeDisplayName = '',
   });
 }
 
 // ── Project ───────────────────────────────────────────────────────────────────
 class ProjectModel {
   final String id, name, company, description, status, delayRisk;
+  final String ownerId;
+  final String ownerName;
+  final String startDate;
+  final String endDate;
   final int progress;
   final List<TaskModel> tasks;
   final List<String> members;
@@ -48,15 +61,53 @@ class ProjectModel {
     required this.status,
     required this.delayRisk,
     required this.progress,
+    this.ownerId = '',
+    this.ownerName = '',
+    this.startDate = '',
+    this.endDate = '',
     this.tasks = const [],
     this.members = const [],
   });
+
+  ProjectModel copyWith({
+    String? id,
+    String? name,
+    String? company,
+    String? description,
+    String? status,
+    String? delayRisk,
+    String? ownerId,
+    String? ownerName,
+    String? startDate,
+    String? endDate,
+    int? progress,
+    List<TaskModel>? tasks,
+    List<String>? members,
+  }) {
+    return ProjectModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      company: company ?? this.company,
+      description: description ?? this.description,
+      status: status ?? this.status,
+      delayRisk: delayRisk ?? this.delayRisk,
+      ownerId: ownerId ?? this.ownerId,
+      ownerName: ownerName ?? this.ownerName,
+      startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
+      progress: progress ?? this.progress,
+      tasks: tasks ?? this.tasks,
+      members: members ?? this.members,
+    );
+  }
 }
 
 // ── Chat ──────────────────────────────────────────────────────────────────────
 class ChatMessage {
   final String id, senderId, senderName, senderInitials, message, time;
   final bool isMe;
+  final bool isPending;
+
   const ChatMessage({
     required this.id,
     required this.senderId,
@@ -65,6 +116,7 @@ class ChatMessage {
     required this.message,
     required this.time,
     this.isMe = false,
+    this.isPending = false,
   });
 }
 

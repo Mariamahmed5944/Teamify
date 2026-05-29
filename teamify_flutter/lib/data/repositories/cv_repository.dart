@@ -38,6 +38,11 @@ class CVRepository {
     return ApiCV.fromJson(cv.isNotEmpty ? cv : data);
   }
 
+  // DELETE /api/cv/<id>
+  Future<void> deleteCV(String id) async {
+    await _client.delete<dynamic>('/api/cv/$id');
+  }
+
   // PATCH /api/cv/<id>
   Future<ApiCV> updateCV(String id, Map<String, dynamic> payload) async {
     final response =
@@ -51,7 +56,10 @@ class CVRepository {
   Future<Response<List<int>>> exportPdf(String id) {
     return _client.get<List<int>>(
       '/api/cv/$id/export/pdf',
-      options: Options(responseType: ResponseType.bytes),
+      options: Options(
+        responseType: ResponseType.bytes,
+        headers: const {'Accept': '*/*'},
+      ),
     );
   }
 

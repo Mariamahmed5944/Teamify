@@ -31,6 +31,8 @@ class AuthService with ServiceErrorHandler {
     required String password,
   }) =>
       guard(() async {
+        // Prevent cross-account data leakage from SWR/offline caches.
+        await _cache.clearAll();
         final result = await _session.login(email: email, password: password);
         return result.user;
       });
@@ -70,7 +72,7 @@ class AuthService with ServiceErrorHandler {
   Future<ApiResult<String>> verifyOtp(String email, String otp) =>
       guard(() async {
         final data = await _repo.verifyOtp(email, otp);
-        return data['token']?.toString() ?? '';
+        return data['reset_token']?.toString() ?? data['token']?.toString() ?? '';
       });
 
   Future<ApiResult<void>> resetPassword(String token, String newPassword) =>
@@ -81,9 +83,16 @@ class AuthService with ServiceErrorHandler {
   Future<ApiResult<ApiUser?>> loginWithGoogle(String idToken,
           {String? userType}) =>
       guard(() async {
-        // Call repo for token saving side-effect
+        await _cache.clearAll();
         await _repo.loginWithGoogle(idToken, userType: userType);
-        // Restore session properly to batch state updates + notifyListeners
+        await _session.restoreSession();
+        return _session.currentUser;
+      });
+
+  Future<ApiResult<ApiUser?>> loginWithGithub(String code, {String? userType}) =>
+      guard(() async {
+        await _cache.clearAll();
+        await _repo.loginWithGithub(code, userType: userType);
         await _session.restoreSession();
         return _session.currentUser;
       });

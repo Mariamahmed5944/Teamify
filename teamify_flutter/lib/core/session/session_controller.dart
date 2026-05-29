@@ -55,10 +55,20 @@ class SessionController extends ChangeNotifier {
     final result =
         await _authRepository.login(email: email, password: password);
     currentUser = result.user;
+    final hasSession = await _authRepository.hasSavedSession();
+    if (currentUser == null && hasSession) {
+      try {
+        currentUser = await _authRepository.me();
+      } catch (_) {}
+    }
     lastMessage = result.message;
-    status = (result.user?.isPending ?? false)
-        ? SessionStatus.pendingApproval
-        : SessionStatus.authenticated;
+    if (currentUser == null && !hasSession) {
+      status = SessionStatus.unauthenticated;
+    } else {
+      status = (currentUser?.isPending ?? false)
+          ? SessionStatus.pendingApproval
+          : SessionStatus.authenticated;
+    }
     notifyListeners();
     return result;
   }
@@ -88,6 +98,19 @@ class SessionController extends ChangeNotifier {
         : SessionStatus.authenticated;
     notifyListeners();
     return result;
+  }
+
+  /// Update in-memory user after profile edits (avoids extra /me round-trip).
+  void setCurrentUser(ApiUser? user) {
+    currentUser = user;
+    if (user == null) {
+      status = SessionStatus.unauthenticated;
+    } else {
+      status = user.isPending
+          ? SessionStatus.pendingApproval
+          : SessionStatus.authenticated;
+    }
+    notifyListeners();
   }
 
   Future<void> logout() async {

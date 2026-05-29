@@ -2,14 +2,17 @@
 from __future__ import annotations
 
 import io
+import logging
 import os
+import re
+import unicodedata
 import uuid
 from datetime import datetime, timezone
 
 from flask import Blueprint, current_app, jsonify, request, send_file
 from flask_jwt_extended import get_jwt_identity
 
-from middleware.auth import auth_required
+from middleware.auth import auth_required, get_project_role, _READ_ROLES
 from models import db
 from models.alert import Alert
 from models.file_metadata import FileMetadata
@@ -22,11 +25,49 @@ from utils.crypto import (
     verify_hash,
 )
 
+logger = logging.getLogger(__name__)
+
 files_bp = Blueprint("files", __name__, url_prefix="/api/files")
 
-# Allowlist of MIME types we accept. Adjust to your domain.
-ALLOWED_MIME_PREFIXES = ("image/", "application/pdf", "text/")
+# ── Security constants ─────────────────────────────────────────────────────────
+
+# Hard size cap (10 MB). Flask's MAX_CONTENT_LENGTH catches oversized multi-part
+# requests before they hit this handler; this is a double-check on the raw bytes.
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
+
+# Allowlisted MIME prefixes. Client-supplied MIME is verified; we also sniff
+# magic bytes to detect spoofed Content-Type headers.
+ALLOWED_MIME_PREFIXES: tuple[str, ...] = (
+    "image/",
+    "application/pdf",
+    "text/plain",
+    "text/csv",
+    "application/vnd.openxmlformats-officedocument",  # .docx/.xlsx/.pptx
+    "application/msword",
+    "application/vnd.ms-excel",
+    "application/vnd.ms-powerpoint",
+    "application/zip",
+)
+
+# Blocked file extensions — executables, scripts, and other dangerous types.
+BLOCKED_EXTENSIONS: frozenset[str] = frozenset(
+    {
+        ".exe", ".com", ".cmd", ".bat", ".sh", ".ps1", ".vbs", ".js", ".mjs",
+        ".cjs", ".ts", ".py", ".rb", ".pl", ".php", ".apk", ".ipa", ".dmg",
+        ".msi", ".dll", ".so", ".dylib", ".jar", ".class", ".war", ".ear",
+        ".pif", ".scr", ".hta", ".lnk", ".reg", ".inf",
+    }
+)
+
+# Magic-byte signatures of blocked executable formats:
+# Each entry: (offset, bytes_to_match)
+_BLOCKED_MAGIC: list[tuple[int, bytes]] = [
+    (0, b"MZ"),          # Windows PE / DOS executable
+    (0, b"\x7fELF"),     # Linux ELF binary
+    (0, b"#!/"),         # Shell shebang  (#!/bin/sh, #!/usr/bin/env, …)
+    (0, b"#!"),          # Broader shebang catch
+    (0, b"PK\x03\x04"),  # ZIP — allowed only via MIME allowlist (double-check below)
+]
 
 
 def _upload_dir() -> str:
@@ -37,6 +78,56 @@ def _upload_dir() -> str:
 
 def _is_allowed_mime(mime: str) -> bool:
     return any(mime.startswith(p) for p in ALLOWED_MIME_PREFIXES)
+
+
+def _is_blocked_extension(filename: str) -> bool:
+    """Return True when the filename ends with a blocked extension."""
+    parts = filename.lower().rsplit(".", 1)
+    ext = "." + parts[1] if len(parts) > 1 else ""
+    return ext in BLOCKED_EXTENSIONS
+
+
+def _has_blocked_magic(data: bytes) -> bool:
+    """Return True if magic bytes indicate an executable / script payload."""
+    for offset, magic in _BLOCKED_MAGIC:
+        # Skip the ZIP magic-byte check — ZIP is allowed (e.g. .docx)
+        if magic == b"PK\x03\x04":
+            continue
+        if data[offset : offset + len(magic)] == magic:
+            return True
+    # Catch shebangs up to 512 bytes in (some editors insert BOM)
+    head = data[:512]
+    if re.search(rb"^(?:\xef\xbb\xbf)?#!", head):
+        return True
+    return False
+
+
+def _sanitize_filename(filename: str) -> str:
+    """
+    Return a safe filename:
+    - Unicode normalised to NFKC
+    - Non-ASCII stripped
+    - Path separators / null bytes removed
+    - Collapsed whitespace replaced with underscore
+    - Truncated to 200 characters (preserving extension)
+    """
+    # Normalise unicode, strip non-printable / non-ASCII
+    normalised = unicodedata.normalize("NFKC", filename)
+    safe = re.sub(r"[^\w\s.\-]", "", normalised, flags=re.ASCII)
+    # Remove path traversal sequences
+    safe = safe.replace("..", "").replace("/", "").replace("\\", "").replace("\x00", "")
+    safe = re.sub(r"\s+", "_", safe).strip("._")
+    if not safe:
+        safe = "upload"
+    # Preserve extension, truncate stem
+    parts = safe.rsplit(".", 1)
+    if len(parts) > 1:
+        root, ext = parts[0], "." + parts[1]
+    else:
+        root, ext = safe, ""
+    ext = ext[:10]  # cap extension length
+    max_stem = 200 - len(ext)
+    return root[:max_stem] + ext
 
 
 # ─── POST /api/files ─────────────────────────────────────────────────────────
@@ -91,55 +182,103 @@ def upload_file():
 
     upload = request.files["file"]
     if not upload or not upload.filename:
-        return jsonify({"error": "Empty file"}), 400
+        return jsonify({"error": "Empty file name"}), 400
 
+    # ── 0. Sanitize filename BEFORE any further use ────────────────────────
+    original_filename = _sanitize_filename(upload.filename)
+    if not original_filename:
+        return jsonify({"error": "Invalid filename"}), 400
+
+    # ── 1. Extension allowlist — block executables / scripts ──────────────
+    if _is_blocked_extension(original_filename):
+        parts = original_filename.lower().rsplit(".", 1)
+        ext = "." + parts[1] if len(parts) > 1 else ""
+        logger.warning(
+            "Blocked upload of dangerous extension '%s' by user %s",
+            ext,
+            get_jwt_identity(),
+        )
+        return jsonify({"error": f"Unsupported media type: File type '{ext}' is not allowed"}), 415
+
+    # ── 2. Read body ───────────────────────────────────────────────────────
     raw = upload.read()
     if not raw:
-        return jsonify({"error": "Empty file"}), 400
+        return jsonify({"error": "Empty file body"}), 400
     if len(raw) > MAX_UPLOAD_BYTES:
         return jsonify({"error": "File exceeds 10 MB limit"}), 413
 
-    mime = upload.mimetype or "application/octet-stream"
+    # ── 3. MIME validation (client-supplied header) ───────────────────────
+    mime = (upload.mimetype or "application/octet-stream").split(";")[0].strip()
     if not _is_allowed_mime(mime):
+        logger.warning(
+            "Blocked upload with MIME '%s' by user %s", mime, get_jwt_identity()
+        )
         return jsonify({"error": f"Unsupported media type: {mime}"}), 415
 
-    # 1. Hash ORIGINAL bytes
+    # ── 4. Magic-byte validation (detects spoofed MIME) ───────────────────
+    if _has_blocked_magic(raw):
+        logger.warning(
+            "Blocked upload: magic bytes indicate executable, user %s filename '%s'",
+            get_jwt_identity(),
+            original_filename,
+        )
+        return jsonify({"error": "File content is not allowed (executable detected)"}), 415
+
+    # ── 5. SHA-256 of original plaintext ──────────────────────────────────
     digest = sha256_hex(raw)
 
-    # 2. Encrypt
+    # ── 6. Encrypt ────────────────────────────────────────────────────────
     try:
         ciphertext = encrypt_bytes(raw)
     except RuntimeError as exc:
         return jsonify({"error": str(exc)}), 500
 
-    # 3. Write to a server-generated path (no client-controlled names)
+    # ── 7. Write to server-generated path (never client-controlled) ───────
     file_id = uuid.uuid4()
     enc_filename = f"{file_id}.enc"
     enc_path = os.path.join(_upload_dir(), enc_filename)
-    # O_EXCL prevents clobbering an existing file with the same name.
+    # O_EXCL prevents clobbering an existing file with the same UUID.
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
     fd = os.open(enc_path, flags, 0o600)
     try:
         with os.fdopen(fd, "wb") as fh:
             fh.write(ciphertext)
     except Exception:
-        # Make sure no partial file is left behind
         try:
             os.unlink(enc_path)
         except OSError:
             pass
         raise
 
-    # 4. Persist metadata
+    # ── 8. Persist metadata ────────────────────────────────────────────────
     try:
         owner_id = int(get_jwt_identity())
     except (ValueError, TypeError):
         os.unlink(enc_path)
         return jsonify({"error": "Invalid token identity"}), 401
 
+    project_id = None
+    project_id_raw = request.form.get("project_id", "").strip()
+    if project_id_raw:
+        try:
+            project_id = int(project_id_raw)
+        except ValueError:
+            os.unlink(enc_path)
+            return jsonify({"error": "Invalid project_id"}), 400
+        from models.project import Project
+
+        project = Project.query.get(project_id)
+        if not project:
+            os.unlink(enc_path)
+            return jsonify({"error": "Project not found"}), 404
+        if get_project_role(owner_id, project_id) not in _READ_ROLES:
+            os.unlink(enc_path)
+            return jsonify({"error": "Forbidden"}), 403
+
     meta = FileMetadata(
         owner_id=owner_id,
-        original_filename=os.path.basename(upload.filename)[:255],
+        project_id=project_id,
+        original_filename=original_filename[:255],
         mime_type=mime[:127],
         size_bytes=len(raw),
         encrypted_path=enc_path,
@@ -149,6 +288,15 @@ def upload_file():
     db.session.add(meta)
     db.session.commit()
 
+    logger.info(
+        "File uploaded: id=%s owner=%s filename='%s' mime=%s size=%d sha256=%s",
+        meta.id,
+        owner_id,
+        original_filename,
+        mime,
+        len(raw),
+        digest[:12],
+    )
     return jsonify({"message": "File stored", "file": meta.to_dict()}), 201
 
 
@@ -157,17 +305,35 @@ def upload_file():
 @files_bp.route("", methods=["GET"])
 @auth_required
 def list_files():
-    """List uploaded file metadata for the authenticated user."""
+    """List file metadata. Use project_id to scope to a single project."""
     try:
-        owner_id = int(get_jwt_identity())
+        user_id = int(get_jwt_identity())
     except (ValueError, TypeError):
         return jsonify({"error": "Invalid token identity"}), 401
 
-    files = (
-        FileMetadata.query.filter_by(owner_id=owner_id)
-        .order_by(FileMetadata.created_at.desc())
-        .all()
-    )
+    project_id_str = request.args.get("project_id", "").strip()
+    if project_id_str:
+        try:
+            project_id = int(project_id_str)
+        except ValueError:
+            return jsonify({"error": "Invalid project_id"}), 400
+        from models.project import Project
+
+        if not Project.query.get(project_id):
+            return jsonify({"error": "Project not found"}), 404
+        if get_project_role(user_id, project_id) not in _READ_ROLES:
+            return jsonify({"error": "Forbidden"}), 403
+        files = (
+            FileMetadata.query.filter_by(project_id=project_id)
+            .order_by(FileMetadata.created_at.desc())
+            .all()
+        )
+    else:
+        files = (
+            FileMetadata.query.filter_by(owner_id=user_id, project_id=None)
+            .order_by(FileMetadata.created_at.desc())
+            .all()
+        )
     return jsonify({"files": [f.to_dict() for f in files]}), 200
 
 
@@ -233,7 +399,11 @@ def download_file(file_id: str):
     caller = User.query.filter_by(id=caller_id).first()
     is_admin = bool(caller and caller.role == "admin")
     if meta.owner_id != caller_id and not is_admin:
-        return jsonify({"error": "Forbidden"}), 403
+        if meta.project_id:
+            if get_project_role(caller_id, meta.project_id) not in _READ_ROLES:
+                return jsonify({"error": "Forbidden"}), 403
+        else:
+            return jsonify({"error": "Forbidden"}), 403
 
     # Read ciphertext from disk
     try:
@@ -262,6 +432,42 @@ def download_file(file_id: str):
         as_attachment=True,
         download_name=meta.original_filename,
     )
+
+
+# ─── DELETE /api/files/<id> ──────────────────────────────────────────────────
+
+@files_bp.route("/<file_id>", methods=["DELETE"])
+@auth_required
+def delete_file(file_id: str):
+    """Delete a file (owner or admin). Removes ciphertext from disk and DB row."""
+    try:
+        fid = int(file_id)
+    except (ValueError, AttributeError):
+        return jsonify({"error": "Invalid file_id"}), 400
+
+    meta = FileMetadata.query.filter_by(id=fid).first()
+    if not meta:
+        return jsonify({"error": "Not Found"}), 404
+
+    try:
+        caller_id = int(get_jwt_identity())
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid token identity"}), 401
+
+    caller = User.query.filter_by(id=caller_id).first()
+    is_admin = bool(caller and caller.role == "admin")
+    if meta.owner_id != caller_id and not is_admin:
+        return jsonify({"error": "Forbidden"}), 403
+
+    if meta.encrypted_path and os.path.isfile(meta.encrypted_path):
+        try:
+            os.remove(meta.encrypted_path)
+        except OSError as exc:
+            logger.warning("Could not remove encrypted file %s: %s", meta.encrypted_path, exc)
+
+    db.session.delete(meta)
+    db.session.commit()
+    return jsonify({"message": "File deleted", "id": fid}), 200
 
 
 def _raise_integrity_alert(meta: FileMetadata, *, reason: str) -> None:

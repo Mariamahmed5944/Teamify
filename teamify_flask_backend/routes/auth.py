@@ -1,4 +1,6 @@
 import re
+from typing import Any, cast
+
 from flask import Blueprint, request, jsonify, make_response
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import (
@@ -42,6 +44,29 @@ PASSWORD_RE = re.compile(r'^(?=.*[A-Z])(?=.*\d).{8,}$')
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 bcrypt = Bcrypt()
+
+
+def _request_json() -> dict[str, Any]:
+    """Return the JSON body as a dict (empty dict when missing or invalid)."""
+    payload = request.get_json(silent=True, force=True)
+    return payload if isinstance(payload, dict) else {}
+
+
+def _format_validation_errors(err) -> list[str]:
+    """Flatten Marshmallow ValidationError messages into a string list."""
+    error_msgs: list[str] = []
+    messages = err.messages
+    if isinstance(messages, dict):
+        for field_msgs in messages.values():
+            if isinstance(field_msgs, (list, tuple)):
+                error_msgs.extend(str(msg) for msg in field_msgs)
+            else:
+                error_msgs.append(str(field_msgs))
+    elif isinstance(messages, (list, tuple)):
+        error_msgs.extend(str(msg) for msg in messages)
+    else:
+        error_msgs.append(str(messages))
+    return error_msgs
 
 
 @auth_bp.route("/register", methods=["POST"])
@@ -147,7 +172,7 @@ def register():
               type: string
               example: Display name already exists
     """
-    data = request.get_json(silent=True, force=True)
+    data = _request_json()
 
     if not data:
         return jsonify({"error": "Request body is required"}), 400
@@ -156,13 +181,12 @@ def register():
     from validators.auth_validator import register_schema
 
     try:
-        data = register_schema.load(data)
+        data = cast(dict[str, Any], register_schema.load(data))
     except ValidationError as err:
-        # Format messages into a list of strings to match the old API response format
-        error_msgs = []
-        for field, msgs in err.messages.items():
-            error_msgs.extend(msgs)
-        return jsonify({"error": "Validation failed", "messages": error_msgs}), 400
+        return jsonify({
+            "error": "Validation failed",
+            "messages": _format_validation_errors(err),
+        }), 400
 
     display_name = data.get("display_name")
     full_name = data.get("full_name")
@@ -202,11 +226,6 @@ def register():
     # --- Hash password with bcrypt ---
     hashed_password = bcrypt.generate_password_hash(password).decode("utf-8")
 
-    # Freelancers and students require admin approval before they can use the platform.
-    # user_type=admin is auto-approved on registration.
-    _requires_approval = {"freelancer", "student"}
-    initial_status = "pending" if user_type in _requires_approval else "approved"
-
     # --- Create user ---
     new_user = User(
         display_name=display_name,
@@ -215,7 +234,6 @@ def register():
         password=hashed_password,
         role=role,
         user_type=user_type,
-        account_status=initial_status,
         professional_field=data.get("professional_field") or None,
         experience_level=data.get("experience_level") or None,
         availability=data.get("availability") or None,
@@ -324,7 +342,7 @@ def login():
               type: string
               example: Invalid email or password
     """
-    data = request.get_json(silent=True, force=True)
+    data = _request_json()
 
     if not data:
         return jsonify({"error": "Request body is required"}), 400
@@ -333,7 +351,7 @@ def login():
     from validators.auth_validator import login_schema
 
     try:
-        data = login_schema.load(data)
+        data = cast(dict[str, Any], login_schema.load(data))
     except ValidationError as err:
         return jsonify({"error": "Email and password are required", "messages": err.messages}), 400
 
@@ -408,7 +426,7 @@ def login():
     user.failed_login_attempts = 0
     user.locked_until = None
 
-    # ─── Approval Gate ──────────────────────────────────────────────────────────────────────────
+    # ─── Approval Gate ───
     if getattr(user, "account_status", "approved") == "pending":
         db.session.commit()
         return jsonify({
@@ -571,9 +589,15 @@ def logout():
               type: string
               example: Missing Authorization Header
     """
-    from flask import current_app
-    jti = get_jwt()["jti"]
-    current_app.config["BLACKLISTED_TOKENS"].add(jti)
+    jwt_data = get_jwt()
+    jti = jwt_data["jti"]
+    from datetime import datetime, timezone
+    exp_ts = jwt_data.get("exp")
+    expires_at = (
+        datetime.fromtimestamp(exp_ts, tz=timezone.utc) if exp_ts else None
+    )
+    from models.token_blocklist import TokenBlocklist
+    TokenBlocklist.revoke(jti, expires_at=expires_at)
     # ── VULN-002 FIX: clear JWT cookies on logout ──────────────────────────
     response = make_response(jsonify({"message": "Successfully logged out"}), 200)
     unset_jwt_cookies(response)
@@ -800,6 +824,9 @@ def reset_password():
         return jsonify({"error": "Invalid token purpose"}), 401
 
     user_id = token_data.get("sub")
+    if not user_id:
+        return jsonify({"error": "Invalid reset token"}), 401
+
     user = User.query.filter_by(id=int(user_id)).first()
     if not user:
         return jsonify({"error": "User not found"}), 404
@@ -848,11 +875,11 @@ def google_login():
         description: Invalid or expired Google token
     """
     import os
-    from google.oauth2 import id_token as google_id_token
-    from google.auth.transport import requests as google_requests
+    from google.oauth2 import id_token as google_id_token  # type: ignore[import-untyped]
+    from google.auth.transport import requests as google_requests  # type: ignore[import-untyped]
 
-    data = request.get_json(silent=True, force=True) or {}
-    raw_token = data.get("id_token", "").strip()
+    data = _request_json()
+    raw_token = str(data.get("id_token", "")).strip()
 
     if not raw_token:
         return jsonify({"error": "Bad Request", "message": "id_token is required"}), 400
@@ -1189,6 +1216,10 @@ def github_login():
     client_id     = os.getenv("GITHUB_CLIENT_ID", "")
     client_secret = os.getenv("GITHUB_CLIENT_SECRET", "")
 
+    user_type_raw = data.get("user_type", "").strip().lower()
+    VALID_USER_TYPES = {"freelancer", "student", "admin"}
+    user_type = user_type_raw if user_type_raw in VALID_USER_TYPES else None
+
     # Step 1: Exchange code for GitHub access token
     token_resp = _req.post(
         "https://github.com/login/oauth/access_token",
@@ -1262,7 +1293,7 @@ def github_login():
             password=dummy_pw,
             role="member",
             github_id=github_id,
-            account_status="approved",  # GitHub users are pre-verified
+            user_type=user_type,
         )
         db.session.add(user)
         db.session.flush()
@@ -1273,12 +1304,7 @@ def github_login():
         ))
         db.session.commit()
 
-    # Step 5: Check account status
-    if getattr(user, "account_status", "approved") == "rejected":
-        reason = user.account_status_note or "Contact support."
-        return jsonify({"error": "Account Rejected", "message": reason}), 403
-
-    # Step 6: Issue app JWT
+    # Step 5: Issue app JWT
     access_token  = create_access_token(identity=str(user.id))
     refresh_token = create_refresh_token(identity=str(user.id))
 

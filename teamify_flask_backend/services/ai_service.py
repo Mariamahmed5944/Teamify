@@ -315,20 +315,34 @@ def _predict_task_delay(task_id):
             features = build_task_features_from_orm(task, assignee)
             ml_result = predict_delay_probability(features)
 
-            if ml_result.get("source") == "ml_model":
-                prob = ml_result["delay_probability"]
+            prob = ml_result.get("delay_probability")
+            if ml_result.get("source") == "ml_model" and prob is not None:
                 if prob >= 70:
                     risk = "high"
                 elif prob >= 40:
                     risk = "medium"
                 else:
                     risk = "low"
+                task.ai_delay_risk = risk
+                reasons = [
+                    "Predicted by ML delay model (Delay_Predictor.pkl)",
+                    f"Live data: progress {task.progress_percent or 0:.0f}%, "
+                    f"{task.days_remaining if task.days_remaining is not None else '?'} days remaining",
+                ]
+                if task.assigned_to:
+                    assignee = User.query.get(task.assigned_to)
+                    if assignee:
+                        reasons.append(
+                            f"Assignee workload: {get_user_workload(assignee.id)} active tasks"
+                        )
                 return {
                     "task_id": str(task_id),
+                    "task_title": task.title,
                     "risk_level": risk,
                     "delay_probability": prob,
-                    "reasons": ["Predicted by ML delay model"],
+                    "reasons": reasons,
                     "ml_source": "ml_model",
+                    "model_available": True,
                 }
         except Exception as exc:
             logger.warning("ML task delay prediction failed, using heuristic: %s", exc)
@@ -389,12 +403,15 @@ def _predict_task_delay(task_id):
     else:
         risk = "low"
 
+    task.ai_delay_risk = risk
     return {
         "task_id": str(task_id),
+        "task_title": task.title,
         "risk_level": risk,
         "delay_probability": probability,
         "reasons": reasons,
         "ml_source": "heuristic",
+        "model_available": False,
     }
 
 
@@ -415,13 +432,21 @@ def _predict_project_delay(project_id):
 
     task_risks = []
     total_score = 0
+    ml_task_count = 0
 
     for t in tasks:
         if t.status == "done":
             continue
         risk = _predict_task_delay(t.id)
         task_risks.append(risk)
-        total_score += risk.get("delay_probability", 0)
+        total_score += float(risk.get("delay_probability") or 0)
+        if risk.get("ml_source") == "ml_model":
+            ml_task_count += 1
+
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
 
     active_count = len(task_risks)
     if active_count == 0:
@@ -463,12 +488,23 @@ def _predict_project_delay(project_id):
     else:
         risk = "low"
 
+    from services.delay_predictor_service import get_delay_model_status
+
+    model_status = get_delay_model_status()
+
     return {
         "project_id": str(project_id),
+        "project_name": project.name,
         "risk_level": risk,
         "delay_probability": round(avg_probability),
         "reasons": reasons,
         "task_risks": task_risks,
+        "ml_source": "ml_model" if ml_task_count == active_count and active_count else "mixed",
+        "ml_summary": {
+            **model_status,
+            "tasks_scored_with_ml": ml_task_count,
+            "active_tasks": active_count,
+        },
     }
 
 

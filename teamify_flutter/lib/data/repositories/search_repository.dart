@@ -7,12 +7,17 @@ class SearchRepository {
 
   SearchRepository(this._client);
 
-  Future<List<ApiUser>> users(String query, {String? userType}) async {
+  Future<List<ApiUser>> users(
+    String query, {
+    String? userType,
+    int perPage = 100,
+  }) async {
     final response = await _client.get<dynamic>(
       '/api/search/users',
       queryParameters: {
         if (query.isNotEmpty) 'q': query,
         if (userType != null) 'user_type': userType,
+        'per_page': perPage,
       },
     );
     return responseList(response.data, ['users', 'data'])

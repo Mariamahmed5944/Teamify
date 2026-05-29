@@ -42,6 +42,9 @@ class Dispute(db.Model):
     VALID_STATUSES   = {"open", "under_review", "resolved", "dismissed"}
     VALID_CATEGORIES = {"payment", "behaviour", "quality", "deadline", "other"}
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
     def to_dict(self) -> dict:
         return {
             "id":            self.id,

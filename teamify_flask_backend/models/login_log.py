@@ -28,6 +28,9 @@ class LoginLog(db.Model):
         db.Index("ix_login_logs_user_time", "user_id", "timestamp"),
     )
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
     def to_dict(self) -> dict:
         return {
             "id": self.id,

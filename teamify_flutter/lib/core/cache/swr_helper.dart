@@ -20,12 +20,12 @@ class SwrHelper {
     Duration staleAge = const Duration(minutes: 10),
   }) async {
     final cached = await cache.getMap(boxName, key, maxAge: const Duration(days: 30));
-    final isStale = cached == null || _isStale(boxName, key, staleAge);
+    final isStale =
+        cached != null && cache.isExpired(boxName, key, staleAge);
 
     if (cached != null) {
       final data = fromJson(cached);
       if (isStale) {
-        // Revalidate in background
         _revalidateMap(
           boxName: boxName,
           key: key,
@@ -58,12 +58,12 @@ class SwrHelper {
     Duration staleAge = const Duration(minutes: 10),
   }) async {
     final cached = await cache.getList(boxName, key, maxAge: const Duration(days: 30));
-    final isStale = cached == null || _isStale(boxName, key, staleAge);
+    final isStale =
+        cached != null && cache.isExpired(boxName, key, staleAge);
 
     if (cached != null) {
       final data = cached.map(fromJson).toList();
       if (isStale) {
-        // Revalidate in background
         _revalidateList(
           boxName: boxName,
           key: key,
@@ -83,15 +83,6 @@ class SwrHelper {
     } catch (e) {
       return ApiResult.failure(e.toString());
     }
-  }
-
-  bool _isStale(String boxName, String key, Duration maxAge) {
-    // Actually we need to check the metadata box. But cache_manager has _isExpired private.
-    // As a workaround we can use cache_manager's public getList/getMap with maxAge.
-    // Since we did that above, we just need CacheManager to expose freshness or handle it.
-    // Wait, let's just make cache.getList return null if expired.
-    // If it returns null, we know it's missing or expired.
-    return false; // Handled by caller or we can improve CacheManager
   }
 
   Future<void> _revalidateMap<T>({

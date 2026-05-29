@@ -1,8 +1,4 @@
-import 'package:dio/dio.dart';
-
 import '../../core/network/api_client.dart';
-import '../../models/models.dart' as ui;
-import '../models/models.dart';
 import 'repository_helpers.dart';
 
 class AdminRepository {
@@ -10,237 +6,303 @@ class AdminRepository {
 
   AdminRepository(this._client);
 
-  /// List all uploaded files (admin view, via /api/files).
-  Future<List<ApiFile>> listFiles() async {
-    final response = await _client.get<dynamic>('/api/files');
-    return responseList(response.data, ['files', 'data'])
-        .map(ApiFile.fromJson)
-        .toList();
+  // ── 1. Admin Dashboard ──────────────────────────────────────────────────────
+  Future<Map<String, dynamic>> getDashboardStats() async {
+    final response = await _client.get<Map<String, dynamic>>('/admin/dashboard');
+    return responseMap(response.data);
   }
 
-  Future<List<ApiUser>> listUsers() async {
-    final response = await _client.get<dynamic>('/admin/users');
-    return responseList(response.data, ['items', 'users', 'data'])
-        .map(ApiUser.fromJson)
-        .toList();
+  // ── 2. User Management ──────────────────────────────────────────────────────
+  Future<Map<String, dynamic>> listUsers({
+    String search = '',
+    String status = '',
+    String type = '',
+    int page = 1,
+    int perPage = 20,
+  }) async {
+    final response = await _client.get<Map<String, dynamic>>(
+      '/admin/users',
+      queryParameters: {
+        'search': search,
+        'status': status,
+        'user_type': type,
+        'page': page,
+        'per_page': perPage,
+      },
+    );
+    return responseMap(response.data);
   }
 
-  Future<List<ApiUser>> listPendingUsers() async {
-    final response = await _client.get<dynamic>('/admin/users/pending');
-    return responseList(
-            response.data, ['items', 'users', 'pending_users', 'data'])
-        .map(ApiUser.fromJson)
-        .toList();
-  }
-
-  Future<List<ui.LoginLog>> listLoginLogs() async {
-    final response = await _client.get<dynamic>('/admin/logs');
-    return responseList(response.data, ['items', 'logs', 'data']).map((json) {
-      final timestamp = asString(json['timestamp'] ?? json['created_at']);
-      final user = responseMap(json['user']);
-      final userName = asString(
-        json['user_name'] ??
-            json['username'] ??
-            user['display_name'] ??
-            user['full_name'] ??
-            user['email'],
-        'Unknown user',
-      );
-      final status = asString(json['status']).toLowerCase() == 'success'
-          ? 'Success'
-          : 'Failed';
-      return ui.LoginLog(
-        id: asString(json['id']),
-        userName: userName,
-        status: status,
-        time: _formatTime(timestamp),
-        date: _formatDate(timestamp),
-        device: asString(json['device_info'] ?? json['device'], 'Unknown'),
-        ip: asString(json['ip_address'] ?? json['ip'], 'Unknown'),
-      );
-    }).toList();
-  }
-
-  Future<List<ui.SecurityAlert>> listAlerts() async {
-    final response = await _client.get<dynamic>('/admin/alerts');
-    return responseList(response.data, ['items', 'alerts', 'data']).map((json) {
-      final resolved = asBool(json['resolved']);
-      final type = asString(json['type'], 'Security Alert');
-      final description = asString(json['description']);
-      final timestamp = asString(json['timestamp'] ?? json['created_at']);
-      return ui.SecurityAlert(
-        id: asString(json['id']),
-        title: _titleFromType(type),
-        user: asString(json['user_name'] ?? json['user_id'], 'System'),
-        description: description.isNotEmpty ? description : type,
-        risk: _riskFromType(type, description),
-        status: resolved ? 'Resolved' : 'New',
-        time: _formatDateTime(timestamp),
-      );
-    }).toList();
-  }
-
-  Future<void> approveUser(String id) async {
-    await _client.patch<dynamic>('/admin/users/$id/approve');
-  }
-
-  Future<void> rejectUser(String id, {String? reason}) async {
+  Future<void> updateUserStatus(String id, String action, {String reason = ''}) async {
     await _client.patch<dynamic>(
-      '/admin/users/$id/reject',
-      data: reason == null ? null : {'reason': reason},
+      '/admin/users/$id/status',
+      data: {'action': action, 'reason': reason},
     );
   }
 
-  // ── User Detail & Management ─────────────────────────────────────────────
-
-  /// GET /admin/users/<id>
-  Future<ApiUser> getUserDetail(String id) async {
-    final response =
-        await _client.get<Map<String, dynamic>>('/admin/users/$id');
-    final data = responseMap(response.data);
-    final user = responseMap(data['user']);
-    return ApiUser.fromJson(user.isNotEmpty ? user : data);
-  }
-
-  /// PUT /admin/users/<id>
-  Future<ApiUser> updateUserDetails(
-      String id, Map<String, dynamic> payload) async {
-    final response = await _client.put<Map<String, dynamic>>(
-      '/admin/users/$id',
-      data: payload,
+  Future<void> changeUserRole(String id, String role) async {
+    await _client.patch<dynamic>(
+      '/admin/users/$id/role',
+      data: {'role': role},
     );
-    final data = responseMap(response.data);
-    final user = responseMap(data['user']);
-    return ApiUser.fromJson(user.isNotEmpty ? user : data);
   }
 
-  /// DELETE /admin/users/<id>
+  Future<void> resetUserPassword(String id, String password) async {
+    await _client.patch<dynamic>(
+      '/admin/users/$id/reset-password',
+      data: {'password': password},
+    );
+  }
+
   Future<void> deleteUser(String id) async {
     await _client.delete<dynamic>('/admin/users/$id');
   }
 
-  /// PATCH /admin/users/<id>/lock
-  Future<void> lockUser(String id) async {
-    await _client.patch<dynamic>('/admin/users/$id/lock');
-  }
-
-  /// PATCH /admin/users/<id>/unlock
-  Future<void> unlockUser(String id) async {
-    await _client.patch<dynamic>('/admin/users/$id/unlock');
-  }
-
-  // ── Project Management ───────────────────────────────────────────────────
-
-  /// GET /admin/projects
-  Future<List<ApiProject>> listAllProjects() async {
-    final response = await _client.get<dynamic>('/admin/projects');
-    return responseList(response.data, ['projects', 'data'])
-        .map(ApiProject.fromJson)
-        .toList();
-  }
-
-  /// DELETE /admin/projects/<id>
-  Future<void> deleteProjectAdmin(String id) async {
-    await _client.delete<dynamic>('/admin/projects/$id');
-  }
-
-  // ── Reports & Analytics ──────────────────────────────────────────────────
-
-  /// GET /admin/reports/summary
-  Future<Map<String, dynamic>> getReportSummary() async {
-    final response =
-        await _client.get<Map<String, dynamic>>('/admin/reports/summary');
+  Future<Map<String, dynamic>> createUser({
+    required String fullName,
+    required String email,
+    required String password,
+    required String role,
+  }) async {
+    final response = await _client.post<Map<String, dynamic>>(
+      '/admin/users',
+      data: {
+        'full_name': fullName,
+        'email': email,
+        'password': password,
+        'role': role,
+      },
+    );
     return responseMap(response.data);
   }
 
-  /// GET /admin/analytics/overview
+  // ── 3. Project Management ───────────────────────────────────────────────────
+  Future<Map<String, dynamic>> listProjects({
+    String search = '',
+    String status = '',
+    int page = 1,
+    int perPage = 20,
+  }) async {
+    final response = await _client.get<Map<String, dynamic>>(
+      '/admin/projects',
+      queryParameters: {
+        'search': search,
+        'status': status,
+        'page': page,
+        'per_page': perPage,
+      },
+    );
+    return responseMap(response.data);
+  }
+
+  Future<void> reassignProject(String projectId, String newOwnerId) async {
+    await _client.patch<dynamic>(
+      '/admin/projects/$projectId/reassign',
+      data: {'owner_id': int.parse(newOwnerId)},
+    );
+  }
+
+  Future<void> deleteProject(String projectId) async {
+    await _client.delete<dynamic>('/admin/projects/$projectId');
+  }
+
+  // ── 4. Task Management ──────────────────────────────────────────────────────
+  Future<Map<String, dynamic>> listTasks({
+    String search = '',
+    int? projectId,
+    int? assignedTo,
+    String priority = '',
+    String status = '',
+    int page = 1,
+    int perPage = 20,
+  }) async {
+    final Map<String, dynamic> qParams = {
+      'search': search,
+      'priority': priority,
+      'status': status,
+      'page': page,
+      'per_page': perPage,
+    };
+    if (projectId != null) qParams['project_id'] = projectId;
+    if (assignedTo != null) qParams['assigned_to'] = assignedTo;
+
+    final response = await _client.get<Map<String, dynamic>>(
+      '/admin/tasks',
+      queryParameters: qParams,
+    );
+    return responseMap(response.data);
+  }
+
+  Future<void> updateTask(String taskId, {String? status, String? assignedTo}) async {
+    final Map<String, dynamic> data = {};
+    if (status != null) data['status'] = status;
+    if (assignedTo != null) data['assigned_to'] = int.tryParse(assignedTo);
+
+    await _client.patch<dynamic>(
+      '/admin/tasks/$taskId',
+      data: data,
+    );
+  }
+
+  Future<void> deleteTask(String taskId) async {
+    await _client.delete<dynamic>('/admin/tasks/$taskId');
+  }
+
+  // ── 5. AI Monitor ───────────────────────────────────────────────────────────
+  Future<Map<String, dynamic>> getAiMetrics() async {
+    final response = await _client.get<Map<String, dynamic>>('/admin/ai/metrics');
+    return responseMap(response.data);
+  }
+
+  // ── 6. Disputes ─────────────────────────────────────────────────────────────
+  Future<Map<String, dynamic>> listDisputes({
+    String status = '',
+    String category = '',
+    int page = 1,
+    int perPage = 20,
+  }) async {
+    final response = await _client.get<Map<String, dynamic>>(
+      '/admin/disputes',
+      queryParameters: {
+        'status': status,
+        'category': category,
+        'page': page,
+        'per_page': perPage,
+      },
+    );
+    return responseMap(response.data);
+  }
+
+  Future<void> resolveDispute(String disputeId, String action, String resolution) async {
+    await _client.patch<dynamic>(
+      '/admin/disputes/$disputeId/resolve',
+      data: {'action': action, 'resolution': resolution},
+    );
+  }
+
+  // ── 7. Notifications Center ─────────────────────────────────────────────────
+  Future<void> broadcastNotification(String target, String title, String body, {String? userId}) async {
+    final Map<String, dynamic> data = {
+      'target': target,
+      'title': title,
+      'body': body,
+    };
+    if (userId != null) data['user_id'] = int.tryParse(userId);
+
+    await _client.post<dynamic>(
+      '/admin/notifications',
+      data: data,
+    );
+  }
+
+  // ── 8. File Management ──────────────────────────────────────────────────────
+  Future<Map<String, dynamic>> listFiles({
+    String search = '',
+    int? ownerId,
+    int page = 1,
+    int perPage = 20,
+  }) async {
+    final Map<String, dynamic> qParams = {
+      'search': search,
+      'page': page,
+      'per_page': perPage,
+    };
+    if (ownerId != null) qParams['owner_id'] = ownerId;
+
+    final response = await _client.get<Map<String, dynamic>>(
+      '/admin/files',
+      queryParameters: qParams,
+    );
+    return responseMap(response.data);
+  }
+
+  Future<void> deleteFile(String fileId) async {
+    await _client.delete<dynamic>('/admin/files/$fileId');
+  }
+
+  // ── 9. Activity Logs ────────────────────────────────────────────────────────
+  Future<Map<String, dynamic>> listLogs({
+    String action = '',
+    String entity = '',
+    int? userId,
+    int page = 1,
+    int perPage = 50,
+  }) async {
+    final Map<String, dynamic> qParams = {
+      'action': action,
+      'entity': entity,
+      'page': page,
+      'per_page': perPage,
+    };
+    if (userId != null) qParams['user_id'] = userId;
+
+    final response = await _client.get<Map<String, dynamic>>(
+      '/admin/logs',
+      queryParameters: qParams,
+    );
+    return responseMap(response.data);
+  }
+
+  // ── 10. Security Center ─────────────────────────────────────────────────────
+  Future<Map<String, dynamic>> getSecuritySummary() async {
+    final response = await _client.get<Map<String, dynamic>>('/admin/security');
+    return responseMap(response.data);
+  }
+
+  Future<void> revokeSessions(String userId) async {
+    await _client.post<dynamic>('/admin/security/revoke-session/$userId');
+  }
+
+  Future<Map<String, dynamic>> listLoginLogs({
+    String status = '',
+    String ip = '',
+    int? userId,
+    int page = 1,
+    int perPage = 100,
+  }) async {
+    final Map<String, dynamic> qParams = {
+      'page': page,
+      'per_page': perPage,
+    };
+    if (status.isNotEmpty) qParams['status'] = status;
+    if (ip.isNotEmpty) qParams['ip'] = ip;
+    if (userId != null) qParams['user_id'] = userId;
+
+    final response = await _client.get<Map<String, dynamic>>(
+      '/admin/login-logs',
+      queryParameters: qParams,
+    );
+    return responseMap(response.data);
+  }
+
+  // ── 11. Analytics ───────────────────────────────────────────────────────────
   Future<Map<String, dynamic>> getAnalyticsOverview() async {
     final response =
         await _client.get<Map<String, dynamic>>('/admin/analytics/overview');
     return responseMap(response.data);
   }
 
-  /// GET /admin/analytics/users/growth
-  Future<List<Map<String, dynamic>>> getUserGrowthData() async {
+  Future<Map<String, dynamic>> getReportSummary() async {
     final response =
-        await _client.get<dynamic>('/admin/analytics/users/growth');
-    return responseList(response.data, ['data', 'growth'])
-        .cast<Map<String, dynamic>>();
+        await _client.get<Map<String, dynamic>>('/admin/reports/summary');
+    return responseMap(response.data);
   }
 
-  // ── Activity & Audit Logs ────────────────────────────────────────────────
-
-  /// GET /admin/activity
-  Future<List<Map<String, dynamic>>> getAdminActivity() async {
-    final response = await _client.get<dynamic>('/admin/activity');
-    return responseList(response.data, ['items', 'activity', 'data'])
-        .cast<Map<String, dynamic>>();
+  Future<Map<String, dynamic>> getAnalyticsDetails() async {
+    final response = await _client.get<Map<String, dynamic>>('/admin/analytics');
+    return responseMap(response.data);
   }
 
-  /// GET /admin/audit-logs
-  Future<List<Map<String, dynamic>>> getAuditLogs() async {
-    final response = await _client.get<dynamic>('/admin/audit-logs');
-    return responseList(response.data, ['logs', 'items', 'data'])
-        .cast<Map<String, dynamic>>();
+  // ── 12. Settings ────────────────────────────────────────────────────────────
+  Future<Map<String, dynamic>> getSettings() async {
+    final response = await _client.get<Map<String, dynamic>>('/admin/settings');
+    return responseMap(response.data);
   }
 
-  // ── Alert Management ─────────────────────────────────────────────────────
-
-  /// PATCH /admin/alerts/<id>/resolve
-  Future<void> resolveAlert(String id) async {
-    await _client.patch<dynamic>('/admin/alerts/$id/resolve');
-  }
-
-  // ── Exports ──────────────────────────────────────────────────────────────
-
-  /// GET /admin/export/users — returns CSV bytes
-  Future<List<int>> exportUsersCsv() async {
-    final response = await _client.get<List<int>>(
-      '/admin/export/users',
-      options: Options(responseType: ResponseType.bytes),
+  Future<void> updateSettings(Map<String, dynamic> settings) async {
+    await _client.put<dynamic>(
+      '/admin/settings',
+      data: settings,
     );
-    return response.data ?? [];
-  }
-
-  /// GET /admin/export/projects — returns CSV bytes
-  Future<List<int>> exportProjectsCsv() async {
-    final response = await _client.get<List<int>>(
-      '/admin/export/projects',
-      options: Options(responseType: ResponseType.bytes),
-    );
-    return response.data ?? [];
-  }
-
-  static String _titleFromType(String type) {
-    return type
-        .replaceAll('_', ' ')
-        .split(' ')
-        .where((part) => part.isNotEmpty)
-        .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
-        .join(' ');
-  }
-
-  static String _riskFromType(String type, String description) {
-    final value = '$type $description'.toLowerCase();
-    if (value.contains('brute') ||
-        value.contains('failed') ||
-        value.contains('critical')) {
-      return 'HIGH RISK';
-    }
-    if (value.contains('anomaly') || value.contains('suspicious')) {
-      return 'MEDIUM RISK';
-    }
-    return 'LOW RISK';
-  }
-
-  static String _formatDateTime(String value) =>
-      value.isEmpty ? 'Unknown' : value.replaceFirst('T', ' ').split('.').first;
-
-  static String _formatDate(String value) =>
-      _formatDateTime(value).split(' ').first;
-
-  static String _formatTime(String value) {
-    final parts = _formatDateTime(value).split(' ');
-    return parts.length > 1 ? parts[1] : 'Unknown';
   }
 }

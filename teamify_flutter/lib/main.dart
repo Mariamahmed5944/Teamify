@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'core/theme.dart';
+import 'core/theme_controller.dart';
 import 'core/routes.dart';
 import 'core/cache/cache_manager.dart';
 import 'core/network/websocket_manager.dart';
@@ -10,6 +11,7 @@ import 'core/session/disposable_registry.dart';
 import 'core/offline/offline_manager.dart';
 import 'core/network/api_client.dart';
 import 'data/repositories/app_repositories.dart';
+import 'data/models/api_user.dart';
 import 'services/app_services.dart';
 
 import 'screens/auth/auth_screens.dart';
@@ -37,15 +39,27 @@ void main() async {
 
   final session = SessionController(repositories.auth);
 
+  // ── Offline Manager ──────────────────────────────────────────────────
+  // Created BEFORE AppServices so every service shares the same queue.
+  final offline = OfflineManager(
+    cache: cache,
+    apiClient: ApiClient(tokenStorage: repositories.tokenStorage),
+  );
+  offline.init();
+  globalDisposableRegistry.register(offline);
+
+  // ── WebSocket ─────────────────────────────────────────────────────────
+  // Created BEFORE AppServices so NotificationService can subscribe to events.
+  final ws = WebSocketManager(repositories.tokenStorage);
+
   // ── Service layer ──────────────────────────────────────────────────────
   final services = AppServices(
     repos: repositories,
     session: session,
     cache: cache,
+    offlineManager: offline,
+    ws: ws,
   );
-
-  // ── WebSocket ─────────────────────────────────────────────────────────
-  final ws = WebSocketManager(repositories.tokenStorage);
 
   // Restore session, then connect WebSocket if authenticated
   await session.restoreSession();
@@ -59,20 +73,21 @@ void main() async {
       ws.connect();
     } else if (!session.isAuthenticated && ws.isConnected) {
       ws.disconnect();
+      // Clear the mutation queue on logout to avoid replaying another
+      // user's mutations after a session switch.
+      offline.clearAll();
     }
   });
   globalDisposableRegistry.register(session);
   globalDisposableRegistry.register(ws);
 
-  // ── Offline Manager ──────────────────────────────────────────────────
-  final offline = OfflineManager(cache: cache, apiClient: ApiClient(tokenStorage: repositories.tokenStorage));
-  offline.init();
-  globalDisposableRegistry.register(offline);
-
   // ── Lifecycle Manager ─────────────────────────────────────────────────
   final lifecycle = AppLifecycleManager(wsManager: ws, offlineManager: offline);
   lifecycle.init();
   globalDisposableRegistry.register(lifecycle);
+
+  final themeController = ThemeController();
+  await themeController.load();
 
   runApp(
     MultiProvider(
@@ -81,7 +96,9 @@ void main() async {
         Provider<AppServices>.value(value: services),
         Provider<CacheManager>.value(value: cache),
         Provider<WebSocketManager>.value(value: ws),
+        Provider<OfflineManager>.value(value: offline),
         ChangeNotifierProvider<SessionController>.value(value: session),
+        ChangeNotifierProvider<ThemeController>.value(value: themeController),
       ],
       child: const TeamifyApp(),
     ),
@@ -93,12 +110,17 @@ class TeamifyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeMode = context.watch<ThemeController>().themeMode;
     Widget protected(Widget child) => ProtectedRoute(child: child);
+    Widget adminOnly(Widget child) =>
+        protected(AdminRoute(child: child));
 
     return MaterialApp(
       title: 'Teamify',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.theme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: themeMode,
       initialRoute: R.splash,
       routes: {
         // ── Auth ──────────────────────────────────────────────────────────────
@@ -132,12 +154,15 @@ class TeamifyApp extends StatelessWidget {
         R.fileHistory: (_) => protected(const FileVersionHistoryScreen()),
         R.notifications: (_) => protected(const NotificationsScreen()),
         R.settings: (_) => protected(const SettingsScreen()),
-        R.addUser: (_) => protected(const AddUserScreen()),
+        R.privacyPolicy: (_) => protected(const PrivacyPolicyScreen()),
+        R.addUser: (_) => adminOnly(const AddUserScreen()),
         R.mentorMain: (_) => protected(const MentorMainScreen()),
         R.addTask: (_) => protected(const AddTaskScreen()),
 
         // ── Project ───────────────────────────────────────────────────────────
         R.projectsList: (_) => protected(const ProjectsListScreen()),
+        // Web bookmark / legacy hash alias
+        '/projects_list': (_) => protected(const ProjectsListScreen()),
         R.projectDetails: (_) => protected(const ProjectDetailsScreen()),
         R.addProject: (_) => protected(const AddProjectScreen()),
 
@@ -190,14 +215,32 @@ class TeamifyApp extends StatelessWidget {
             protected(const ResumeExportSuccessScreen()),
 
         // ── Admin / Security ──────────────────────────────────────────────────
-        R.adminUsers: (_) => protected(const AdminUsersScreen()),
-        R.adminUserDetails: (_) => protected(const UserDetailsAdminScreen()),
+        R.adminDashboard: (_) => adminOnly(const AdminDashboardScreen()),
+        R.adminProjects: (_) => adminOnly(const AdminProjectsScreen()),
+        R.adminTasks: (_) => adminOnly(const AdminTasksScreen()),
+        R.adminAi: (_) => adminOnly(const AdminAiScreen()),
+        R.adminDisputes: (_) => adminOnly(const AdminDisputesScreen()),
+        R.adminNotifications: (_) => adminOnly(const AdminNotificationsScreen()),
+        R.adminFiles: (_) => adminOnly(const AdminFilesScreen()),
+        R.adminLogs: (_) => adminOnly(const AdminLogsScreen()),
+        R.adminSecurity: (_) => adminOnly(const AdminSecurityScreen()),
+        R.adminSettings: (_) => adminOnly(const AdminSettingsScreen()),
+
+        R.adminUsers: (_) => adminOnly(const AdminUsersScreen()),
+        R.adminUserDetails: (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          return adminOnly(
+            UserDetailsAdminScreen(
+              initialUser: args is ApiUser ? args : null,
+            ),
+          );
+        },
         R.adminRoles: (_) => protected(const AdminRolesScreen()),
         R.editRolePermissions: (_) =>
             protected(const EditRolePermissionsScreen()),
         R.securityChecklist: (_) => protected(const SecurityChecklistScreen()),
-        R.loginLogs: (_) => protected(const LoginLogsScreen()),
-        R.securityAlerts: (_) => protected(const SecurityAlertsScreen()),
+        R.loginLogs: (_) => adminOnly(const LoginLogsScreen()),
+        R.securityAlerts: (_) => adminOnly(const SecurityAlertsScreen()),
         R.alertDetails: (_) => protected(const AlertDetailsScreen()),
         R.securityMonitor: (_) => protected(const SecurityMonitorScreen()),
         R.rateLimiting: (_) => protected(const RateLimitingScreen()),
@@ -206,12 +249,12 @@ class TeamifyApp extends StatelessWidget {
         R.twoFAVerify: (_) => protected(const TwoFAVerifyScreen()),
         R.twoFASuccess: (_) => protected(const TwoFASuccessScreen()),
         R.analyst: (_) => protected(const AnalystScreen()),
-        R.securityFiles: (_) => protected(const SecurityFilesScreen()),
-        R.securityCenter: (_) => protected(const SecurityCenterScreen()),
-        R.securityOverview: (_) => protected(const SecurityOverviewScreen()),
+        R.securityFiles: (_) => adminOnly(const SecurityFilesScreen()),
+        R.securityCenter: (_) => adminOnly(const SecurityCenterScreen()),
+        R.securityOverview: (_) => adminOnly(const SecurityOverviewScreen()),
         R.forceLogout: (_) => protected(const ForceLogoutScreen()),
         R.logoutAllDevices: (_) => protected(const LogoutAllDevicesScreen()),
-        R.reviewActivity: (_) => protected(const ReviewActivityScreen()),
+        R.reviewActivity: (_) => adminOnly(const ReviewActivityScreen()),
         R.askAI: (_) => protected(const AskAIScreen()),
         R.teamsList: (_) => protected(const TeamsListScreen()),
         R.membersList: (_) => protected(const MembersListScreen()),
@@ -238,6 +281,56 @@ class ProtectedRoute extends StatelessWidget {
         }
       });
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    return child;
+  }
+}
+
+/// Blocks non-admin users from admin-only security screens.
+class AdminRoute extends StatelessWidget {
+  final Widget child;
+
+  const AdminRoute({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final user = context.watch<SessionController>().currentUser;
+    if (user?.isAdmin != true) {
+      return Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios, size: 18),
+            onPressed: () => Navigator.maybePop(context),
+          ),
+          title: const Text('Access denied'),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.lock_outline,
+                    size: 48, color: AppColors.textSecondary),
+                const SizedBox(height: 16),
+                Text(
+                  'Security Center is available for administrators only.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontSize: 15,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () => Navigator.maybePop(context),
+                  child: const Text('Go back'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
     }
     return child;
   }

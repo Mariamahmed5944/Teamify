@@ -1,4 +1,17 @@
+# ============================================================
+# CRITICAL: gevent monkey-patch MUST be the very first thing
+# that executes — before ANY other import, including stdlib.
+# Placing it here prevents the Werkzeug write()-before-
+# start_response AssertionError and makes the process-level
+# I/O fully async-compatible for Flask-SocketIO.
+# ============================================================
+from gevent import monkey as _monkey
+_monkey.patch_all()
+# ============================================================
+
 import os
+import logging
+
 from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
@@ -11,11 +24,64 @@ from flask_socketio import SocketIO
 from config import Config
 from models import db
 
+# ---------------------------------------------------------------------------
+# Module-level singletons — safe to import from routes/sockets because they
+# are created *before* any blueprint import happens.
+# ---------------------------------------------------------------------------
+
 # Module-level limiter so routes can import it without circular deps
 limiter = Limiter(key_func=get_remote_address, storage_uri="memory://")
 
-# Module-level SocketIO so sockets/ modules can import it
-socketio = SocketIO()
+# SocketIO singleton — do NOT pass the app yet; we call init_app() inside
+# create_app() so test configs are respected.
+#
+# async_mode="gevent":
+#   - Fully compatible with Python 3.13 (eventlet is NOT).
+#   - Enables true WebSocket upgrades without Werkzeug's WSGI middleware
+#     intercepting the connection mid-flight.
+#   - Uses gevent greenlets — no GIL contention on I/O-heavy paths.
+#
+# ping_interval / ping_timeout:
+#   - Must be kept well inside the Flutter socket_io_client default
+#     reconnect window (20 s).  25/60 means a missed pong triggers a
+#     clean server-side disconnect before the client decides to reconnect
+#     on its own, preventing the dreaded dual-reconnect race.
+socketio = SocketIO(
+    async_mode="gevent",
+    ping_interval=25,
+    ping_timeout=60,
+    cors_allowed_origins="*",
+    logger=False,
+    engineio_logger=False,
+)
+
+
+def _apply_runtime_schema_patches(app: Flask) -> None:
+    """Add columns introduced after the last successful Alembic upgrade."""
+    from sqlalchemy import inspect, text
+
+    try:
+        insp = inspect(db.engine)
+        if "meeting_sessions" not in insp.get_table_names():
+            return
+        col_names = {c["name"] for c in insp.get_columns("meeting_sessions")}
+        if "ai_summary" in col_names:
+            return
+
+        dialect = db.engine.dialect.name
+        if dialect == "postgresql":
+            sql = (
+                "ALTER TABLE meeting_sessions "
+                "ADD COLUMN IF NOT EXISTS ai_summary JSONB"
+            )
+        else:
+            sql = "ALTER TABLE meeting_sessions ADD COLUMN ai_summary JSON"
+
+        with db.engine.begin() as conn:
+            conn.execute(text(sql))
+        app.logger.info("Schema patch: added meeting_sessions.ai_summary")
+    except Exception as exc:
+        app.logger.warning("Schema patch meeting_sessions.ai_summary skipped: %s", exc)
 
 
 def create_app(test_config=None):
@@ -29,29 +95,54 @@ def create_app(test_config=None):
     # --- Initialize Extensions ---
     db.init_app(app)
     Migrate(app, db)          # enables: flask db init / migrate / upgrade
+
+    # CORS — allow socket.io polling path too (needed during upgrade handshake)
+    _cors_origins = os.getenv(
+        "CORS_ORIGINS",
+        "http://localhost:3000,http://localhost:8080",
+    ).split(",")
     cors_settings = {
-        "origins": os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:8080").split(","),
+        "origins": _cors_origins,
         "methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization"],
     }
-    CORS(app, resources={
-        r"/api/*": cors_settings,
-        r"/admin/*": cors_settings,
-    })
+    CORS(
+        app,
+        resources={
+            r"/api/*": cors_settings,
+            r"/admin/*": cors_settings,
+            r"/socket.io/*": {
+                "origins": "*",
+                "allow_headers": ["Content-Type", "Authorization"],
+            },
+        },
+    )
+
     jwt = JWTManager(app)
     Bcrypt(app)
     limiter.init_app(app)
-    socketio.init_app(app, cors_allowed_origins="*", async_mode="threading")
 
-    # --- JWT Token Blacklist ---
-    BLACKLISTED_TOKENS: set = set()
+    # Re-initialise SocketIO with the concrete app instance.
+    # All parameters are already set on the singleton; init_app() just wires
+    # the Flask app without creating a second SocketIO object.
+    socketio.init_app(
+        app,
+        cors_allowed_origins="*",
+        async_mode="gevent",
+        ping_interval=25,
+        ping_timeout=60,
+        logger=False,
+        engineio_logger=False,
+        # Allow the upgrade probe to reach the server even when
+        # Flask-Limiter rejects the polling XHR (different IP buckets).
+        manage_session=False,
+    )
 
+    # --- JWT Token Blocklist (DB-backed, survives restarts) ---
     @jwt.token_in_blocklist_loader
     def check_if_token_revoked(jwt_header, jwt_payload):
-        return jwt_payload["jti"] in BLACKLISTED_TOKENS
-
-    # Make blacklist accessible from routes via app config
-    app.config["BLACKLISTED_TOKENS"] = BLACKLISTED_TOKENS
+        from models.token_blocklist import TokenBlocklist
+        return TokenBlocklist.is_revoked(jwt_payload["jti"])
 
     # --- Swagger Configuration ---
     is_production = os.getenv("FLASK_ENV") == "production"
@@ -152,6 +243,7 @@ def create_app(test_config=None):
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(search_bp)
     app.register_blueprint(admin_bp)
+    app.register_blueprint(admin_bp, url_prefix="/admin", name="admin_legacy")
     app.register_blueprint(files_bp)
     app.register_blueprint(comments_bp)
     app.register_blueprint(feedback_bp)
@@ -198,6 +290,7 @@ def create_app(test_config=None):
         from models.user import User
         from models.project import Project
         from models.project_member import ProjectMember
+        from models.project_invitation import ProjectInvitation  # noqa: F401
         from models.task import Task
         from models.log import Log
         from models.notification import Notification
@@ -212,8 +305,12 @@ def create_app(test_config=None):
         from models.audit_log import AuditLog
         from models.dispute import Dispute
         from models.chat import ChatRoom, ChatRoomMember, Message
+        from models.meeting_session import MeetingSession  # noqa: F401
+        from models.mentor_chat_message import MentorChatMessage  # noqa: F401
+        from models.token_blocklist import TokenBlocklist  # noqa: F401
 
-        db.create_all()  # ← مهم: بينشئ الجداول في PostgreSQL لو مش موجودة
+        db.create_all()
+        _apply_runtime_schema_patches(app)
 
     # --- Start reminders scheduler ---
     from services.scheduler import init_scheduler
@@ -232,18 +329,26 @@ if __name__ == "__main__":
     debug = os.getenv("FLASK_DEBUG", "False").lower() in ("true", "1")
     host = "127.0.0.1" if debug else "0.0.0.0"
 
-    print(f"[OK] Server running on http://localhost:{port}")
-    print(f"[OK] Debug mode: {debug}")
-    print(f"[OK] Swagger UI: http://localhost:{port}/swagger/")
-    print(f"[OK] WebSocket:  ws://localhost:{port}  (Socket.IO)")
-    print(f"[OK] Endpoints:")
-    print(f"    POST /api/auth/register")
-    print(f"    POST /api/auth/login")
-    print(f"    GET  /api/chat/rooms            (chat)")
-    print(f"    GET  /api/users/profile          (protected)")
-    print(f"    GET  /api/users/admin-dashboard   (admin only)")
+    print(f"[OK] Async mode : gevent (Python {__import__('sys').version.split()[0]})")
+    print(f"[OK] Server     : http://{host}:{port}")
+    print(f"[OK] Debug      : {debug}")
+    print(f"[OK] Swagger UI : http://localhost:{port}/swagger/")
+    print(f"[OK] WebSocket  : ws://localhost:{port}  (Socket.IO via gevent)")
+    print(f"[OK] Endpoints  :")
+    print(f"     POST /api/auth/register")
+    print(f"     POST /api/auth/login")
+    print(f"     GET  /api/chat/rooms            (chat)")
+    print(f"     GET  /api/users/profile          (protected)")
+    print(f"     GET  /api/users/admin-dashboard  (admin only)")
 
-    # Use socketio.run() instead of app.run() to enable WebSocket support.
-    # Disable auto-reloader: it triggers on transformers/__pycache__ updates
-    # which cause spurious server restarts during development.
-    socketio.run(app, host=host, port=port, debug=debug, use_reloader=False)
+    # socketio.run() wraps the WSGI app in gevent's WSGIServer +
+    # WebSocket-aware handler automatically.  Never call app.run()
+    # directly — that bypasses the WebSocket layer entirely.
+    socketio.run(
+        app,
+        host=host,
+        port=port,
+        debug=debug,
+        use_reloader=False,   # avoid double-startup under gevent
+        log_output=True,
+    )

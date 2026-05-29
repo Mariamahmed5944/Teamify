@@ -1,10 +1,22 @@
 {
-    "python.defaultInterpreterPath": "${workspaceFolder}/teamify_flask_backend/.venv/Scripts/python.exe",
-    "python.pythonPath": "${workspaceFolder}/teamify_flask_backend/.venv/Scripts/python.exe",
+    // ── Python interpreter ────────────────────────────────────────────────────
+    // Always use the project venv, never the Windows Store Python 3.11.
+    "python.defaultInterpreterPath": "c:/Users/20111/Desktop/Teamify/teamify_flask_backend/.venv/Scripts/python.exe",
+
+    // ── Language server ───────────────────────────────────────────────────────
+    // Pylance respects python.defaultInterpreterPath + python.analysis.extraPaths.
+    // Pyrefly does NOT — it queries the system Python, causing hundreds of
+    // false "Cannot find module" errors and tries to parse docstring prose as code.
+    "python.languageServer": "None",
+
+    // ── Pylance type-check paths ──────────────────────────────────────────────
     "python.analysis.extraPaths": [
-        "${workspaceFolder}/teamify_flask_backend/.venv/Lib/site-packages",
-        "${workspaceFolder}/teamify_flask_backend"
+        "c:/Users/20111/Desktop/Teamify/teamify_flask_backend/.venv/Lib/site-packages",
+        "c:/Users/20111/Desktop/Teamify/teamify_flask_backend"
     ],
+    "python.analysis.typeCheckingMode": "basic",
+
+    // ── Testing ───────────────────────────────────────────────────────────────
     "python.testing.pytestArgs": [
         "teamify_flask_backend/tests"
     ],

@@ -60,10 +60,59 @@ ALLOWED_SKILLS = {
     "GraphQL", "gRPC", "WebSocket", "Microservices", "System Design",
     "Technical Writing", "UI/UX Design", "Project Management",
     "Leadership", "Communication", "Problem Solving", "Team Management",
+    "Reliability & Consistency", "Teamwork & Synergy",
+    "REST APIs", "HTML/CSS", "Unit Testing", "Code Review",
+    "Product Thinking", "Stakeholder Communication", "Architecture", "OKRs",
 }
 
 # Case-insensitive lookup set for validation
 _ALLOWED_SKILLS_LOWER = {s.lower() for s in ALLOWED_SKILLS}
+
+# Map common aliases / profile labels to canonical whitelist entries
+_SKILL_ALIASES: dict[str, str] = {
+    "rest apis": "REST APIs",
+    "rest api": "REST API",
+    "html/css": "HTML/CSS",
+    "html": "HTML",
+    "css": "CSS",
+    "node": "Node.js",
+    "nodejs": "Node.js",
+    "node.js": "Node.js",
+    "react.js": "React",
+    "reactjs": "React",
+    "vue.js": "Vue",
+    "ts": "TypeScript",
+    "js": "JavaScript",
+    "py": "Python",
+    "ai/ml": "Machine Learning",
+    "ai": "Machine Learning",
+    "ml": "Machine Learning",
+    "k8s": "Kubernetes",
+    "postgres": "PostgreSQL",
+    "mongo": "MongoDB",
+    "github actions": "GitHub Actions",
+    "cicd": "CI/CD",
+    "ci/cd": "CI/CD",
+    "fast api": "FastAPI",
+    "spring": "Spring Boot",
+    "tailwind": "TailwindCSS",
+    "tailwind css": "TailwindCSS",
+}
+
+
+def _canonical_skill_name(value: str) -> str | None:
+    """Return canonical whitelist skill name, or None if not recognized."""
+    cleaned = _strip_tags(value).strip()
+    if len(cleaned) < 2 or len(cleaned) > 80:
+        return None
+    key = cleaned.lower()
+    if key in _SKILL_ALIASES:
+        return _SKILL_ALIASES[key]
+    if key in _ALLOWED_SKILLS_LOWER:
+        for skill in ALLOWED_SKILLS:
+            if skill.lower() == key:
+                return skill
+    return None
 
 
 # ─── Nested Section Schemas ───────────────────────────────────────────────────
@@ -76,11 +125,19 @@ class PersonalInfoSchema(Schema):
     linkedin    = fields.Url(load_default=None)
     github      = fields.Url(load_default=None)
     website     = fields.Url(load_default=None)
+    title       = fields.Str(load_default=None, validate=validate.Length(max=150))
+    resume_style = fields.Str(load_default=None, validate=validate.Length(max=30))
+    accent_color = fields.Str(load_default=None, validate=validate.Length(max=20))
+    section_visibility = fields.Raw(load_default=None)
 
     @pre_load
     def sanitize(self, data, **kwargs):
         # SECURITY: strip HTML tags from every string field to prevent XSS
-        return {k: _sanitize_str(v) for k, v in data.items()}
+        cleaned = {k: _sanitize_str(v) for k, v in data.items()}
+        for url_key in ("linkedin", "github", "website"):
+            if cleaned.get(url_key) == "":
+                cleaned[url_key] = None
+        return cleaned
 
 
 class SkillSchema(Schema):
@@ -96,15 +153,21 @@ class SkillSchema(Schema):
 
     @pre_load
     def sanitize(self, data, **kwargs):
-        return {k: _sanitize_str(v) for k, v in data.items()}
+        cleaned = {k: _sanitize_str(v) for k, v in data.items()}
+        raw_name = cleaned.get("name")
+        if isinstance(raw_name, str) and raw_name.strip():
+            canon = _canonical_skill_name(raw_name)
+            if canon:
+                cleaned["name"] = canon
+        return cleaned
 
     @validates("name")
     def validate_skill_name(self, value):
-        """SECURITY: Reject skill names not on the approved whitelist."""
-        if value.lower() not in _ALLOWED_SKILLS_LOWER:
+        """Allow standard whitelist skills (max 80 chars)."""
+        if not _canonical_skill_name(value):
             raise ValidationError(
-                f"'{value}' is not a recognised skill. "
-                f"Choose from the approved list."
+                "Skill name is not recognized. Pick a standard skill "
+                "(e.g. Python, React, AWS) or remove it."
             )
 
 
@@ -162,6 +225,7 @@ class CertificationSchema(Schema):
 
 class CVCreateSchema(Schema):
     personal_info   = fields.Nested(PersonalInfoSchema, required=True)
+    summary         = fields.Str(load_default=None, validate=validate.Length(max=5000))
     skills          = fields.List(fields.Nested(SkillSchema), load_default=list)
     experience      = fields.List(fields.Nested(ExperienceSchema), load_default=list)
     projects        = fields.List(fields.Nested(ProjectSchema), load_default=list)

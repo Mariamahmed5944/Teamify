@@ -8,7 +8,8 @@ from models.project_member import ProjectMember
 from models.log import Log
 from models.notification import Notification
 from services.ai_service import predict_delay
-from sqlalchemy import or_, func
+from services.project_access import get_accessible_project_ids
+from sqlalchemy import func
 from datetime import date, datetime, timezone
 
 dashboard_bp = Blueprint("dashboard", __name__, url_prefix="/api/dashboard")
@@ -78,33 +79,44 @@ def get_dashboard():
     user_id = int(get_jwt_identity())
 
     from models.user import User
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
 
-    # ── Determine accessible project IDs ──────────────────────────────────
-    if user and user.role == "admin":
-        project_ids = [p.id for p in Project.query.all()]
-    else:
-        owned = [p.id for p in Project.query.filter_by(user_id=user_id).all()]
-        member_of = [pm.project_id for pm in ProjectMember.query.filter_by(user_id=user_id).all()]
-        project_ids = list(set(owned + member_of))
+    # ── Determine accessible project IDs (owner OR member only) ───────────
+    project_ids = get_accessible_project_ids(user_id)
 
     # ── Task statistics ───────────────────────────────────────────────────
     today = date.today()
 
     if project_ids:
         base_q = Task.query.filter(Task.project_id.in_(project_ids))
+        my_tasks_q = base_q.filter(Task.assigned_to == user_id)
     else:
-        base_q = Task.query.filter(False)
+        base_q = Task.query.filter(Task.project_id.in_([]))
+        my_tasks_q = base_q
 
-    total_tasks = base_q.count()
-    tasks_due_today = base_q.filter(Task.due_date == today, Task.status != "done").count()
-    overdue_tasks = base_q.filter(Task.due_date < today, Task.status != "done").count()
-    completed_tasks = base_q.filter(Task.status == "done").count()
-    in_progress_tasks = base_q.filter(Task.status == "in_progress").count()
+    total_tasks = my_tasks_q.count()
+    tasks_due_today = my_tasks_q.filter(
+        Task.due_date == today, Task.status != "done"
+    ).count()
+    overdue_tasks = my_tasks_q.filter(
+        Task.due_date < today, Task.status != "done"
+    ).count()
+    completed_tasks = my_tasks_q.filter(Task.status == "done").count()
+    in_progress_tasks = my_tasks_q.filter(Task.status == "in_progress").count()
+    pending_tasks = my_tasks_q.filter(Task.status == "pending").count()
+
+    active_projects_count = (
+        Project.query.filter(
+            Project.id.in_(project_ids),
+            Project.status.in_(["active", "planned"]),
+        ).count()
+        if project_ids
+        else 0
+    )
 
     # ── At-risk tasks (top 5 by delay probability) ────────────────────────
     at_risk_tasks_raw = (
-        base_q
+        my_tasks_q
         .filter(Task.status != "done", Task.due_date.isnot(None))
         .order_by(Task.due_date.asc())
         .limit(10)
@@ -114,7 +126,7 @@ def get_dashboard():
     at_risk_tasks = []
     for t in at_risk_tasks_raw:
         delay_info = predict_delay(task_id=t.id)
-        prob = delay_info.get("delay_probability", 0)
+        prob = float(delay_info.get("delay_probability", 0) or 0)
         if prob > 20:
             at_risk_tasks.append({
                 "id": str(t.id),
@@ -190,6 +202,10 @@ def get_dashboard():
             "overdue_tasks": overdue_tasks,
             "completed_tasks": completed_tasks,
             "in_progress_tasks": in_progress_tasks,
+            "pending_tasks": pending_tasks,
+            "active_projects_count": active_projects_count,
+            "accessible_projects_count": active_projects_count,
+            "my_assigned_tasks": total_tasks,
         },
         "at_risk_tasks": at_risk_tasks,
         "active_projects": active_projects,

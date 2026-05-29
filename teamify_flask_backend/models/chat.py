@@ -26,6 +26,9 @@ class ChatRoom(db.Model):
         "Message", backref="room", lazy="dynamic", cascade="all, delete-orphan"
     )
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
     def to_dict(self, include_last_message=False):
         d = {
             "id": self.id,
@@ -33,7 +36,10 @@ class ChatRoom(db.Model):
             "project_id": self.project_id,
             "is_group": self.is_group,
             "created_at": self.created_at.isoformat() if self.created_at else None,
-            "member_ids": [m.user_id for m in self.members],
+            "member_ids": [
+                m.user_id
+                for m in ChatRoomMember.query.filter_by(room_id=self.id).all()
+            ],
         }
         if include_last_message:
             last = (
@@ -72,6 +78,9 @@ class ChatRoomMember(db.Model):
         db.Index("ix_crm_user_id", "user_id"),
     )
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
     def __repr__(self):
         return f"<ChatRoomMember room={self.room_id} user={self.user_id}>"
 
@@ -101,6 +110,9 @@ class Message(db.Model):
     __table_args__ = (
         db.Index("ix_msg_room_created", "room_id", "created_at"),
     )
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
     def to_dict(self):
         sender_name = ""

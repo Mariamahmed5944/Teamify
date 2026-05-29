@@ -1,5 +1,6 @@
 from datetime import datetime, timezone, timedelta
 from models import db
+from models.task import Task
 import secrets
 
 
@@ -17,11 +18,6 @@ class User(db.Model):
     role = db.Column(db.String(20), nullable=False, default="member")
     # user_type: how the user describes themselves — freelancer | student | admin
     user_type = db.Column(db.String(30), nullable=True)
-    # account_status: approval gate — pending | approved | rejected
-    # Freelancers and students start as 'pending' until an admin approves them.
-    # Other user types default to 'approved' immediately.
-    account_status = db.Column(db.String(20), nullable=False, default="approved")
-    account_status_note = db.Column(db.Text, nullable=True)   # admin rejection reason
     # GitHub OAuth: stores GitHub user id for social login
     github_id = db.Column(db.String(64), nullable=True, unique=True)
     # Extended profile fields (from registration forms)
@@ -33,6 +29,13 @@ class User(db.Model):
     major = db.Column(db.String(100), nullable=True)               # student: Computer Science, etc.
     looking_for_team = db.Column(db.Boolean, nullable=True)        # student: Yes/No
     reason_for_joining = db.Column(db.String(50), nullable=True)   # guest: Reviewing project, Viewer, etc.
+    phone = db.Column(db.String(30), nullable=True)
+    bio = db.Column(db.Text, nullable=True)
+    avatar_file_id = db.Column(
+        db.Integer,
+        db.ForeignKey("file_metadata.id", ondelete="SET NULL"),
+        nullable=True,
+    )
 
     # ─── AI Feature: Raw fields ──────────────────────────────────────────────
     member_on_time_rate = db.Column(db.Float, nullable=False, default=1.0)
@@ -60,6 +63,9 @@ class User(db.Model):
     # When set, logins are rejected until this UTC datetime has passed.
     locked_until = db.Column(db.DateTime, nullable=True)
 
+    account_status = db.Column(db.String(20), nullable=False, default="approved")
+    account_status_note = db.Column(db.Text, nullable=True)
+
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = db.Column(
         db.DateTime,
@@ -74,6 +80,14 @@ class User(db.Model):
     )
     logs = db.relationship("Log", backref="user", lazy=True)
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def _assigned_tasks(self) -> list[Task]:
+        if self.id is None:
+            return []
+        return Task.query.filter_by(assigned_to=self.id).all()
+
     # ─── AI Calculated Properties ────────────────────────────────────────────
 
     @property
@@ -85,8 +99,8 @@ class User(db.Model):
 
     @property
     def member_current_tasks(self):
-        """count(tasks where assigned_user_id = user AND status != 'Completed')"""
-        return len([t for t in self.assigned_tasks if t.status != "Completed"])
+        """count(tasks where assigned_user_id = user AND status != 'done')"""
+        return len([t for t in self._assigned_tasks() if t.status != "done"])
 
     @property
     def availability_score(self):
@@ -105,21 +119,21 @@ class User(db.Model):
 
     @property
     def tasks_completed(self):
-        """len(tasks where status == 'Completed')"""
-        return len([t for t in self.assigned_tasks if t.status == "Completed"])
+        """len(tasks where status == 'done')"""
+        return len([t for t in self._assigned_tasks() if t.status == "done"])
 
     @property
     def overdue_tasks(self):
         """len(tasks where completed_date > deadline)"""
         return len([
-            t for t in self.assigned_tasks
+            t for t in self._assigned_tasks()
             if t.completed_date and t.due_date and t.completed_date.date() > t.due_date
         ])
 
     @property
     def quality_score(self):
         """Average(task.review_score) / 5"""
-        scores = [t.review_score for t in self.assigned_tasks if t.review_score is not None]
+        scores = [t.review_score for t in self._assigned_tasks() if t.review_score is not None]
         if not scores:
             return 0.0
         return (sum(scores) / len(scores)) / 5.0
@@ -145,8 +159,6 @@ class User(db.Model):
             "email": self.email,
             "role": self.role,
             "user_type": self.user_type,
-            "account_status": self.account_status,
-            "account_status_note": self.account_status_note,
             "github_id": getattr(self, 'github_id', None),
             "professional_field": self.professional_field,
             "experience_level": self.experience_level,
@@ -156,6 +168,9 @@ class User(db.Model):
             "major": self.major,
             "looking_for_team": self.looking_for_team,
             "reason_for_joining": self.reason_for_joining,
+            "phone": self.phone,
+            "bio": self.bio,
+            "avatar_file_id": self.avatar_file_id,
             "member_on_time_rate": self.member_on_time_rate,
             "member_avg_delay_days": self.member_avg_delay_days,
             "member_experience_years": self.member_experience_years,
@@ -167,6 +182,8 @@ class User(db.Model):
             "attendance_rate": self.attendance_rate,
             "availability_score": self.availability_score,
             "workload_ratio": self.workload_ratio,
+            "account_status": self.account_status,
+            "account_status_note": self.account_status_note,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }

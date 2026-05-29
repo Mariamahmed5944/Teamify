@@ -15,6 +15,9 @@ class Log(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
     def to_dict(self):
         """Serialize log to dictionary."""
         return {

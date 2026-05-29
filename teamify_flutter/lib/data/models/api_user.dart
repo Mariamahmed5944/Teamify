@@ -7,9 +7,26 @@ class ApiUser {
   final String fullName;
   final String email;
   final String role;
+  final String projectRole;
   final String userType;
-  final String accountStatus;
   final List<String> skills;
+  final String professionalField;
+  final String availability;
+  final String experienceLevel;
+  final String joinedAt;
+  final String phone;
+  final String bio;
+  final String avatarFileId;
+  final String accountStatus;
+  final String major;
+  final String currentLevel;
+  final bool? lookingForTeam;
+  final String reasonForJoining;
+  final int memberExperienceYears;
+  final int tasksCompleted;
+  final double qualityScore;
+  final double attendanceRate;
+  final double memberOnTimeRate;
 
   const ApiUser({
     required this.id,
@@ -17,15 +34,77 @@ class ApiUser {
     required this.fullName,
     required this.email,
     required this.role,
+    this.projectRole = '',
     required this.userType,
-    required this.accountStatus,
     this.skills = const [],
+    this.professionalField = '',
+    this.availability = '',
+    this.experienceLevel = '',
+    this.joinedAt = '',
+    this.phone = '',
+    this.bio = '',
+    this.avatarFileId = '',
+    this.accountStatus = 'approved',
+    this.major = '',
+    this.currentLevel = '',
+    this.lookingForTeam,
+    this.reasonForJoining = '',
+    this.memberExperienceYears = 0,
+    this.tasksCompleted = 0,
+    this.qualityScore = 0,
+    this.attendanceRate = 0,
+    this.memberOnTimeRate = 0,
   });
+
+  /// Best label for lists (full name, else @display_name).
+  String get primaryName =>
+      fullName.isNotEmpty ? fullName : displayName;
+
+  /// Secondary line: email · account type · field · availability.
+  String get memberMetaLine {
+    final parts = <String>[];
+    if (email.isNotEmpty) parts.add(email);
+    if (displayRole.isNotEmpty) parts.add(displayRole);
+    if (professionalField.isNotEmpty) parts.add(professionalField);
+    if (availability.isNotEmpty) parts.add(availability);
+    if (experienceLevel.isNotEmpty) parts.add(experienceLevel);
+    return parts.join(' · ');
+  }
+
+  /// Skills summary for member cards.
+  String get skillsSummary =>
+      skills.isEmpty ? '' : skills.take(6).join(', ');
+
+  /// Role label for project member lists (Owner / Member).
+  String get projectRoleLabel {
+    final pr = projectRole.isNotEmpty ? projectRole : role;
+    if (pr == 'owner' || pr == 'member') {
+      return pr[0].toUpperCase() + pr.substring(1);
+    }
+    return '';
+  }
 
   bool get isAdmin => role.toLowerCase() == 'admin';
   bool get isStudent => userType.toLowerCase() == 'student';
   bool get isFreelancer => userType.toLowerCase() == 'freelancer';
+  /// Account approval workflow removed — always false.
   bool get isPending => accountStatus.toLowerCase() == 'pending';
+
+  String get accountStatusLabel {
+    switch (accountStatus.toLowerCase()) {
+      case 'approved':
+        return 'Active';
+      case 'pending':
+        return 'Pending';
+      case 'rejected':
+        return 'Rejected';
+      case 'locked':
+      case 'suspended':
+        return accountStatus[0].toUpperCase() + accountStatus.substring(1);
+      default:
+        return accountStatus.isEmpty ? 'Active' : accountStatus;
+    }
+  }
 
   String get displayRole {
     if (isAdmin) return 'Admin';
@@ -38,19 +117,67 @@ class ApiUser {
       json['display_name'] ?? json['displayName'] ?? json['name'],
       'User',
     );
+    final projectRole = asString(
+      json['project_role'] ?? json['projectRole'],
+    );
+    final systemRole = asString(json['role'], 'member');
     return ApiUser(
-      id: asString(json['id']),
+      id: asString(json['user_id'] ?? json['id']),
       displayName: display,
       fullName: asString(json['full_name'] ?? json['fullName'], display),
       email: asString(json['email']),
-      role: asString(json['role'], 'member'),
+      role: projectRole.isNotEmpty ? projectRole : systemRole,
+      projectRole: projectRole.isNotEmpty ? projectRole : systemRole,
       userType: asString(json['user_type'] ?? json['userType'], 'freelancer'),
+      skills: asStringList(json['skills']),
+      professionalField: asString(
+        json['professional_field'] ?? json['professionalField'],
+      ),
+      availability: asString(json['availability']),
+      experienceLevel: asString(
+        json['experience_level'] ?? json['experienceLevel'],
+      ),
+      joinedAt: asString(
+        json['joined_at'] ?? json['joinedAt'] ?? json['created_at'],
+      ),
+      phone: asString(json['phone']),
+      bio: asString(json['bio']),
+      avatarFileId: asString(json['avatar_file_id'] ?? json['avatarFileId']),
       accountStatus: asString(
         json['account_status'] ?? json['accountStatus'],
         'approved',
       ),
-      skills: asStringList(json['skills']),
+      major: asString(json['major']),
+      currentLevel: asString(json['current_level'] ?? json['currentLevel']),
+      lookingForTeam: json['looking_for_team'] == null &&
+              json['lookingForTeam'] == null
+          ? null
+          : asBool(json['looking_for_team'] ?? json['lookingForTeam']),
+      reasonForJoining: asString(
+        json['reason_for_joining'] ?? json['reasonForJoining'],
+      ),
+      memberExperienceYears: asInt(
+        json['member_experience_years'] ?? json['memberExperienceYears'],
+      ),
+      tasksCompleted: asInt(json['tasks_completed'] ?? json['tasksCompleted']),
+      qualityScore: asDouble(json['quality_score'] ?? json['qualityScore']),
+      attendanceRate: asDouble(
+        json['attendance_rate'] ?? json['attendanceRate'],
+      ),
+      memberOnTimeRate: asDouble(
+        json['member_on_time_rate'] ?? json['memberOnTimeRate'],
+      ),
     );
+  }
+
+  String get initials {
+    final n = primaryName.trim();
+    if (n.isEmpty) return '?';
+    final parts = n.split(RegExp(r'\s+'));
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+    return n[0].toUpperCase();
   }
 
   Map<String, dynamic> toJson() => {
@@ -60,8 +187,15 @@ class ApiUser {
         'email': email,
         'role': role,
         'user_type': userType,
-        'account_status': accountStatus,
         'skills': skills,
+        'professional_field': professionalField,
+        'availability': availability,
+        'experience_level': experienceLevel,
+        'joined_at': joinedAt,
+        'phone': phone,
+        'bio': bio,
+        'avatar_file_id': avatarFileId.isEmpty ? null : avatarFileId,
+        'account_status': accountStatus,
       };
 
   UserModel toDisplayModel() {

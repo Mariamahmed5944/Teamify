@@ -22,37 +22,59 @@ class AppColors {
 }
 
 class AppTheme {
-  static ThemeData get theme => ThemeData(
-        useMaterial3: true,
-        primaryColor: AppColors.primary,
-        scaffoldBackgroundColor: AppColors.background,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: AppColors.primary,
-          primary: AppColors.primary,
-          secondary: AppColors.accent,
-          surface: AppColors.white,
-          onSurface: AppColors.textPrimary,
+  static ThemeData get theme => _buildTheme(Brightness.light);
+
+  static ThemeData get darkTheme => _buildTheme(Brightness.dark);
+
+  static ThemeData _buildTheme(Brightness brightness) {
+    final isDark = brightness == Brightness.dark;
+    final surface = isDark ? const Color(0xFF1E293B) : AppColors.white;
+    final scaffold = isDark ? const Color(0xFF0F172A) : AppColors.background;
+    final onSurface = isDark ? const Color(0xFFF1F5F9) : AppColors.textPrimary;
+    final border = isDark ? const Color(0xFF334155) : AppColors.border;
+
+    return ThemeData(
+      useMaterial3: true,
+      brightness: brightness,
+      primaryColor: AppColors.primary,
+      scaffoldBackgroundColor: scaffold,
+      dividerColor: border,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: AppColors.primary,
+        brightness: brightness,
+        primary: AppColors.primary,
+        secondary: AppColors.accent,
+        surface: surface,
+        onSurface: onSurface,
+      ),
+      textTheme: GoogleFonts.interTextTheme(
+        ThemeData(brightness: brightness).textTheme,
+      ).apply(bodyColor: onSurface, displayColor: onSurface),
+      appBarTheme: AppBarTheme(
+        backgroundColor: surface,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        iconTheme: IconThemeData(color: onSurface),
+        titleTextStyle: GoogleFonts.inter(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          color: onSurface,
         ),
-        textTheme: GoogleFonts.interTextTheme(),
-        appBarTheme: AppBarTheme(
-          backgroundColor: AppColors.white,
+      ),
+      cardColor: surface,
+      listTileTheme: ListTileThemeData(
+        iconColor: onSurface,
+        textColor: onSurface,
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           elevation: 0,
-          scrolledUnderElevation: 0,
-          iconTheme: const IconThemeData(color: AppColors.textPrimary),
-          titleTextStyle: GoogleFonts.inter(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: AppColors.textPrimary,
-          ),
         ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            foregroundColor: Colors.white,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            elevation: 0,
-          ),
-        ),
-      );
+      ),
+    );
+  }
 }

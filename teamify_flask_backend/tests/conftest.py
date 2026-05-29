@@ -340,12 +340,18 @@ def client(app, _db):
 
 @pytest.fixture(autouse=True)
 def mock_db_session(request):
-    """Prevent any real database writes during unit tests, unless marked as integration."""
+    """Prevent any real database writes during unit tests, unless marked as integration.
+
+    Also patches TokenBlocklist.is_revoked → False so that JWT tokens created by
+    the test fixtures are never treated as revoked (the blocklist is tested separately
+    in test_jwt_blocklist.py which is marked @pytest.mark.integration).
+    """
     if "integration" in request.keywords:
         yield None
         return
 
-    with patch("models.db.session") as mock_session:
+    with patch("models.db.session") as mock_session, \
+         patch("models.token_blocklist.TokenBlocklist.is_revoked", return_value=False):
         mock_session.add = MagicMock()
         mock_session.flush = MagicMock()
         mock_session.commit = MagicMock()

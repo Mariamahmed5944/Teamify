@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import io
 from functools import wraps
+from typing import Any, cast
 
 from flask import Blueprint, jsonify, request, send_file
 from flask_jwt_extended import jwt_required, get_jwt_identity
@@ -32,6 +33,33 @@ from services.cv_pdf_service import build_cv_pdf
 from validators.cv_validator import cv_create_schema
 
 cv_bp = Blueprint("cv", __name__, url_prefix="/api/cv")
+
+
+def _request_json() -> dict[str, Any]:
+    payload = request.get_json(silent=True, force=True)
+    return payload if isinstance(payload, dict) else {}
+
+
+def _flatten_validation_messages(messages: Any) -> list[str]:
+    """Turn Marshmallow nested error dicts into human-readable strings."""
+    out: list[str] = []
+
+    def walk(node: Any, prefix: str) -> None:
+        if isinstance(node, dict):
+            for key, val in node.items():
+                path = f"{prefix}.{key}" if prefix else str(key)
+                walk(val, path)
+        elif isinstance(node, list):
+            for item in node:
+                if isinstance(item, str):
+                    out.append(f"{prefix}: {item}" if prefix else item)
+                else:
+                    walk(item, prefix)
+        elif isinstance(node, str):
+            out.append(f"{prefix}: {node}" if prefix else node)
+
+    walk(messages, "")
+    return out
 
 
 # ─── RBAC Helper ──────────────────────────────────────────────────────────────
@@ -97,16 +125,25 @@ def create_or_update_cv():
     if caller_role == "guest":
         return jsonify({"error": "Forbidden", "message": "Guests cannot create CVs."}), 403
 
-    raw = request.get_json(silent=True, force=True) or {}
+    raw = _request_json()
 
     # Validate + sanitize via Marshmallow (XSS stripped inside schema's @pre_load)
     try:
-        data = cv_create_schema.load(raw)
+        data = cast(dict[str, Any], cv_create_schema.load(raw))
     except ValidationError as err:
-        return jsonify({"error": "Validation Error", "messages": err.messages}), 400
+        flat = _flatten_validation_messages(err.messages)
+        return jsonify({
+            "error": "Validation Error",
+            "message": flat[0] if flat else "Invalid CV data.",
+            "messages": err.messages,
+            "details": flat,
+        }), 400
 
     # ── AI Enhancement ─────────────────────────────────────────────────────
+    client_summary = data.get("summary")
     enhanced = enhance_cv(data)
+    if client_summary:
+        enhanced["summary"] = client_summary
 
     # ── Upsert: one CV per user ─────────────────────────────────────────────
     cv = CV.query.filter_by(user_id=caller_id).first()
@@ -237,17 +274,24 @@ def update_cv(cv_id: int):
     if not _can_write_cv(caller_id, caller_role, cv.user_id):
         return jsonify({"error": "Forbidden", "message": "You cannot edit this CV."}), 403
 
-    raw = request.get_json(silent=True, force=True) or {}
+    raw = _request_json()
 
     # Validate only the supplied fields
     try:
-        data = cv_create_schema.load(raw, partial=True)
+        data = cast(dict[str, Any], cv_create_schema.load(raw, partial=True))
     except ValidationError as err:
-        return jsonify({"error": "Validation Error", "messages": err.messages}), 400
+        flat = _flatten_validation_messages(err.messages)
+        return jsonify({
+            "error": "Validation Error",
+            "message": flat[0] if flat else "Invalid CV data.",
+            "messages": err.messages,
+            "details": flat,
+        }), 400
 
     # Merge patch: only overwrite fields that were explicitly submitted
     field_map = {
         "personal_info": "personal_info",
+        "summary":       "summary",
         "skills":        "skills",
         "experience":    "experience",
         "projects":      "projects",
@@ -268,6 +312,40 @@ def update_cv(cv_id: int):
 
     db.session.commit()
     return jsonify({"message": "CV updated.", "cv": cv.to_dict()}), 200
+
+
+# ─── DELETE /api/cv/<id>  — Remove own CV ─────────────────────────────────────
+
+@cv_bp.route("/<int:cv_id>", methods=["DELETE"])
+@jwt_required()
+def delete_cv(cv_id: int):
+    """Delete a CV. Members may only delete their own."""
+    try:
+        caller_id, caller_role = _resolve_caller()
+    except ValueError as exc:
+        return jsonify({"error": "Unauthorized", "message": str(exc)}), 401
+
+    if caller_role == "guest":
+        return jsonify({"error": "Forbidden", "message": "Guests cannot delete CVs."}), 403
+
+    cv = CV.query.filter_by(id=cv_id).first()
+    if not cv:
+        return jsonify({"error": "Not Found", "message": "CV not found."}), 404
+
+    if not _can_write_cv(caller_id, caller_role, cv.user_id):
+        return jsonify({"error": "Forbidden", "message": "You cannot delete this CV."}), 403
+
+    CVDownloadToken.query.filter_by(cv_id=cv_id).delete()
+    db.session.delete(cv)
+    db.session.commit()
+
+    log_security_event(
+        "CV_DELETED",
+        user_id=caller_id,
+        ip=request.remote_addr or "unknown",
+        details={"cv_id": cv_id},
+    )
+    return jsonify({"message": "CV deleted."}), 200
 
 
 # ─── GET /api/cv/<id>/export/pdf  — Secure PDF export ────────────────────────
@@ -339,7 +417,13 @@ def export_cv_pdf(cv_id: int):
         return jsonify({"error": "Forbidden", "message": "You cannot export this CV."}), 403
 
     # ── Build PDF in RAM ────────────────────────────────────────────────────
-    pdf_buffer = build_cv_pdf(cv.to_dict())
+    try:
+        pdf_buffer = build_cv_pdf(cv.to_dict())
+    except Exception as exc:
+        return jsonify({
+            "error": "PDF Generation Failed",
+            "message": str(exc),
+        }), 500
 
     # Audit-log the successful export
     log_security_event(

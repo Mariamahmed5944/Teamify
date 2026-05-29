@@ -34,6 +34,9 @@ class CVDownloadToken(db.Model):
     owner = db.relationship("User", backref=db.backref("cv_download_tokens", lazy=True))
     cv    = db.relationship("CV",   backref=db.backref("download_tokens",    lazy=True))
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
     @staticmethod
     def create_token(user_id: int, cv_id: int, ttl_minutes: int = 15) -> "CVDownloadToken":
         """Generate a secure, time-limited download token."""

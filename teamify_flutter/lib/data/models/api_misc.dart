@@ -6,6 +6,9 @@ class ApiNotification {
   final String body;
   final bool isRead;
   final String createdAt;
+  final String type;
+  final String entityType;
+  final String entityId;
 
   const ApiNotification({
     required this.id,
@@ -13,6 +16,9 @@ class ApiNotification {
     this.body = '',
     this.isRead = false,
     this.createdAt = '',
+    this.type = 'general',
+    this.entityType = '',
+    this.entityId = '',
   });
 
   factory ApiNotification.fromJson(Map<String, dynamic> json) {
@@ -22,8 +28,25 @@ class ApiNotification {
       body: asString(json['body'] ?? json['message']),
       isRead: asBool(json['is_read'] ?? json['isRead']),
       createdAt: asString(json['created_at'] ?? json['createdAt']),
+      type: asString(json['type'] ?? 'general'),
+      entityType: asString(json['entity_type'] ?? json['entityType']),
+      entityId: asString(json['entity_id'] ?? json['entityId']),
     );
   }
+
+  bool get hasLinkedEntity =>
+      entityType.isNotEmpty && entityId.isNotEmpty;
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'title': title,
+        'body': body,
+        'is_read': isRead,
+        'created_at': createdAt,
+        'type': type,
+        'entity_type': entityType,
+        'entity_id': entityId,
+      };
 }
 
 class ApiFile {
@@ -32,6 +55,7 @@ class ApiFile {
   final String size;
   final String type;
   final String uploadedBy;
+  final String projectId;
   final String createdAt;
   final String sha256;
 
@@ -41,6 +65,7 @@ class ApiFile {
     this.size = '',
     this.type = '',
     this.uploadedBy = '',
+    this.projectId = '',
     this.createdAt = '',
     this.sha256 = '',
   });
@@ -53,7 +78,10 @@ class ApiFile {
       name: asString(json['filename'] ?? json['original_filename'] ?? json['name']),
       size: size.isNotEmpty ? size : _formatBytes(bytes),
       type: asString(json['mime_type'] ?? json['type']),
-      uploadedBy: asString(json['uploaded_by'] ?? json['owner_id']),
+      uploadedBy: asString(
+        json['owner_name'] ?? json['uploaded_by'] ?? json['owner_id'],
+      ),
+      projectId: asString(json['project_id'] ?? json['projectId']),
       createdAt: asString(json['created_at'] ?? json['uploaded_at']),
       sha256: asString(json['sha256'] ?? json['sha256_hash']),
     );
@@ -74,6 +102,16 @@ class ApiFile {
     final decimals = unitIndex == 0 ? 0 : 1;
     return '${value.toStringAsFixed(decimals)} ${units[unitIndex]}';
   }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'filename': name,
+        'size': size,
+        'mime_type': type,
+        'uploaded_by': uploadedBy,
+        'created_at': createdAt,
+        'sha256': sha256,
+      };
 }
 
 class ApiCV {
@@ -94,4 +132,6 @@ class ApiCV {
       data: json,
     );
   }
+
+  Map<String, dynamic> toJson() => data;
 }
