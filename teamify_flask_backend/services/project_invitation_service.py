@@ -50,6 +50,10 @@ def invite_users_to_project(
             skipped.append({"id": mid, "reason": "user not found"})
             continue
 
+        if target.role == "admin" or (target.user_type or "").lower() == "admin":
+            skipped.append({"id": mid, "reason": "admin accounts cannot be invited"})
+            continue
+
         if ProjectMember.query.filter_by(project_id=project.id, user_id=mid).first():
             skipped.append({"id": mid, "reason": "already a member"})
             continue

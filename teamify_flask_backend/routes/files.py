@@ -323,10 +323,43 @@ def list_files():
             return jsonify({"error": "Project not found"}), 404
         if get_project_role(user_id, project_id) not in _READ_ROLES:
             return jsonify({"error": "Forbidden"}), 403
-        files = (
-            FileMetadata.query.filter_by(project_id=project_id)
-            .order_by(FileMetadata.created_at.desc())
-            .all()
+        from models.chat import ChatRoom, Message
+
+        files_by_project = {
+            f.id: f
+            for f in FileMetadata.query.filter_by(project_id=project_id).all()
+        }
+        room_ids = [
+            r.id
+            for r in ChatRoom.query.filter_by(project_id=project_id).all()
+        ]
+        if room_ids:
+            chat_file_ids = {
+                row[0]
+                for row in db.session.query(Message.file_id)
+                .filter(
+                    Message.room_id.in_(room_ids),
+                    Message.file_id.isnot(None),
+                )
+                .distinct()
+                .all()
+            }
+            for fid in chat_file_ids:
+                if fid in files_by_project:
+                    continue
+                meta = db.session.get(FileMetadata, fid)
+                if meta:
+                    if meta.project_id is None:
+                        meta.project_id = project_id
+                    files_by_project[fid] = meta
+            try:
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+        files = sorted(
+            files_by_project.values(),
+            key=lambda f: f.created_at or datetime.min.replace(tzinfo=timezone.utc),
+            reverse=True,
         )
     else:
         files = (

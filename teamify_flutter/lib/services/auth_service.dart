@@ -38,22 +38,20 @@ class AuthService with ServiceErrorHandler {
       });
 
   Future<ApiResult<ApiUser?>> register({
-    required String displayName,
+    required String fullName,
     required String email,
     required String password,
     required String role,
     required String userType,
-    String? fullName,
     Map<String, dynamic> extra = const {},
   }) =>
       guard(() async {
         final result = await _session.register(
-          displayName: displayName,
+          fullName: fullName,
           email: email,
           password: password,
           role: role,
           userType: userType,
-          fullName: fullName,
           extra: extra,
         );
         return result.user;
@@ -84,16 +82,22 @@ class AuthService with ServiceErrorHandler {
           {String? userType}) =>
       guard(() async {
         await _cache.clearAll();
-        await _repo.loginWithGoogle(idToken, userType: userType);
-        await _session.restoreSession();
+        final result =
+            await _repo.loginWithGoogle(idToken, userType: userType);
+        await _session.completeOAuthLogin(result);
         return _session.currentUser;
       });
 
-  Future<ApiResult<ApiUser?>> loginWithGithub(String code, {String? userType}) =>
+  Future<ApiResult<ApiUser?>> loginWithGithub(String code,
+          {String? userType, String? redirectUri}) =>
       guard(() async {
         await _cache.clearAll();
-        await _repo.loginWithGithub(code, userType: userType);
-        await _session.restoreSession();
+        final result = await _repo.loginWithGithub(
+          code,
+          userType: userType,
+          redirectUri: redirectUri,
+        );
+        await _session.completeOAuthLogin(result);
         return _session.currentUser;
       });
 

@@ -9,6 +9,8 @@ import '../../services/app_services.dart';
 import '../../core/network/api_result.dart';
 import '../../models/models.dart';
 import '../../widgets/widgets.dart';
+import '../mentor/mentor_skill_ui.dart';
+import '../../services/ai_service.dart';
 
 Future<List<UserModel>> _fetchTeammateRecommendations(
     BuildContext context) async {
@@ -1875,12 +1877,7 @@ class SkillsScreen extends StatefulWidget {
 class _SkillsScreenState extends State<SkillsScreen> {
   bool _loading = true;
   String? _error;
-  List<Map<String, dynamic>> _skills = [];
-
-  static const _palette = [
-    AppColors.primary, AppColors.error, AppColors.success, AppColors.warning,
-    Color(0xFF6366F1), Colors.teal, Colors.purple, Colors.orange,
-  ];
+  MentorInsights? _insights;
 
   @override
   void initState() {
@@ -1894,37 +1891,10 @@ class _SkillsScreenState extends State<SkillsScreen> {
       final svc = context.read<AppServices>();
       final userId = context.read<SessionController>().currentUser?.id.toString() ?? '';
       if (userId.isEmpty) throw Exception('Not logged in');
-      final result = await svc.ai.mentorInsights(userId).unwrap();
+      final insights = await svc.ai.getMentorInsights(userId).unwrap();
       if (!mounted) return;
-
-      final gaps = result['skill_gaps'];
-      final missing = (gaps is Map ? gaps['missing_skills'] : null) ?? result['missing_skills'];
-      final weaknesses = result['weaknesses'];
-      final strengths = result['strengths'];
-
-      final List<Map<String, dynamic>> skills = [];
-
-      void addList(dynamic raw, String level) {
-        if (raw is List) {
-          for (final item in raw) {
-            final name = item is Map ? (item['name'] ?? item['skill'] ?? item.toString()) : item.toString();
-            final score = item is Map ? ((item['score'] as num?)?.toDouble() ?? 0.7) : 0.7;
-            skills.add({'name': name.toString(), 'level': level, 'score': score});
-          }
-        } else if (raw is String && raw.isNotEmpty) {
-          for (final s in raw.split(',')) {
-            final t = s.trim();
-            if (t.isNotEmpty) skills.add({'name': t, 'level': level, 'score': 0.7});
-          }
-        }
-      }
-
-      addList(missing, 'To Learn');
-      addList(weaknesses, 'Needs Work');
-      addList(strengths, 'Strong');
-
       setState(() {
-        _skills = skills;
+        _insights = insights;
         _loading = false;
       });
     } catch (e) {
@@ -1936,8 +1906,50 @@ class _SkillsScreenState extends State<SkillsScreen> {
     }
   }
 
+  List<({String title, double score, bool owned})> _skillRows(MentorInsights insights) {
+    final seen = <String>{};
+    final rows = <({String title, double score, bool owned})>[];
+
+    void add(MentorSkillInsight g) {
+      final key = g.area.trim().toLowerCase();
+      if (key.isEmpty || seen.contains(key)) return;
+      seen.add(key);
+      rows.add((
+        title: g.area,
+        score: g.score.clamp(0, 100),
+        owned: g.severity == 'owned',
+      ));
+    }
+
+    for (final g in insights.skillGaps) {
+      add(g);
+    }
+    for (final w in insights.weaknesses) {
+      if (!seen.contains(w.area.trim().toLowerCase())) add(w);
+    }
+    for (final s in insights.strengths) {
+      if (rows.length >= 8) break;
+      if (!seen.contains(s.area.trim().toLowerCase())) {
+        seen.add(s.area.trim().toLowerCase());
+        rows.add((title: s.area, score: s.score.clamp(0, 100), owned: true));
+      }
+    }
+    for (final name in insights.profileSkills) {
+      if (rows.length >= 10) break;
+      final key = name.trim().toLowerCase();
+      if (key.isEmpty || seen.contains(key)) continue;
+      seen.add(key);
+      rows.add((title: name, score: 72, owned: true));
+    }
+
+    rows.sort((a, b) => b.score.compareTo(a.score));
+    return rows;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final rows = _insights != null ? _skillRows(_insights!) : const [];
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -1958,72 +1970,37 @@ class _SkillsScreenState extends State<SkillsScreen> {
                     const SizedBox(height: 12),
                     TButton(label: 'Retry', onTap: _load),
                   ]))
-              : ListView(padding: const EdgeInsets.all(16), children: [
-                  const AIBanner(
-                      title: 'Personalized Skill Map',
-                      subtitle:
-                          'Skills selected based on your performance, projects, and career trajectory'),
-                  const SizedBox(height: 16),
-                  if (_skills.isEmpty)
-                    const TCard(
+              : ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                  children: [
+                    if (rows.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 24),
                         child: Text(
-                            'Complete more projects and tasks to unlock AI skill insights.',
-                            style: TextStyle(color: AppColors.textSecondary)))
-                  else ...[
-                    const TSectionHeader(title: 'Your Skills', action: 'From AI Analysis'),
-                    const SizedBox(height: 12),
-                    ..._skills.asMap().entries.map((e) {
-                      final s = e.value;
-                      final color = _palette[e.key % _palette.length];
-                      final score = (s['score'] as double).clamp(0.0, 1.0);
-                      final level = s['level'] as String;
-                      return TCard(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Row(children: [
-                            Expanded(
-                                child: Text(s['name'] as String,
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.textPrimary))),
-                            TChip(
-                                label: level,
-                                bg: color.withValues(alpha: 0.1),
-                                textColor: color),
-                          ]),
-                          const SizedBox(height: 8),
-                          Row(children: [
-                            const Text('Relevance Score',
-                                style: TextStyle(
-                                    fontSize: 12, color: AppColors.textSecondary)),
-                            const Spacer(),
-                            Text('↗ ${(score * 100).toInt()}%',
-                                style: TextStyle(
-                                    fontSize: 12,
-                                    color: color,
-                                    fontWeight: FontWeight.bold)),
-                          ]),
-                          const SizedBox(height: 4),
-                          TBar(value: score, color: color),
-                          const SizedBox(height: 8),
-                          SizedBox(
-                            width: double.infinity,
-                            child: OutlinedButton(
-                              onPressed: () =>
-                                  Navigator.pushNamed(context, R.aiMentorChat),
-                              style: OutlinedButton.styleFrom(
-                                  side: const BorderSide(color: AppColors.border),
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10))),
-                              child: const Text('Ask AI Mentor',
-                                  style: TextStyle(color: AppColors.textPrimary)),
+                          'Complete projects and add skills to your profile to unlock personalized recommendations.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                        ),
+                      )
+                    else
+                      ...rows.map(
+                        (r) => MentorSkillCard(
+                          title: r.title,
+                          score: r.score,
+                          levelLabel: MentorSkillCard.levelForScore(r.score, owned: r.owned),
+                          onExplore: () => MentorSkillCard.openExploreChat(
+                            context,
+                            skillName: r.title,
+                            score: r.score,
+                            levelLabel: MentorSkillCard.levelForScore(
+                              r.score,
+                              owned: r.owned,
                             ),
                           ),
-                        ]),
-                      );
-                    }),
+                        ),
+                      ),
                   ],
-                ]),
+                ),
     );
   }
 }

@@ -74,21 +74,19 @@ class SessionController extends ChangeNotifier {
   }
 
   Future<AuthResult> register({
-    required String displayName,
+    required String fullName,
     required String email,
     required String password,
     required String role,
     required String userType,
-    String? fullName,
     Map<String, dynamic> extra = const {},
   }) async {
     final result = await _authRepository.register(
-      displayName: displayName,
+      fullName: fullName,
       email: email,
       password: password,
       role: role,
       userType: userType,
-      fullName: fullName,
       extra: extra,
     );
     currentUser = result.user;
@@ -118,6 +116,25 @@ class SessionController extends ChangeNotifier {
     currentUser = null;
     status = SessionStatus.unauthenticated;
     globalDisposableRegistry.disposeAll();
+    notifyListeners();
+  }
+
+  /// Apply tokens + user returned by Google/GitHub OAuth endpoints.
+  Future<void> completeOAuthLogin(AuthResult result) async {
+    currentUser = result.user;
+    lastMessage = result.message;
+
+    if (currentUser == null && await _authRepository.hasSavedSession()) {
+      try {
+        currentUser = await _authRepository.me();
+      } catch (_) {}
+    }
+
+    status = currentUser == null
+        ? SessionStatus.unauthenticated
+        : currentUser!.isPending
+            ? SessionStatus.pendingApproval
+            : SessionStatus.authenticated;
     notifyListeners();
   }
 }

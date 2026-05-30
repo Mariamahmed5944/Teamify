@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -7,12 +9,50 @@ import '../../core/routes.dart';
 import '../../core/session/session_controller.dart';
 import '../../services/app_services.dart';
 import '../../data/models/models.dart' as api;
-import '../../data/repositories/project_repository.dart' show AvailableMember;
 import '../../models/models.dart';
 import '../../core/files/file_downloader.dart';
 import '../../widgets/widgets.dart';
 import '../../widgets/project_member_detail_tile.dart';
 import '../chat/chat_room_utils.dart';
+
+bool _matchesMemberSearch(api.ApiUser user, String query) {
+  if (query.isEmpty) return true;
+  final hay =
+      '${user.primaryName} ${user.displayName} ${user.email} '
+      '${user.memberMetaLine} ${user.skillsSummary} ${user.bio}'
+          .toLowerCase();
+  return hay.contains(query);
+}
+
+Widget _inviteMemberPickerRow({
+  required api.ApiUser user,
+  required bool selected,
+  required bool sending,
+  required ValueChanged<bool?> onChanged,
+}) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 6),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: Checkbox(
+            value: selected,
+            onChanged: sending ? null : onChanged,
+          ),
+        ),
+        Expanded(
+          child: ProjectMemberDetailTile(
+            user: user,
+            useAccountRole: true,
+            showSkills: true,
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
 /// Route arguments for [AddTaskScreen] when opened from a project context.
 class AddTaskRouteArgs {
@@ -28,6 +68,36 @@ String? _routeProjectIdForTask(Object? args) {
 
 String _isoDate(DateTime d) =>
     '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+DateTime? _dateFromDisplay(String display) {
+  if (display.isEmpty) return null;
+  final parts = display.split('/');
+  if (parts.length == 3) {
+    final d = int.tryParse(parts[0]);
+    final m = int.tryParse(parts[1]);
+    final y = int.tryParse(parts[2]);
+    if (d != null && m != null && y != null) return DateTime(y, m, d);
+  }
+  return DateTime.tryParse(display);
+}
+
+String _cleanProjectDescription(String raw) {
+  var text = raw.trim();
+  if (text.startsWith('[Visibility:')) {
+    final end = text.indexOf(']');
+    if (end != -1 && end + 1 < text.length) {
+      text = text.substring(end + 1).trim();
+    }
+  }
+  return text;
+}
+
+String _displayDateLabel(DateTime? d) {
+  if (d == null) return 'Not set';
+  return '${d.day.toString().padLeft(2, '0')}/'
+      '${d.month.toString().padLeft(2, '0')}/'
+      '${d.year}';
+}
 
 String _apiTaskStatusFromUi(String ui) {
   switch (ui) {
@@ -94,6 +164,132 @@ String _uiTaskStatusFromApi(String raw) {
 String _priorityLabelFromApi(String raw) {
   if (raw.isEmpty) return 'Medium';
   return raw[0].toUpperCase() + raw.substring(1).toLowerCase();
+}
+
+int _progressFromTasks(List<TaskModel> tasks) {
+  if (tasks.isEmpty) return 0;
+  final done = tasks.where((t) => t.status == 'done').length;
+  return ((done / tasks.length) * 100).round();
+}
+
+String _delayRiskDisplayLabel(String? raw) {
+  if (raw == null || raw.isEmpty || raw.toLowerCase() == 'unknown') {
+    return 'Unknown';
+  }
+  switch (raw.toLowerCase()) {
+    case 'low':
+      return 'Low Risk';
+    case 'medium':
+      return 'Medium Risk';
+    case 'high':
+      return 'High Risk';
+    default:
+      return '${raw[0].toUpperCase()}${raw.substring(1)} Risk';
+  }
+}
+
+Color _delayRiskBg(String? raw) {
+  switch (raw?.toLowerCase()) {
+    case 'high':
+      return const Color(0xFFFEE2E2);
+    case 'medium':
+      return const Color(0xFFFEF3C7);
+    case 'low':
+      return const Color(0xFFDCFCE7);
+    default:
+      return const Color(0xFFF1F5F9);
+  }
+}
+
+Color _delayRiskText(String? raw) {
+  switch (raw?.toLowerCase()) {
+    case 'high':
+      return const Color(0xFFDC2626);
+    case 'medium':
+      return const Color(0xFFD97706);
+    case 'low':
+      return const Color(0xFF16A34A);
+    default:
+      return AppColors.textSecondary;
+  }
+}
+
+bool _isKnownDelayRisk(String? risk) =>
+    risk != null && risk.isNotEmpty && risk.toLowerCase() != 'unknown';
+
+String _estimateDelayRiskFromTasks(List<TaskModel> tasks, ProjectModel project) {
+  final active = tasks.where((t) => t.status != 'done').toList();
+  if (active.isEmpty) return 'low';
+
+  var score = 0;
+  final now = DateTime.now();
+  for (final t in active) {
+    if (t.dueDate.isEmpty) continue;
+    DateTime? due = DateTime.tryParse(t.dueDate);
+    if (due == null) continue;
+    final days = due.difference(now).inDays;
+    if (days < 0) {
+      score += 3;
+    } else if (days <= 2) {
+      score += 2;
+    } else if (days <= 5) {
+      score += 1;
+    }
+    if (t.status == 'pending' && days <= 3) score += 1;
+  }
+
+  if (project.endDate.isNotEmpty) {
+    final parts = project.endDate.split('/');
+    if (parts.length == 3) {
+      final end = DateTime.tryParse(
+        '${parts[2]}-${parts[1].padLeft(2, '0')}-${parts[0].padLeft(2, '0')}',
+      );
+      if (end != null) {
+        final daysToEnd = end.difference(now).inDays;
+        if (daysToEnd < 0) {
+          score += 3;
+        } else if (daysToEnd <= 7) {
+          score += 1;
+        }
+      }
+    }
+  }
+
+  if (score >= 5) return 'high';
+  if (score >= 2) return 'medium';
+  return 'low';
+}
+
+String _projectListDateLabel(ProjectModel p) {
+  if (p.endDate.isNotEmpty) return 'Due ${p.endDate}';
+  if (p.startDate.isNotEmpty) return 'Started ${p.startDate}';
+  return 'No due date';
+}
+
+String _projectListSubtitle(ProjectModel p) {
+  if (p.ownerName.isNotEmpty) return p.ownerName;
+  if (p.company.isNotEmpty && p.company != 'Teamify') return p.company;
+  if (p.status.isNotEmpty) {
+    return p.status[0].toUpperCase() + p.status.substring(1);
+  }
+  return 'Project';
+}
+
+String _estimateDelayRiskFromProjectDates(ProjectModel p) {
+  if (p.endDate.isEmpty) {
+    return p.progress >= 100 ? 'low' : 'medium';
+  }
+  final parts = p.endDate.split('/');
+  if (parts.length != 3) return 'unknown';
+  final end = DateTime.tryParse(
+    '${parts[2]}-${parts[1].padLeft(2, '0')}-${parts[0].padLeft(2, '0')}',
+  );
+  if (end == null) return 'unknown';
+  final days = end.difference(DateTime.now()).inDays;
+  if (days < 0) return 'high';
+  if (days <= 3) return p.progress >= 90 ? 'medium' : 'high';
+  if (days <= 7 && p.progress < 70) return 'medium';
+  return 'low';
 }
 
 /// Full task view with role-based actions (owner vs member).
@@ -620,13 +816,20 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen>
   List<TaskModel> _tasks = [];
   bool _tasksLoading = false;
   String? _tasksError;
+  bool _delayRiskLoading = false;
+  int _filesRefreshToken = 0;
 
   @override
   void initState() {
     super.initState();
     _tabController =
         TabController(length: _tabLabels.length, vsync: this, initialIndex: 0);
-    _tabController.addListener(() => setState(() {}));
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging && _tabController.index == 2) {
+        setState(() => _filesRefreshToken++);
+      }
+      setState(() {});
+    });
   }
 
   @override
@@ -650,10 +853,18 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen>
       _project = p;
       _tasks = List<TaskModel>.from(p.tasks);
     });
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _refreshProjectFromApi();
-      _fetchTasks();
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _bootstrapProjectData());
+  }
+
+  Future<void> _bootstrapProjectData() async {
+    await _refreshProjectFromApi();
+    await _fetchTasks();
+    await _loadDelayRisk();
+  }
+
+  void _setDelayRisk(String risk) {
+    if (!mounted || _project == null) return;
+    setState(() => _project = _project!.copyWith(delayRisk: risk));
   }
 
   /// Reload project from DB so owner name, dates, and description are current.
@@ -666,13 +877,88 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen>
       result.when(
         success: (apiProject) {
           final fresh = apiProject.toDisplayModel();
+          final progress = _tasks.isNotEmpty
+              ? _progressFromTasks(_tasks)
+              : fresh.progress;
+          final keepRisk = _project?.delayRisk;
           setState(() {
-            _project = fresh.copyWith(tasks: _tasks);
+            _project = fresh.copyWith(
+              tasks: _tasks,
+              progress: progress,
+              delayRisk:
+                  _isKnownDelayRisk(keepRisk) ? keepRisk! : fresh.delayRisk,
+            );
           });
         },
         failure: (_) {},
       );
     } catch (_) {}
+  }
+
+  Future<void> _loadDelayRisk() async {
+    final proj = _project;
+    if (proj == null || proj.id.isEmpty || !mounted) return;
+    setState(() => _delayRiskLoading = true);
+    try {
+      final result = await context.read<AppServices>().ai.predictDelay(
+            projectId: proj.id,
+            forceRefresh: true,
+          );
+      if (!mounted) return;
+      result.when(
+        success: (data) {
+          final err = data['error']?.toString();
+          if (err != null && err.isNotEmpty) {
+            _setDelayRisk(_estimateDelayRiskFromTasks(_tasks, proj));
+          } else {
+            final risk = data['risk_level']?.toString();
+            _setDelayRisk(
+              _isKnownDelayRisk(risk)
+                  ? risk!
+                  : _estimateDelayRiskFromTasks(_tasks, proj),
+            );
+          }
+          if (mounted) setState(() => _delayRiskLoading = false);
+        },
+        failure: (_) {
+          _setDelayRisk(_estimateDelayRiskFromTasks(_tasks, proj));
+          if (mounted) setState(() => _delayRiskLoading = false);
+        },
+      );
+    } catch (_) {
+      _setDelayRisk(_estimateDelayRiskFromTasks(_tasks, proj));
+      if (mounted) setState(() => _delayRiskLoading = false);
+    }
+  }
+
+  Future<void> _editProjectDetails() async {
+    final proj = _project;
+    if (proj == null || !mounted) return;
+
+    final updated = await showModalBottomSheet<api.ApiProject>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => _EditProjectSheet(project: proj),
+    );
+    if (updated == null || !mounted) return;
+
+    final fresh = updated.toDisplayModel();
+    setState(() {
+      _project = fresh.copyWith(
+        tasks: _tasks,
+        progress: _tasks.isNotEmpty ? _progressFromTasks(_tasks) : fresh.progress,
+        delayRisk: proj.delayRisk,
+      );
+    });
+    _loadDelayRisk();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Project updated')),
+    );
   }
 
   Future<void> _fetchTasks() async {
@@ -705,10 +991,17 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen>
         success: (tasks) {
           final models =
               tasks.map((t) => _taskWithMemberNames(t, membersById)).toList();
+          final progress = _progressFromTasks(models);
+          final keepRisk = _project?.delayRisk;
           setState(() {
             _tasks = models;
             _tasksLoading = false;
-            _project = proj.copyWith(tasks: models);
+            _project = proj.copyWith(
+              tasks: models,
+              progress: progress,
+              delayRisk:
+                  _isKnownDelayRisk(keepRisk) ? keepRisk! : proj.delayRisk,
+            );
             _tasksError = null;
           });
         },
@@ -792,11 +1085,33 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(p.name,
-                    style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary)),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        p.name,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                    if (isOwner)
+                      IconButton(
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        tooltip: 'Edit project',
+                        onPressed: _editProjectDetails,
+                        icon: const Icon(
+                          Icons.edit_outlined,
+                          size: 18,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                  ],
+                ),
                 Text(p.company,
                     style: const TextStyle(
                         color: AppColors.textSecondary,
@@ -829,18 +1144,29 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen>
                     const Text('Delay Risk: ',
                         style: TextStyle(
                             fontSize: 15, color: AppColors.textSecondary)),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 6),
-                      decoration: BoxDecoration(
-                          color: const Color(0xFFDCFCE7),
-                          borderRadius: BorderRadius.circular(20)),
-                      child: const Text('Low Risk',
+                    if (_delayRiskLoading)
+                      const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    else
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: _delayRiskBg(p.delayRisk),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          _delayRiskDisplayLabel(p.delayRisk),
                           style: TextStyle(
-                              color: Color(0xFF16A34A),
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold)),
-                    ),
+                            color: _delayRiskText(p.delayRisk),
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ],
@@ -894,7 +1220,10 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen>
                     onRefreshTasks: _fetchTasks,
                     isOwner: isOwner,
                   ),
-                  _FilesTab(projectId: p.id),
+                  _FilesTab(
+                    projectId: p.id,
+                    refreshToken: _filesRefreshToken,
+                  ),
                   _ChatTab(project: p),
                   _AnalyticsTab(project: p),
                 ],
@@ -921,12 +1250,24 @@ class _OverviewTab extends StatefulWidget {
 
 class _OverviewTabState extends State<_OverviewTab> {
   List<api.ApiUser>? _members;
+  List<api.ApiProjectInvitation> _invitations = [];
   bool _membersLoading = true;
+  bool _invitationsLoading = false;
+  final TextEditingController _inviteSearchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _fetchMembers());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchMembers();
+      if (widget.isOwner) _fetchInvitations();
+    });
+  }
+
+  @override
+  void dispose() {
+    _inviteSearchController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchMembers() async {
@@ -948,6 +1289,31 @@ class _OverviewTabState extends State<_OverviewTab> {
     }
   }
 
+  Future<void> _fetchInvitations() async {
+    if (!widget.isOwner) return;
+    setState(() => _invitationsLoading = true);
+    try {
+      final result = await context
+          .read<AppServices>()
+          .projects
+          .listProjectInvitations(widget.project.id);
+      if (!mounted) return;
+      result.when(
+        success: (rows) => setState(() {
+          _invitations = rows;
+          _invitationsLoading = false;
+        }),
+        failure: (_) => setState(() => _invitationsLoading = false),
+      );
+    } catch (_) {
+      if (mounted) setState(() => _invitationsLoading = false);
+    }
+  }
+
+  Future<void> _refreshTeamSection() async {
+    await Future.wait([_fetchMembers(), _fetchInvitations()]);
+  }
+
   String _duration() {
     final s = widget.project.startDate;
     final e = widget.project.endDate;
@@ -967,6 +1333,207 @@ class _OverviewTabState extends State<_OverviewTab> {
       }
     }
     return 'Unknown';
+  }
+
+  Set<String> get _existingMemberIds {
+    final ids = <String>{widget.project.ownerId};
+    for (final u in _members ?? const []) {
+      if (u.id.isNotEmpty) ids.add(u.id);
+    }
+    return ids;
+  }
+
+  Set<String> get _pendingInviteeIds => _invitations
+      .where((inv) => inv.isPending)
+      .map((inv) => inv.inviteeId)
+      .where((id) => id.isNotEmpty)
+      .toSet();
+
+  bool _canInviteUser(api.ApiUser user) =>
+      !user.isAdmin &&
+      user.id.isNotEmpty &&
+      !_existingMemberIds.contains(user.id) &&
+      !_pendingInviteeIds.contains(user.id);
+
+  bool _userMatchesInviteSearch(api.ApiUser user, String query) =>
+      _matchesMemberSearch(user, query);
+
+  Widget _inviteMemberRow({
+    required api.ApiUser user,
+    required bool selected,
+    required bool sending,
+    required ValueChanged<bool?> onChanged,
+  }) =>
+      _inviteMemberPickerRow(
+        user: user,
+        selected: selected,
+        sending: sending,
+        onChanged: onChanged,
+      );
+
+  Future<void> _openInviteMembersDialog() async {
+    final selected = <String>{};
+    var loadingUsers = true;
+    var sending = false;
+    String? loadError;
+    List<api.ApiUser> allUsers = [];
+
+    final projects = context.read<AppServices>().projects;
+    final result = await projects.getAvailableMembers();
+    result.when(
+      success: (users) {
+        allUsers = users.where(_canInviteUser).toList();
+        loadingUsers = false;
+      },
+      failure: (e) {
+        loadError = e;
+        loadingUsers = false;
+      },
+    );
+
+    if (!mounted) return;
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialog) {
+          final q = _inviteSearchController.text.trim().toLowerCase();
+          final visible = allUsers
+              .where((m) => _userMatchesInviteSearch(m, q))
+              .toList();
+
+          Future<void> sendInvites() async {
+            if (selected.isEmpty || sending) return;
+            setDialog(() => sending = true);
+            var sent = 0;
+            var failed = 0;
+            for (final id in selected) {
+              final r = await projects.addMember(widget.project.id, id);
+              r.when(
+                success: (_) => sent++,
+                failure: (_) => failed++,
+              );
+            }
+            if (!ctx.mounted) return;
+            Navigator.pop(ctx);
+            if (!mounted) return;
+            final msg = failed == 0
+                ? '$sent invitation${sent == 1 ? '' : 's'} sent'
+                : '$sent sent, $failed failed';
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(msg)),
+            );
+            _refreshTeamSection();
+          }
+
+          return AlertDialog(
+            title: const Text('Invite team members'),
+            contentPadding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            content: SizedBox(
+              width: double.maxFinite,
+              height: 520,
+              child: loadingUsers
+                  ? const Center(child: CircularProgressIndicator())
+                  : loadError != null
+                      ? Center(
+                          child: Text(
+                            loadError!,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: AppColors.error),
+                          ),
+                        )
+                      : Column(
+                          children: [
+                            TextField(
+                              controller: _inviteSearchController,
+                              decoration: InputDecoration(
+                                hintText: 'Search name, email, skills, field…',
+                                prefixIcon:
+                                    const Icon(Icons.search, size: 18),
+                                isDense: true,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10,
+                                ),
+                              ),
+                              onChanged: (_) => setDialog(() {}),
+                            ),
+                            const SizedBox(height: 8),
+                            if (allUsers.isEmpty)
+                              const Expanded(
+                                child: Center(
+                                  child: Text(
+                                    'Everyone available is already on this project.',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ),
+                              )
+                            else if (visible.isEmpty)
+                              const Expanded(
+                                child: Center(child: Text('No users found')),
+                              )
+                            else
+                              Expanded(
+                                child: ListView.builder(
+                                  itemCount: visible.length,
+                                  itemBuilder: (_, i) {
+                                    final m = visible[i];
+                                    final isSelected = selected.contains(m.id);
+                                    return _inviteMemberRow(
+                                      user: m,
+                                      selected: isSelected,
+                                      sending: sending,
+                                      onChanged: (_) {
+                                        setDialog(() {
+                                          if (isSelected) {
+                                            selected.remove(m.id);
+                                          } else {
+                                            selected.add(m.id);
+                                          }
+                                        });
+                                      },
+                                    );
+                                  },
+                                ),
+                              ),
+                          ],
+                        ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: sending ? null : () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: (sending || selected.isEmpty) ? null : sendInvites,
+                child: sending
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Text(
+                        selected.isEmpty
+                            ? 'Send invitations'
+                            : 'Send (${selected.length})',
+                      ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    _inviteSearchController.clear();
   }
 
   @override
@@ -1011,19 +1578,67 @@ class _OverviewTabState extends State<_OverviewTab> {
           ),
         ]),
         const SizedBox(height: 8),
-        _buildCard(
-            'Team Members',
-            [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.people_outline,
+                      size: 16, color: AppColors.primary),
+                  const SizedBox(width: 6),
+                  const Expanded(
+                    child: Text(
+                      'Team Members',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ),
+                  if (widget.isOwner)
+                    TextButton.icon(
+                      onPressed: _membersLoading ? null : _openInviteMembersDialog,
+                      icon: const Icon(Icons.person_add_outlined, size: 18),
+                      label: const Text('Invite'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                      ),
+                    ),
+                ],
+              ),
+              if (widget.isOwner) ...[
+                const SizedBox(height: 4),
+                const Text(
+                  'Pending invites appear below until accepted or declined.',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 8),
+              if (widget.isOwner) ...[
+                _buildInvitationsSection(),
+                const SizedBox(height: 12),
+              ],
               if (_membersLoading)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 8),
-                  child:
-                      Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                  child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
                 )
               else if (_members == null || _members!.isEmpty)
-                const Text('No team members found',
-                    style:
-                        TextStyle(fontSize: 13, color: AppColors.textSecondary))
+                const Text(
+                  'No team members found',
+                  style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                )
               else
                 ..._members!.map(
                   (u) => Padding(
@@ -1035,8 +1650,139 @@ class _OverviewTabState extends State<_OverviewTab> {
                   ),
                 ),
             ],
-            icon: Icons.people_outline),
+          ),
+        ),
       ],
+    );
+  }
+
+  Widget _buildInvitationsSection() {
+    if (_invitationsLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 8),
+        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      );
+    }
+    if (_invitations.isEmpty) {
+      return const Text(
+        'No invitations sent yet.',
+        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Invitations',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 13,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 8),
+        ..._invitations.map(_invitationRow),
+      ],
+    );
+  }
+
+  Widget _invitationRow(api.ApiProjectInvitation inv) {
+    Color badgeBg;
+    Color badgeFg;
+    IconData badgeIcon;
+    switch (inv.status.toLowerCase()) {
+      case 'accepted':
+        badgeBg = AppColors.success.withValues(alpha: 0.12);
+        badgeFg = AppColors.success;
+        badgeIcon = Icons.check_circle_outline;
+        break;
+      case 'declined':
+        badgeBg = AppColors.error.withValues(alpha: 0.12);
+        badgeFg = AppColors.error;
+        badgeIcon = Icons.cancel_outlined;
+        break;
+      default:
+        badgeBg = const Color(0xFFFFF3E0);
+        badgeFg = const Color(0xFFE65100);
+        badgeIcon = Icons.schedule;
+    }
+
+    final skills = inv.inviteeSkills.where((s) => s.trim().isNotEmpty).take(6);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      inv.displayName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                    if (inv.inviteeEmail.isNotEmpty)
+                      Text(
+                        inv.inviteeEmail,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: badgeBg,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(badgeIcon, size: 14, color: badgeFg),
+                    const SizedBox(width: 4),
+                    Text(
+                      inv.statusLabel,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: badgeFg,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (skills.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: skills
+                  .map((s) => TChip(label: s, fontSize: 10))
+                  .toList(),
+            ),
+          ],
+        ],
+      ),
     );
   }
 
@@ -1533,7 +2279,8 @@ class _TasksTabState extends State<_TasksTab> {
 // ── Files Tab ─────────────────────────────────────────────────────────────────
 class _FilesTab extends StatefulWidget {
   final String? projectId;
-  const _FilesTab({this.projectId});
+  final int refreshToken;
+  const _FilesTab({this.projectId, this.refreshToken = 0});
 
   @override
   State<_FilesTab> createState() => _FilesTabState();
@@ -1544,6 +2291,14 @@ class _FilesTabState extends State<_FilesTab> {
   bool _uploading = false;
   int _fileVersion = 0;
   String? _busyFileId;
+
+  @override
+  void didUpdateWidget(covariant _FilesTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.refreshToken != oldWidget.refreshToken) {
+      setState(() => _fileVersion++);
+    }
+  }
 
   Future<void> _pickAndUpload() async {
     final svc = context.read<AppServices>();
@@ -1744,7 +2499,7 @@ class _FilesTabState extends State<_FilesTab> {
                 itemCount: filteredFiles.length,
                 itemBuilder: (ctx, i) {
                   final f = filteredFiles[i];
-                  final color = _getFileColor(f.name);
+                  final color = _getFileColor(f.name, mime: f.type);
                   return Container(
                     margin: const EdgeInsets.only(bottom: 8),
                     padding: const EdgeInsets.all(8),
@@ -1762,7 +2517,7 @@ class _FilesTabState extends State<_FilesTab> {
                                 decoration: BoxDecoration(
                                     color: color.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(10)),
-                                child: Icon(_getFileIcon(f.name),
+                                child: Icon(_getFileIcon(f.name, mime: f.type),
                                     color: color, size: 20)),
                             const SizedBox(width: 12),
                             Expanded(
@@ -1845,15 +2600,27 @@ class _FilesTabState extends State<_FilesTab> {
     if (_selectedFilter == 'ALL') return files;
     return files.where((f) {
       final n = f.name.toLowerCase();
+      final mime = f.type.toLowerCase();
       final filter = _selectedFilter.toLowerCase();
       if (filter == 'figma') {
         return n.endsWith('.fig') || n.contains('figma');
       }
       if (filter == 'image') {
-        return n.endsWith('.png') || n.endsWith('.jpg') || n.contains('image');
+        return mime.startsWith('image/') ||
+            n.endsWith('.png') ||
+            n.endsWith('.jpg') ||
+            n.endsWith('.jpeg') ||
+            n.endsWith('.webp') ||
+            n.endsWith('.gif');
       }
       if (filter == 'doc') {
-        return n.endsWith('.doc') || n.endsWith('.docx') || n.contains('doc');
+        return n.endsWith('.doc') ||
+            n.endsWith('.docx') ||
+            n.contains('doc') ||
+            mime.contains('word');
+      }
+      if (filter == 'pdf') {
+        return n.endsWith('.pdf') || mime.contains('pdf');
       }
       return n.contains(filter);
     }).toList();
@@ -1901,10 +2668,19 @@ class _FilesTabState extends State<_FilesTab> {
     );
   }
 
-  IconData _getFileIcon(String n) {
-    if (n.endsWith('.pdf')) return Icons.picture_as_pdf_rounded;
+  IconData _getFileIcon(String n, {String mime = ''}) {
+    final m = mime.toLowerCase();
+    if (m.startsWith('image/')) return Icons.image_rounded;
+    if (n.endsWith('.pdf') || m.contains('pdf')) {
+      return Icons.picture_as_pdf_rounded;
+    }
     if (n.endsWith('.fig')) return Icons.auto_awesome_motion_rounded;
-    if (n.endsWith('.png') || n.endsWith('.jpg')) return Icons.image_rounded;
+    if (n.endsWith('.png') ||
+        n.endsWith('.jpg') ||
+        n.endsWith('.jpeg') ||
+        n.endsWith('.webp')) {
+      return Icons.image_rounded;
+    }
     if (n.endsWith('.docx') || n.endsWith('.doc')) {
       return Icons.description_rounded;
     }
@@ -1912,16 +2688,22 @@ class _FilesTabState extends State<_FilesTab> {
     return Icons.insert_drive_file_rounded;
   }
 
-  Color _getFileColor(String n) {
-    if (n.endsWith('.pdf')) return const Color(0xFFEF4444);
-    if (n.endsWith('.fig')) return const Color(0xFFA855F7);
-    if (n.endsWith('.png') || n.endsWith('.jpg')) {
-      return const Color(0xFF22C55E);
-    }
-    if (n.endsWith('.docx') || n.endsWith('.doc')) {
+  Color _getFileColor(String n, {String mime = ''}) {
+    final m = mime.toLowerCase();
+    if (m.startsWith('image/') ||
+        n.endsWith('.png') ||
+        n.endsWith('.jpg') ||
+        n.endsWith('.jpeg')) {
       return const Color(0xFF3B82F6);
     }
-    if (n.endsWith('.sketch')) return const Color(0xFFF59E0B);
+    if (n.endsWith('.pdf') || m.contains('pdf')) {
+      return const Color(0xFFEF4444);
+    }
+    if (n.endsWith('.fig')) return const Color(0xFFA855F7);
+    if (n.endsWith('.docx') || n.endsWith('.doc')) {
+      return const Color(0xFF2563EB);
+    }
+    if (n.endsWith('.sketch')) return const Color(0xFFF97316);
     return AppColors.textSecondary;
   }
 
@@ -2583,12 +3365,18 @@ class _ProjectsListScreenState extends State<ProjectsListScreen> {
       if (!mounted) return;
       result.when(
         success: (items) {
+          final projects = items.map((project) {
+            final model = project.toDisplayModel();
+            return model.copyWith(
+              delayRisk: _estimateDelayRiskFromProjectDates(model),
+            );
+          }).toList();
           setState(() {
-            _projects =
-                items.map((project) => project.toDisplayModel()).toList();
+            _projects = projects;
             _loading = false;
             _loadError = null;
           });
+          unawaited(_enrichDelayRisksFromAi());
         },
         failure: (e) {
           setState(() {
@@ -2603,6 +3391,31 @@ class _ProjectsListScreenState extends State<ProjectsListScreen> {
         _loading = false;
         _loadError = e.toString();
       });
+    }
+  }
+
+  Future<void> _enrichDelayRisksFromAi() async {
+    if (!mounted || _projects.isEmpty) return;
+    final svc = context.read<AppServices>().ai;
+    for (var i = 0; i < _projects.length; i++) {
+      if (!mounted) return;
+      final p = _projects[i];
+      try {
+        final result = await svc.predictDelay(projectId: p.id);
+        if (!mounted) return;
+        result.when(
+          success: (data) {
+            final risk = data['risk_level']?.toString();
+            if (!_isKnownDelayRisk(risk) || !mounted) return;
+            setState(() {
+              if (i < _projects.length && _projects[i].id == p.id) {
+                _projects[i] = _projects[i].copyWith(delayRisk: risk);
+              }
+            });
+          },
+          failure: (_) {},
+        );
+      } catch (_) {}
     }
   }
 
@@ -2768,7 +3581,7 @@ class _ProjectsListScreenState extends State<ProjectsListScreen> {
                         Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(p.company,
+                              Text(_projectListSubtitle(p),
                                   style: const TextStyle(
                                       fontSize: 12,
                                       color: AppColors.textSecondary)),
@@ -2781,12 +3594,13 @@ class _ProjectsListScreenState extends State<ProjectsListScreen> {
                         Row(children: [
                           const Icon(Icons.calendar_today_outlined, size: 12),
                           const SizedBox(width: 6),
-                          const Text('Jan, 15', style: TextStyle(fontSize: 11)),
+                          Text(_projectListDateLabel(p),
+                              style: const TextStyle(fontSize: 11)),
                           const Spacer(),
                           TChip(
-                              label: p.delayRisk,
-                              bg: AppColors.success.withValues(alpha: 0.1),
-                              textColor: AppColors.success)
+                              label: _delayRiskDisplayLabel(p.delayRisk),
+                              bg: _delayRiskBg(p.delayRisk),
+                              textColor: _delayRiskText(p.delayRisk))
                         ]),
                       ])),
             )),
@@ -2858,6 +3672,27 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   String? get _activeProjectId =>
       _selectedProjectId ??
       _routeProjectIdForTask(ModalRoute.of(context)?.settings.arguments);
+
+  String get _currentUserId =>
+      context.read<SessionController>().currentUser?.id ?? '';
+
+  bool _isProjectOwner(String? projectId) {
+    if (projectId == null || projectId.isEmpty) return false;
+    final uid = _currentUserId;
+    if (uid.isEmpty) return false;
+    for (final p in _projectChoices) {
+      if (p.id == projectId) return p.ownerId == uid;
+    }
+    return false;
+  }
+
+  bool get _canAssignMembers => _isProjectOwner(_activeProjectId);
+
+  List<api.ApiProject> _ownedProjects(List<api.ApiProject> projects) {
+    final uid = _currentUserId;
+    if (uid.isEmpty) return [];
+    return projects.where((p) => p.ownerId == uid).toList();
+  }
 
   api.ApiUser? get _selectedAssignee {
     if (_selectedAssigneeId == null || _selectedAssigneeId!.isEmpty) {
@@ -2939,6 +3774,15 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   }
 
   Future<void> _loadProjectMembers(String projectId) async {
+    if (!_isProjectOwner(projectId)) {
+      setState(() {
+        _membersLoading = false;
+        _membersError = null;
+        _projectMembers = [];
+        _selectedAssigneeId = null;
+      });
+      return;
+    }
     setState(() {
       _membersLoading = true;
       _membersError = null;
@@ -2975,8 +3819,39 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     final routeId =
         _routeProjectIdForTask(ModalRoute.of(context)?.settings.arguments);
     if (routeId != null && routeId.isNotEmpty) {
-      setState(() => _selectedProjectId = routeId);
-      await _loadProjectMembers(routeId);
+      setState(() {
+        _projectsLoading = true;
+        _projectsError = null;
+      });
+      final result =
+          await context.read<AppServices>().projects.getProject(routeId);
+      if (!mounted) return;
+      await result.when(
+        success: (project) async {
+          if (project.ownerId != _currentUserId) {
+            setState(() {
+              _projectsLoading = false;
+              _projectsError =
+                  'Only the project owner can add tasks and assign members.';
+              _projectChoices = [];
+              _selectedProjectId = null;
+            });
+            return;
+          }
+          setState(() {
+            _projectChoices = [project];
+            _selectedProjectId = routeId;
+            _projectsLoading = false;
+          });
+          await _loadProjectMembers(routeId);
+        },
+        failure: (e) {
+          setState(() {
+            _projectsLoading = false;
+            _projectsError = e;
+          });
+        },
+      );
       return;
     }
     setState(() {
@@ -2988,9 +3863,10 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
       if (!mounted) return;
       result.when(
         success: (list) {
-          final defaultId = list.isNotEmpty ? list.first.id : null;
+          final owned = _ownedProjects(list);
+          final defaultId = owned.isNotEmpty ? owned.first.id : null;
           setState(() {
-            _projectChoices = list;
+            _projectChoices = owned;
             _projectsLoading = false;
             _selectedProjectId ??= defaultId;
           });
@@ -3035,6 +3911,17 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
       return;
     }
 
+    if (!_isProjectOwner(projectId)) {
+      setState(() => _error = 'Only the project owner can add tasks.');
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Only the project owner can add tasks.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _error = null;
@@ -3051,7 +3938,9 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
       if (_dueDate != null) {
         payload['due_date'] = _isoDate(_dueDate!);
       }
-      if (_selectedAssigneeId != null && _selectedAssigneeId!.isNotEmpty) {
+      if (_canAssignMembers &&
+          _selectedAssigneeId != null &&
+          _selectedAssigneeId!.isNotEmpty) {
         final aid = int.tryParse(_selectedAssigneeId!);
         if (aid != null) payload['assigned_to'] = aid;
       }
@@ -3169,7 +4058,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                     Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: Text(
-                        'No projects available. Create a project first.',
+                        'No projects you own. Create a project to add tasks.',
                         style:
                             TextStyle(color: Colors.red.shade700, fontSize: 13),
                       ),
@@ -3204,94 +4093,107 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
-                _label('Assignee (optional)'),
-                if (_activeProjectId == null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Text(
-                      'Select a project to choose a team member.',
-                      style:
-                          TextStyle(color: Colors.grey.shade600, fontSize: 13),
-                    ),
-                  )
-                else if (_membersLoading)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8),
-                    child: LinearProgressIndicator(),
-                  )
-                else if (_membersError != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            _membersError!,
-                            style: TextStyle(
-                                color: Colors.red.shade700, fontSize: 13),
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: _isLoading
-                              ? null
-                              : () => _loadProjectMembers(_activeProjectId!),
-                          child: const Text('Retry'),
-                        ),
-                      ],
-                    ),
-                  )
-                else if (_projectMembers.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Text(
-                      'No members on this project yet.',
-                      style:
-                          TextStyle(color: Colors.grey.shade600, fontSize: 13),
-                    ),
-                  )
-                else ...[
-                  GestureDetector(
-                    onTap:
-                        _isLoading ? null : () => _showAssigneePicker(context),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 12,
+                if (_canAssignMembers) ...[
+                  _label('Assignee (optional)'),
+                  if (_activeProjectId == null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        'Select a project to choose a team member.',
+                        style: TextStyle(
+                            color: Colors.grey.shade600, fontSize: 13),
                       ),
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: AppColors.primary.withValues(alpha: 0.5),
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                    )
+                  else if (_membersLoading)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: LinearProgressIndicator(),
+                    )
+                  else if (_membersError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
                       child: Row(
                         children: [
-                          const Icon(Icons.person_outline,
-                              size: 20, color: AppColors.primary),
-                          const SizedBox(width: 10),
                           Expanded(
-                            child: _selectedAssignee == null
-                                ? Text(
-                                    _assigneeFieldLabel(),
-                                    style: TextStyle(
-                                      color: Colors.grey.shade600,
-                                      fontSize: 14,
-                                    ),
-                                  )
-                                : ProjectMemberDetailTile(
-                                    user: _selectedAssignee!,
-                                    showSkills: false,
-                                  ),
+                            child: Text(
+                              _membersError!,
+                              style: TextStyle(
+                                  color: Colors.red.shade700, fontSize: 13),
+                            ),
                           ),
-                          Icon(Icons.arrow_drop_down,
-                              color: Colors.grey.shade600),
+                          TextButton(
+                            onPressed: _isLoading
+                                ? null
+                                : () =>
+                                    _loadProjectMembers(_activeProjectId!),
+                            child: const Text('Retry'),
+                          ),
                         ],
                       ),
+                    )
+                  else if (_projectMembers.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        'No members on this project yet.',
+                        style: TextStyle(
+                            color: Colors.grey.shade600, fontSize: 13),
+                      ),
+                    )
+                  else ...[
+                    GestureDetector(
+                      onTap: _isLoading
+                          ? null
+                          : () => _showAssigneePicker(context),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: AppColors.primary.withValues(alpha: 0.5),
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.person_outline,
+                                size: 20, color: AppColors.primary),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: _selectedAssignee == null
+                                  ? Text(
+                                      _assigneeFieldLabel(),
+                                      style: TextStyle(
+                                        color: Colors.grey.shade600,
+                                        fontSize: 14,
+                                      ),
+                                    )
+                                  : ProjectMemberDetailTile(
+                                      user: _selectedAssignee!,
+                                      showSkills: false,
+                                    ),
+                            ),
+                            Icon(Icons.arrow_drop_down,
+                                color: Colors.grey.shade600),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                ] else if (_activeProjectId != null) ...[
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Text(
+                      'Only the project owner can assign team members.',
+                      style:
+                          TextStyle(color: Colors.grey.shade600, fontSize: 13),
                     ),
                   ),
                 ],
-                const SizedBox(height: 16),
                 _label('Due Date'),
                 GestureDetector(
                   onTap: _isLoading ? null : () => _showDateOptions(context),
@@ -3580,6 +4482,321 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
       );
 }
 
+// ── Edit Project Sheet ────────────────────────────────────────────────────────
+class _EditProjectSheet extends StatefulWidget {
+  final ProjectModel project;
+  const _EditProjectSheet({required this.project});
+
+  @override
+  State<_EditProjectSheet> createState() => _EditProjectSheetState();
+}
+
+class _EditProjectSheetState extends State<_EditProjectSheet> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _nameController;
+  late final TextEditingController _descriptionController;
+  late final TextEditingController _categoryController;
+
+  late String _statusApi;
+  DateTime? _startDate;
+  DateTime? _endDate;
+  bool _saving = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    final p = widget.project;
+    _nameController = TextEditingController(text: p.name);
+    _descriptionController =
+        TextEditingController(text: _cleanProjectDescription(p.description));
+    _categoryController = TextEditingController(
+      text: p.company == 'Teamify' ? '' : p.company,
+    );
+    _statusApi = const {'planned', 'active', 'on_hold', 'completed'}
+            .contains(p.status.toLowerCase())
+        ? p.status.toLowerCase()
+        : 'active';
+    _startDate = _dateFromDisplay(p.startDate);
+    _endDate = _dateFromDisplay(p.endDate);
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _descriptionController.dispose();
+    _categoryController.dispose();
+    super.dispose();
+  }
+
+  InputDecoration _decor({String? hint}) => InputDecoration(
+        hintText: hint,
+        filled: true,
+        fillColor: const Color(0xFFF8FAFC),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppColors.border.withValues(alpha: 0.6)),
+        ),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      );
+
+  Widget _fieldLabel(String text) => Padding(
+        padding: const EdgeInsets.only(bottom: 6),
+        child: Text(text,
+            style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+                color: AppColors.textPrimary)),
+      );
+
+  Future<void> _pickDate({required bool isStart}) async {
+    final initial = isStart
+        ? (_startDate ?? DateTime.now())
+        : (_endDate ?? _startDate ?? DateTime.now());
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+    );
+    if (picked == null) return;
+    setState(() {
+      if (isStart) {
+        _startDate = picked;
+        if (_endDate != null && _endDate!.isBefore(picked)) {
+          _endDate = picked;
+        }
+      } else {
+        _endDate = picked;
+      }
+    });
+  }
+
+  Future<void> _save() async {
+    if (_saving) return;
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    if (_startDate != null &&
+        _endDate != null &&
+        _endDate!.isBefore(_startDate!)) {
+      setState(() => _error = 'End date must be after start date');
+      return;
+    }
+
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+
+    final payload = <String, dynamic>{
+      'name': _nameController.text.trim(),
+      'description': _descriptionController.text.trim(),
+      'category': _categoryController.text.trim(),
+      'status': _statusApi,
+      'start_date': _startDate != null ? _isoDate(_startDate!) : '',
+      'end_date': _endDate != null ? _isoDate(_endDate!) : '',
+    };
+
+    final result = await context
+        .read<AppServices>()
+        .projects
+        .updateProject(widget.project.id, payload);
+    if (!mounted) return;
+
+    result.when(
+      success: (project) => Navigator.pop(context, project),
+      failure: (err) => setState(() {
+        _saving = false;
+        _error = err;
+      }),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.92,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        builder: (context, scrollController) {
+          return Column(
+            children: [
+              const SizedBox(height: 8),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 12, 8),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Edit project',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: _saving ? null : () => Navigator.pop(context),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Form(
+                  key: _formKey,
+                  child: ListView(
+                    controller: scrollController,
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                    children: [
+                      _fieldLabel('Project name *'),
+                      TextFormField(
+                        controller: _nameController,
+                        maxLength: 150,
+                        decoration: _decor(hint: 'Project title'),
+                        validator: (v) =>
+                            v == null || v.trim().isEmpty ? 'Required' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      _fieldLabel('Category / label'),
+                      TextFormField(
+                        controller: _categoryController,
+                        maxLength: 100,
+                        decoration: _decor(hint: 'e.g. Mobile, Research'),
+                      ),
+                      const SizedBox(height: 16),
+                      _fieldLabel('Description'),
+                      TextFormField(
+                        controller: _descriptionController,
+                        maxLines: 4,
+                        maxLength: 5000,
+                        decoration: _decor(hint: 'Goals, scope, notes…'),
+                      ),
+                      const SizedBox(height: 16),
+                      _fieldLabel('Status'),
+                      DropdownButtonFormField<String>(
+                        // ignore: deprecated_member_use
+                        value: _statusApi,
+                        decoration: _decor(),
+                        items: const [
+                          DropdownMenuItem(
+                              value: 'planned', child: Text('Planned')),
+                          DropdownMenuItem(
+                              value: 'active', child: Text('Active')),
+                          DropdownMenuItem(
+                              value: 'on_hold', child: Text('On hold')),
+                          DropdownMenuItem(
+                              value: 'completed', child: Text('Completed')),
+                        ],
+                        onChanged: _saving
+                            ? null
+                            : (v) => setState(() => _statusApi = v ?? 'active'),
+                      ),
+                      const SizedBox(height: 16),
+                      _fieldLabel('Duration'),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed:
+                                  _saving ? null : () => _pickDate(isStart: true),
+                              icon: const Icon(Icons.calendar_today_outlined,
+                                  size: 16),
+                              label: Text(
+                                _displayDateLabel(_startDate),
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 12),
+                              ),
+                            ),
+                          ),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 8),
+                            child: Text('–',
+                                style: TextStyle(
+                                    color: AppColors.textSecondary)),
+                          ),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed:
+                                  _saving ? null : () => _pickDate(isStart: false),
+                              icon: const Icon(Icons.event_outlined, size: 16),
+                              label: Text(
+                                _displayDateLabel(_endDate),
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 12),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (_error != null) ...[
+                        const SizedBox(height: 12),
+                        Text(_error!,
+                            style: const TextStyle(
+                                color: Color(0xFFDC2626), fontSize: 13)),
+                      ],
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: ElevatedButton(
+                          onPressed: _saving ? null : _save,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: _saving
+                              ? const SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Text(
+                                  'Save changes',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
 // ── Add Project Screen ────────────────────────────────────────────────────────
 class AddProjectScreen extends StatefulWidget {
   const AddProjectScreen({super.key});
@@ -3605,7 +4822,7 @@ class _AddProjectScreenState extends State<AddProjectScreen> {
   String? _error;
 
   // ── Member selection ──────────────────────────────────────────────────────
-  List<AvailableMember> _allMembers = [];
+  List<api.ApiUser> _allMembers = [];
   final Set<String> _selectedMemberIds = {};
   bool _membersLoading = false;
   String? _membersError;
@@ -3636,7 +4853,7 @@ class _AddProjectScreenState extends State<AddProjectScreen> {
     if (!mounted) return;
     result.when(
       success: (members) => setState(() {
-        _allMembers = members;
+        _allMembers = members.where((m) => !m.isAdmin).toList();
         _membersLoading = false;
       }),
       failure: (e) => setState(() {
@@ -3661,25 +4878,20 @@ class _AddProjectScreenState extends State<AddProjectScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialog) {
           final q = _memberSearchController.text.trim().toLowerCase();
-          final visible = q.isEmpty
-              ? _allMembers
-              : _allMembers
-                  .where((m) =>
-                      m.name.toLowerCase().contains(q) ||
-                      m.email.toLowerCase().contains(q))
-                  .toList();
+          final visible =
+              _allMembers.where((m) => _matchesMemberSearch(m, q)).toList();
 
           return AlertDialog(
             title: const Text('Invite team members'),
             contentPadding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             content: SizedBox(
               width: double.maxFinite,
-              height: 420,
+              height: 520,
               child: Column(children: [
                 TextField(
                   controller: _memberSearchController,
                   decoration: InputDecoration(
-                    hintText: 'Search by name or email…',
+                    hintText: 'Search name, email, skills, field…',
                     prefixIcon: const Icon(Icons.search, size: 18),
                     suffixIcon: _memberSearchController.text.isNotEmpty
                         ? IconButton(
@@ -3710,32 +4922,13 @@ class _AddProjectScreenState extends State<AddProjectScreen> {
                       itemBuilder: (_, i) {
                         final m = visible[i];
                         final selected = _selectedMemberIds.contains(m.id);
-                        return CheckboxListTile(
-                          value: selected,
+                        return _inviteMemberPickerRow(
+                          user: m,
+                          selected: selected,
+                          sending: false,
                           onChanged: (_) {
                             setDialog(() => _toggleMember(m.id));
                           },
-                          controlAffinity: ListTileControlAffinity.leading,
-                          dense: true,
-                          title: Text(m.name,
-                              style: const TextStyle(
-                                  fontSize: 14, fontWeight: FontWeight.w500)),
-                          subtitle: Text(m.email,
-                              style: const TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.textSecondary)),
-                          secondary: CircleAvatar(
-                            radius: 18,
-                            backgroundColor:
-                                AppColors.primary.withValues(alpha: 0.15),
-                            child: Text(
-                              m.name.isNotEmpty ? m.name[0].toUpperCase() : '?',
-                              style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.primary),
-                            ),
-                          ),
                         );
                       },
                     ),
@@ -3767,14 +4960,14 @@ class _AddProjectScreenState extends State<AddProjectScreen> {
                   radius: 10,
                   backgroundColor: AppColors.primary.withValues(alpha: 0.15),
                   child: Text(
-                    m.name.isNotEmpty ? m.name[0].toUpperCase() : '?',
+                    m.initials,
                     style: const TextStyle(
                         fontSize: 9,
                         fontWeight: FontWeight.bold,
                         color: AppColors.primary),
                   ),
                 ),
-                label: Text(m.name, style: const TextStyle(fontSize: 12)),
+                label: Text(m.primaryName, style: const TextStyle(fontSize: 12)),
                 deleteIcon: const Icon(Icons.close, size: 14),
                 onDeleted: () => _toggleMember(m.id),
                 materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,

@@ -562,6 +562,7 @@ class EditProfileScreen extends StatefulWidget {
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
   late final TextEditingController _name;
+  late final TextEditingController _username;
   late final TextEditingController _email;
   final _phone = TextEditingController();
   final _bio = TextEditingController();
@@ -576,8 +577,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   void initState() {
     super.initState();
     final user = context.read<SessionController>().currentUser;
-    _name =
-        TextEditingController(text: user?.fullName ?? user?.displayName ?? '');
+    _name = TextEditingController(text: user?.fullName ?? '');
+    _username = TextEditingController(text: user?.displayName ?? '');
     _email = TextEditingController(text: user?.email ?? '');
     // Phone/bio/avatar come from the server for this user only (not session cache).
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadProfile());
@@ -586,6 +587,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   void dispose() {
     _name.dispose();
+    _username.dispose();
     _email.dispose();
     _phone.dispose();
     _bio.dispose();
@@ -615,7 +617,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           setState(() => _loadingProfile = false);
           return;
         }
-        _name.text = user.fullName.isNotEmpty ? user.fullName : user.displayName;
+        _name.text = user.fullName;
+        _username.text = user.displayName;
         _email.text = user.email;
         _phone.text = user.phone;
         _bio.text = user.bio;
@@ -701,6 +704,25 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Future<void> _save() async {
     if (_saving) return;
+
+    final username = _username.text.trim();
+    if (username.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Username is required')),
+      );
+      return;
+    }
+    if (!RegExp(r'^[a-zA-Z0-9_]{3,30}$').hasMatch(username)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Username must be 3–30 characters: letters, numbers, underscores only',
+          ),
+        ),
+      );
+      return;
+    }
+
     setState(() => _saving = true);
 
     final svc = context.read<AppServices>().users;
@@ -708,6 +730,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     final payload = <String, dynamic>{
       'full_name': _name.text.trim(),
+      'display_name': username,
       'email': _email.text.trim(),
       'phone': _phone.text.trim(),
       'bio': _bio.text.trim(),
@@ -818,7 +841,24 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       const SizedBox(height: 8),
                       TextField(
                           controller: _name,
-                          decoration: _inputDec('Your name')),
+                          decoration: _inputDec('Your full name')),
+                      const SizedBox(height: 12),
+                      const Text('Username',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary)),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Unique handle — letters, numbers, and underscores only',
+                        style: TextStyle(
+                            fontSize: 12, color: AppColors.textSecondary),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                          controller: _username,
+                          decoration: _inputDec('e.g. mohamed_dev'),
+                          autocorrect: false,
+                          enableSuggestions: false),
                       const SizedBox(height: 12),
                       const Text('Email',
                           style: TextStyle(

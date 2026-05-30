@@ -25,6 +25,8 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
+from utils.skills import normalize_skills_list
+
 _RATING_MODEL_PATH = os.path.abspath(
     os.path.join(
         os.path.dirname(__file__), "..", "ml_models",
@@ -78,6 +80,79 @@ LEVEL_NEXT = {
     "Tech Lead":           "Tech Lead",
 }
 
+# Profile experience_level (Beginner/Intermediate/Expert) → career ladder
+_PROFILE_LEVEL_MAP: dict[str, str] = {
+    "beginner": "Junior Developer",
+    "intermediate": "Mid-level Developer",
+    "expert": "Senior Developer",
+    "junior": "Junior Developer",
+    "mid-level": "Mid-level Developer",
+    "mid level": "Mid-level Developer",
+    "senior": "Senior Developer",
+    "lead": "Tech Lead",
+    "tech lead": "Tech Lead",
+}
+
+
+def _resolve_career_level(user, computed_level: str) -> str:
+    """Prefer stored profile level when it maps to the career ladder."""
+    for raw in (
+        getattr(user, "experience_level", None),
+        getattr(user, "professional_field", None),
+    ):
+        if not raw:
+            continue
+        key = str(raw).strip().lower()
+        if key in _PROFILE_LEVEL_MAP:
+            return _PROFILE_LEVEL_MAP[key]
+        if raw in LEVEL_NEXT or raw in ROLE_REQUIREMENTS:
+            return str(raw)
+    return computed_level
+
+
+def _build_db_career_summary(
+    user,
+    scores: dict,
+    gaps: dict,
+    perf_snapshot: dict,
+    tasks: list,
+) -> str:
+    """Plain-language summary built only from live DB fields (no static copy)."""
+    name = user.display_name or getattr(user, "username", None) or "You"
+    level = scores.get("level", "Developer")
+    total = scores.get("total_score", 0)
+    done = len([t for t in tasks if getattr(t, "status", None) == "done"])
+    assigned = len(tasks)
+    fb = int(perf_snapshot.get("feedback_count") or 0)
+    rat = int(perf_snapshot.get("rating_count") or 0)
+    target = gaps.get("target_role") or "your next role"
+    missing = gaps.get("missing_skills") or []
+    owned = gaps.get("owned_skills") or []
+    profile_skills = normalize_skills_list(user.skills)
+
+    lines = [
+        f"{name} is currently a {level} with an overall career score of {total}%.",
+        f"From your Teamify records: {done} of {assigned} assigned tasks completed, "
+        f"{fb} peer feedback entries, and {rat} ratings.",
+    ]
+    if profile_skills:
+        lines.append(
+            f"Profile skills ({len(profile_skills)}): {', '.join(profile_skills[:8])}"
+            + ("…" if len(profile_skills) > 8 else "")
+            + "."
+        )
+    if owned:
+        lines.append(
+            f"Already aligned for {target}: {', '.join(owned[:5])}."
+        )
+    if missing:
+        lines.append(
+            f"Priority gaps for {target}: {', '.join(missing[:5])}."
+        )
+    else:
+        lines.append(f"Next target role: {target}.")
+    return " ".join(lines)
+
 SKILL_DEMAND = {
     "System Design": 0.95, "Python": 0.92, "AWS": 0.90, "Docker": 0.88,
     "React": 0.87, "TypeScript": 0.85, "SQL": 0.82, "GraphQL": 0.80,
@@ -127,7 +202,7 @@ NEG_WORDS = {"poor", "missing", "needs", "improvement", "incomplete", "rushed",
 # ── Layer 1: Rule-based scoring ────────────────────────────────────────────────
 
 def _compute_career_score(user, tasks, feedback_sentiment: float = 0.5) -> dict:
-    skills = user.skills or []
+    skills = normalize_skills_list(user.skills)
     skill_score = (sum(3 for _ in skills) / max(len(skills) * 5, 1)) * 100 if skills else 0.0
 
     all_tasks = tasks
@@ -215,14 +290,18 @@ def _detect_strengths(user, perf_scores: Optional[dict] = None) -> list:
     return strengths
 
 
-def _detect_skill_gaps(user) -> dict:
-    career_level = user.career_level if hasattr(user, "career_level") else (
-        user.experience_level or "Junior Developer"
-    )
+def _detect_skill_gaps(user, career_level: Optional[str] = None) -> dict:
+    if not career_level:
+        career_level = (
+            getattr(user, "career_level", None)
+            or user.experience_level
+            or "Junior Developer"
+        )
+    career_level = _resolve_career_level(user, str(career_level))
     target = LEVEL_NEXT.get(career_level, "Senior Developer")
     req = ROLE_REQUIREMENTS.get(target, {})
     required = set(req.get("skills", []))
-    user_skills = set(s for s in (user.skills or []))
+    user_skills = set(normalize_skills_list(user.skills))
     owned = user_skills & required
     missing = sorted(required - owned, key=lambda s: SKILL_DEMAND.get(s, 0.5), reverse=True)
     gap_pct = round(len(missing) / max(len(required), 1) * 100, 1)
@@ -498,6 +577,14 @@ def generate_mentor_report(user_id: int) -> dict:
     if not user:
         return {"error": f"User {user_id} not found"}
 
+    fixed_skills = normalize_skills_list(user.skills)
+    if fixed_skills != (user.skills or []):
+        user.skills = fixed_skills
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
     try:
         tasks = Task.query.filter_by(assigned_to=user_id).all()
     except Exception:
@@ -519,19 +606,41 @@ def generate_mentor_report(user_id: int) -> dict:
         }
     nlp = _analyse_feedback(feedback_rows)
     scores = _compute_career_score(user, tasks, nlp["avg_sentiment_score"])
+    scores["level"] = _resolve_career_level(user, scores["level"])
     if perf_snapshot["feedback_count"] or perf_snapshot["rating_count"]:
         scores["total_score"] = perf_snapshot["overall"]
         scores["breakdown"]["performance_avg"] = perf_snapshot["overall"]
 
     weaknesses = _detect_weaknesses(user, perf_snapshot["scores"])
     strengths = _detect_strengths(user, perf_snapshot["scores"])
-    gaps = _detect_skill_gaps(user)
+    gaps = _detect_skill_gaps(user, scores["level"])
     report = _generate_report(user, scores, weaknesses, strengths, nlp, gaps)
     course_recs = _recommend_courses(gaps)
 
     done = [t for t in tasks if getattr(t, "status", None) == "done"]
+    recent_tasks: list[dict[str, Any]] = []
+    try:
+        from models.project import Project
+
+        for t in tasks[:8]:
+            proj_name = None
+            if getattr(t, "project_id", None):
+                proj = db.session.get(Project, t.project_id)
+                proj_name = getattr(proj, "name", None) if proj else None
+            recent_tasks.append({
+                "title": proj_name or t.title,
+                "task": t.title,
+                "status": t.status,
+            })
+    except Exception:
+        recent_tasks = [
+            {"title": t.title, "task": t.title, "status": t.status}
+            for t in tasks[:8]
+        ]
+
+    db_summary = _build_db_career_summary(user, scores, gaps, perf_snapshot, tasks)
     user_profile = {
-        "skills": list(user.skills or []),
+        "skills": normalize_skills_list(user.skills),
         "experience_level": user.experience_level,
         "professional_field": getattr(user, "professional_field", None),
         "member_experience_years": getattr(user, "member_experience_years", None),
@@ -540,6 +649,9 @@ def generate_mentor_report(user_id: int) -> dict:
         "tasks_completed": len(done),
         "feedback_count": perf_snapshot.get("feedback_count", 0),
         "rating_count": perf_snapshot.get("rating_count", 0),
+        "recent_tasks": recent_tasks,
+        "career_level": scores["level"],
+        "target_role": gaps.get("target_role"),
     }
 
     if not perf_snapshot.get("history") and scores["total_score"]:
@@ -551,14 +663,16 @@ def generate_mentor_report(user_id: int) -> dict:
             }],
         }
 
-    summary = report.split("##")[1].strip() if "##" in report else report[:280]
+    ai_summary = report.split("##")[1].strip() if "##" in report else report[:280]
+    summary = db_summary if db_summary else ai_summary
 
     return {
         "user_id": user_id,
         "user_name": user.display_name,
-        "career_level": getattr(user, "career_level", user.experience_level or "Junior Developer"),
+        "career_level": scores["level"],
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "summary": summary,
+        "db_summary": db_summary,
         "user_profile": user_profile,
         "overall_score": scores["total_score"],
         "career_progress": {
@@ -632,7 +746,7 @@ def build_user_ml_stats(user_id: int) -> dict:
     quality = round(sum(q_scores) / len(q_scores), 2) if q_scores else 3.5
     teamwork = round(sum(t_scores) / len(t_scores), 2) if t_scores else 3.5
     avg_rating = round(sum(r_scores) / len(r_scores), 2) if r_scores else 3.5
-    skills = user.skills or []
+    skills = normalize_skills_list(user.skills)
 
     return {
         "tasks_assigned": assigned or max(completed, 1),
@@ -733,6 +847,7 @@ def generate_mentor_chat_reply(
     user_id: int,
     question: str,
     mentor_data: dict,
+    skill_context: dict | None = None,
 ) -> tuple[str, list[str], dict]:
     """
     ML-backed mentor reply using teamify_model.pkl + career report from DB.
@@ -742,6 +857,33 @@ def generate_mentor_chat_reply(
     skill_gaps, strength_list, courses, level, career_score = _areas_from_report(mentor_data)
     name = mentor_data.get("user_name") or "there"
     q_lower = question.lower().strip()
+
+    skill_name = (skill_context or {}).get("name") if skill_context else None
+    if skill_name:
+        skill_reply, skill_suggestions = _skill_focus_reply(
+            str(skill_name),
+            skill_context or {},
+            q_lower,
+            name,
+            level,
+            career_score,
+            skill_gaps,
+            strength_list,
+            courses,
+            ml,
+            mentor_data,
+        )
+        if skill_reply:
+            meta = {
+                "source": ml.get("source", "formula"),
+                "predicted_rating": ml.get("predicted_rating"),
+                "performance_label": ml.get("percentile_label") or ml.get("performance_label"),
+                "career_score": career_score,
+                "career_level": level,
+                "model": "Profiles&AI Rating/teamify_model.pkl",
+                "skill_focus": skill_name,
+            }
+            return skill_reply, skill_suggestions, meta
 
     reply = _ml_intent_reply(
         q_lower, name, level, career_score, skill_gaps, strength_list, courses, ml, mentor_data
@@ -765,6 +907,117 @@ def generate_mentor_chat_reply(
         "model": "Profiles&AI Rating/teamify_model.pkl",
     }
     return reply, suggestions[:3], meta
+
+
+def _courses_for_skill(courses: list[dict], skill_name: str) -> list[dict]:
+    needle = skill_name.lower().strip()
+    if not needle:
+        return courses[:4]
+    matched = [
+        c for c in courses
+        if needle in f"{c.get('title', '')} {c.get('skills_covered', '')} {c.get('skill', '')}".lower()
+    ]
+    return matched if matched else courses[:4]
+
+
+def _skill_focus_reply(
+    skill_name: str,
+    skill_context: dict,
+    q_lower: str,
+    name: str,
+    level: str,
+    career_score: float,
+    skill_gaps: list[str],
+    strengths: list[str],
+    courses: list[dict],
+    ml: dict,
+    mentor_data: dict,
+) -> tuple[str | None, list[str]]:
+    """Skill-scoped mentor replies when user opens Explore Skill."""
+    pred = float(ml.get("predicted_rating") or 3.0)
+    label = ml.get("percentile_label") or ml.get("performance_label") or "Good"
+    ml_tag = (
+        f"Our ML model (teamify_model.pkl) rates your performance **{pred:.1f}/5** ({label})."
+        if ml.get("source") == "ml_model"
+        else f"Your estimated performance is **{pred:.1f}/5** ({label})."
+    )
+    skill_level = skill_context.get("level") or "Intermediate"
+    relevance = skill_context.get("score")
+    rel_txt = f" Relevance for you: **{relevance}/100**." if relevance is not None else ""
+    skill_courses = _courses_for_skill(courses, skill_name)
+
+    suggestions = [
+        f"What courses help me master {skill_name}?",
+        f"How do I improve my {skill_name}?",
+        f"How does {skill_name} affect promotion?",
+    ]
+
+    if any(kw in q_lower for kw in ("course", "learn", "study", "recommend", "another")):
+        offset = 0
+        if "another" in q_lower or "more" in q_lower:
+            offset = min(2, max(0, len(skill_courses) - 2))
+        picked = skill_courses[offset:offset + 4] or skill_courses[:4]
+        if picked:
+            lines = [
+                f"• **{c.get('title', 'Course')}** ({c.get('platform', 'Online')}, "
+                f"{c.get('hours', '?')} hrs, relevance {c.get('relevance', '—')})"
+                for c in picked
+            ]
+            return (
+                f"For **{skill_name}** ({skill_level}), here are targeted courses:\n"
+                + "\n".join(lines)
+                + f"\n\n{ml_tag}{rel_txt}",
+                suggestions,
+            )
+        return (
+            f"I don't have course matches for **{skill_name}** yet — add it to your profile "
+            f"and complete related tasks. {ml_tag}",
+            suggestions,
+        )
+
+    if any(kw in q_lower for kw in ("improve", "focus", "practice", "gap", "weak")):
+        detail = f"Build **{skill_name}** through deliberate practice and visible project work."
+        for w in mentor_data.get("weaknesses") or []:
+            if isinstance(w, dict) and skill_name.lower() in str(w.get("area", "")).lower():
+                detail = w.get("message") or detail
+                break
+        return (
+            f"To strengthen **{skill_name}** ({skill_level}): {detail}\n\n"
+            f"{ml_tag} Aim for career score **75+** (currently {career_score:.0f}).{rel_txt}",
+            suggestions,
+        )
+
+    if any(kw in q_lower for kw in ("project", "experience", "build")):
+        return (
+            f"Pick a team project where **{skill_name}** is central — ship a small feature, "
+            f"document trade-offs, and request peer feedback.\n\n"
+            f"{ml_tag} Level: **{level}**.{rel_txt}",
+            suggestions,
+        )
+
+    if any(kw in q_lower for kw in ("promot", "career", "level up", "senior")):
+        return (
+            f"**{skill_name}** at **{skill_level}** supports your path from **{level}** "
+            f"toward the next role. Pair it with mentorship and code/design reviews.\n\n"
+            f"{ml_tag} Career score **{career_score:.0f}/100**.{rel_txt}",
+            suggestions,
+        )
+
+    # Default skill exploration opener / general question within skill thread
+    course_hint = ""
+    if skill_courses:
+        c = skill_courses[0]
+        course_hint = (
+            f"\n\nStart with **{c.get('title', 'a recommended course')}** "
+            f"({c.get('platform', 'Online')})."
+        )
+    return (
+        f"You're exploring **{skill_name}** — **{skill_level}** level.{rel_txt}\n\n"
+        f"{ml_tag} Career score **{career_score:.0f}/100** ({level})."
+        f"{course_hint}\n\n"
+        f"Ask about courses, practice plans, or how **{skill_name}** fits promotion.",
+        suggestions,
+    )
 
 
 def _ml_intent_reply(

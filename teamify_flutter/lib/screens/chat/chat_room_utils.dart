@@ -39,7 +39,19 @@ ChatRoom chatRoomFromApi(Map<String, dynamic> json) {
     time: time.isNotEmpty ? time : '—',
     initials: initials.isNotEmpty ? initials : 'CH',
     isGroup: json['is_group'] == true,
+    projectId: json['project_id']?.toString(),
   );
+}
+
+String? projectIdFromChatRoomPayload(Map<String, dynamic> data) {
+  final room = data['room'];
+  if (room is Map) {
+    final nested = room['project_id']?.toString();
+    if (nested != null && nested.isNotEmpty) return nested;
+  }
+  final flat = data['project_id']?.toString();
+  if (flat != null && flat.isNotEmpty) return flat;
+  return null;
 }
 
 /// Opens (or creates) the team chat room for a project and navigates to it.

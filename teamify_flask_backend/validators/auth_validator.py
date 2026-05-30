@@ -9,10 +9,12 @@ VALID_USER_TYPES = ["freelancer", "student", "admin"]
 
 
 class RegisterSchema(Schema):
-    display_name = fields.Str(required=True, validate=validate.Length(min=1, max=50))
+    # Legacy clients may still send display_name; registration ignores it and
+    # assigns a temporary unique handle until the user sets a username in profile.
+    display_name = fields.Str(load_default=None, validate=validate.Length(max=80))
     email = fields.Email(required=True)
     password = fields.Str(required=True)
-    full_name = fields.Str(load_default=None, validate=validate.Length(max=100))
+    full_name = fields.Str(required=True, validate=validate.Length(min=1, max=150))
     role = fields.Str(
         load_default="member",
         validate=validate.OneOf(VALID_ROLES, error="Invalid role")
@@ -54,7 +56,8 @@ class LoginSchema(Schema):
 
 
 class ProfileUpdateSchema(Schema):
-    full_name = fields.Str(validate=validate.Length(max=100))
+    display_name = fields.Str(validate=validate.Length(min=3, max=30))
+    full_name = fields.Str(validate=validate.Length(max=150))
     user_type = fields.Str(
         validate=validate.OneOf(VALID_USER_TYPES, error="Invalid user_type")
     )

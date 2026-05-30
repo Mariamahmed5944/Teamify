@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'dart:typed_data';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/audio/meeting_speech_recorder.dart';
+import '../../core/files/file_downloader.dart';
 import '../../core/network/api_result.dart';
 import '../../core/network/websocket_manager.dart';
 import '../../core/theme.dart';
@@ -21,16 +24,93 @@ String _initialsFromName(String name) {
   return parts.take(2).map((p) => p[0].toUpperCase()).join();
 }
 
+DateTime? _parseMessageDate(String? iso) {
+  if (iso == null || iso.isEmpty) return null;
+  var parsed = DateTime.tryParse(iso);
+  if (parsed != null) return parsed.toLocal();
+  // SQLite / API sometimes returns "2026-05-25 10:00:00" without "T".
+  final normalized =
+      iso.contains(' ') && !iso.contains('T') ? iso.replaceFirst(' ', 'T') : iso;
+  parsed = DateTime.tryParse(normalized);
+  if (parsed != null) return parsed.toLocal();
+  if (!iso.endsWith('Z') && !iso.contains('+')) {
+    parsed = DateTime.tryParse('${normalized}Z');
+    if (parsed != null) return parsed.toLocal();
+  }
+  return null;
+}
+
+String _formatChatDateLabel(DateTime dt) {
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final day = DateTime(dt.year, dt.month, dt.day);
+  final diff = today.difference(day).inDays;
+  if (diff == 0) return 'اليوم';
+  if (diff == 1) return 'أمس';
+  const months = [
+    'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+    'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر',
+  ];
+  final month = months[dt.month - 1];
+  if (dt.year == now.year) return '${dt.day} $month';
+  return '${dt.day} $month ${dt.year}';
+}
+
+class _ChatListItem {
+  final String? dateLabel;
+  final ChatMessage? message;
+
+  const _ChatListItem.date(this.dateLabel) : message = null;
+  const _ChatListItem.msg(this.message) : dateLabel = null;
+}
+
+List<_ChatListItem> _chatListItems(List<ChatMessage> messages) {
+  final sorted = [...messages]
+    ..sort((a, b) {
+      final da = a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+      final db = b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+      return da.compareTo(db);
+    });
+  final items = <_ChatListItem>[];
+  String? lastLabel;
+  for (final m in sorted) {
+    if (m.createdAt == null) continue;
+    final label = _formatChatDateLabel(m.createdAt!);
+    if (label != lastLabel) {
+      items.add(_ChatListItem.date(label));
+      lastLabel = label;
+    }
+    items.add(_ChatListItem.msg(m));
+  }
+  return items;
+}
+
 String _formatMsgTime(String? iso) {
-  if (iso == null || iso.isEmpty) return '—';
-  if (iso.contains('T')) return iso.split('T').last.split('.').first;
-  return iso;
+  final dt = _parseMessageDate(iso);
+  if (dt == null) return '—';
+  final h = dt.hour.toString().padLeft(2, '0');
+  final m = dt.minute.toString().padLeft(2, '0');
+  final s = dt.second.toString().padLeft(2, '0');
+  return '$h:$m:$s';
+}
+
+String _formatMsgTimeFromDateTime(DateTime dt) {
+  final h = dt.hour.toString().padLeft(2, '0');
+  final m = dt.minute.toString().padLeft(2, '0');
+  final s = dt.second.toString().padLeft(2, '0');
+  return '$h:$m:$s';
 }
 
 ChatMessage _messageFromRow(Map<String, dynamic> m, String? myId) {
   final senderId = m['sender_id']?.toString() ?? '';
   final senderName = m['sender_name']?.toString() ?? 'User';
   final created = m['created_at']?.toString() ?? '';
+  final createdAt = _parseMessageDate(created);
+  final attachment = m['attachment'] is Map
+      ? Map<String, dynamic>.from(m['attachment'] as Map)
+      : null;
+  final fileId =
+      m['file_id']?.toString() ?? attachment?['file_id']?.toString();
   return ChatMessage(
     id: m['id']?.toString() ?? '',
     senderId: senderId,
@@ -39,6 +119,11 @@ ChatMessage _messageFromRow(Map<String, dynamic> m, String? myId) {
     message: m['content']?.toString() ?? '',
     time: _formatMsgTime(created),
     isMe: myId != null && senderId == myId,
+    messageType: m['message_type']?.toString() ?? 'text',
+    fileId: fileId,
+    fileName: attachment?['filename']?.toString(),
+    mimeType: attachment?['mime_type']?.toString(),
+    createdAt: createdAt,
   );
 }
 
@@ -287,7 +372,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
   bool _recordingVoice = false;
   bool _transcribingVoice = false;
   String? _roomId;
+  String? _projectId;
   String _roomName = 'Chat';
+  bool _sendingAttachment = false;
 
   @override
   void initState() {
@@ -319,8 +406,18 @@ class _ConversationScreenState extends State<ConversationScreen> {
     setState(() {
       _roomId = room.id;
       _roomName = room.name;
+      _projectId = room.projectId;
     });
+    try {
+      final roomData =
+          await context.read<AppServices>().chat.getRoom(room.id).unwrap();
+      if (mounted) {
+        _projectId ??= projectIdFromChatRoomPayload(roomData);
+        if (_projectId != null) setState(() {});
+      }
+    } catch (_) {}
     await _loadHistory();
+    await _ws?.connect();
     _subscribeSocket();
   }
 
@@ -328,14 +425,28 @@ class _ConversationScreenState extends State<ConversationScreen> {
     final ws = _ws;
     final rid = _roomId;
     if (ws == null || rid == null) return;
-    ws.joinRoom(rid);
+    if (ws.isConnected) ws.joinRoom(rid);
     _socketSub?.cancel();
     _socketSub = ws.stream.listen((payload) {
-      if (payload.event != SocketEvent.chatMessage) return;
-      final d = payload.data;
-      final msgRoom = d['room_id']?.toString();
-      if (msgRoom != rid) return;
-      _appendServerMessage(Map<String, dynamic>.from(d));
+      if (payload.event == SocketEvent.connected) {
+        ws.joinRoom(rid);
+        return;
+      }
+      if (payload.event == SocketEvent.chatMessage) {
+        final d = payload.data;
+        final msgRoom = d['room_id']?.toString();
+        if (msgRoom != rid) return;
+        _appendServerMessage(Map<String, dynamic>.from(d));
+      } else if (payload.event == SocketEvent.messageDeleted) {
+        final d = payload.data;
+        final msgRoom = d['room_id']?.toString();
+        if (msgRoom != rid) return;
+        final id =
+            d['message_id']?.toString() ?? d['id']?.toString();
+        if (id != null && id.isNotEmpty) {
+          _removeMessageById(id);
+        }
+      }
     });
   }
 
@@ -345,7 +456,16 @@ class _ConversationScreenState extends State<ConversationScreen> {
     final myId = session.currentUser?.id;
     final id = d['id']?.toString() ?? '';
     final content = d['content']?.toString() ?? '';
-    if (id.isNotEmpty && _seenIds.contains(id)) return;
+    if (id.isNotEmpty && _seenIds.contains(id)) {
+      setState(() {
+        _messages.removeWhere((m) =>
+            m.isPending &&
+            m.isMe &&
+            m.message == content &&
+            (myId == null || m.senderId == myId));
+      });
+      return;
+    }
     if (id.isNotEmpty) _seenIds.add(id);
     final incoming = _messageFromRow(d, myId);
     setState(() {
@@ -356,6 +476,136 @@ class _ConversationScreenState extends State<ConversationScreen> {
           (myId == null || m.senderId == myId));
       _messages.add(incoming);
     });
+  }
+
+  void _confirmPendingFromServer(String pendingId, Map<String, dynamic> row) {
+    if (!mounted) return;
+    final session = context.read<SessionController>();
+    final myId = session.currentUser?.id;
+    final incoming = _messageFromRow(row, myId);
+    final id = incoming.id;
+    if (id.isNotEmpty && _seenIds.contains(id)) {
+      setState(() => _messages.removeWhere((m) => m.id == pendingId));
+      return;
+    }
+    if (id.isNotEmpty) _seenIds.add(id);
+    setState(() {
+      final idx = _messages.indexWhere((m) => m.id == pendingId);
+      if (idx >= 0) {
+        _messages[idx] = incoming;
+      } else {
+        _messages.removeWhere((m) =>
+            m.isPending &&
+            m.isMe &&
+            m.message == incoming.message &&
+            (myId == null || m.senderId == myId));
+        if (id.isEmpty || !_messages.any((m) => m.id == id)) {
+          _messages.add(incoming);
+        }
+      }
+    });
+  }
+
+  void _failPending(String pendingId, String message) {
+    if (!mounted) return;
+    setState(() => _messages.removeWhere((m) => m.id == pendingId));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  void _handleSendResult(
+    String pendingId,
+    ApiResult<Map<String, dynamic>> result,
+  ) {
+    if (!mounted) return;
+    if (result.isSuccess && result.data != null) {
+      final raw = result.data!;
+      final row = raw['data'];
+      if (row is Map) {
+        _confirmPendingFromServer(
+          pendingId,
+          Map<String, dynamic>.from(row),
+        );
+        return;
+      }
+      if (raw.containsKey('id') && raw.containsKey('content')) {
+        _confirmPendingFromServer(pendingId, raw);
+        return;
+      }
+    }
+    if (result.isOfflineQueued) return;
+    _failPending(pendingId, result.error ?? 'Could not send message');
+  }
+
+  Future<void> _confirmPendingViaRestIfNeeded(
+    String pendingId,
+    String rid,
+    Map<String, dynamic> payload,
+  ) async {
+    await Future.delayed(const Duration(seconds: 8));
+    if (!mounted) return;
+    if (!_messages.any((m) => m.id == pendingId && m.isPending)) return;
+    final ws = _ws ?? context.read<WebSocketManager>();
+    if (ws.isConnected) return;
+    final result =
+        await context.read<AppServices>().chat.sendMessage(rid, payload);
+    _handleSendResult(pendingId, result);
+  }
+
+  void _removeMessageById(String id) {
+    if (!mounted) return;
+    setState(() {
+      _messages.removeWhere((m) => m.id == id);
+      _seenIds.remove(id);
+    });
+  }
+
+  Future<void> _confirmDeleteMessage(ChatMessage m) async {
+    final rid = _roomId;
+    if (rid == null) return;
+
+    if (m.isPending) {
+      _removeMessageById(m.id);
+      return;
+    }
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete message?'),
+        content: const Text('This message will be removed for everyone in this chat.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: Color(0xFFDC2626)),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !mounted) return;
+
+    final result =
+        await context.read<AppServices>().chat.deleteMessage(rid, m.id);
+    if (!mounted) return;
+
+    if (result.isSuccess) {
+      _removeMessageById(m.id);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Message deleted')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not delete: ${result.error}')),
+      );
+    }
   }
 
   Future<void> _loadHistory() async {
@@ -423,43 +673,222 @@ class _ConversationScreenState extends State<ConversationScreen> {
   void _showInputMenu() {
     showModalBottomSheet<void>(
       context: context,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text('Share',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _attachAction(
+                    ctx,
+                    icon: Icons.photo_outlined,
+                    label: 'Photo',
+                    color: const Color(0xFF10B981),
+                    onTap: () => _pickAndSendAttachment(
+                      ctx,
+                      type: FileType.image,
+                      messageType: 'image',
+                    ),
+                  ),
+                  _attachAction(
+                    ctx,
+                    icon: Icons.insert_drive_file_outlined,
+                    label: 'File',
+                    color: AppColors.primary,
+                    onTap: () => _pickAndSendAttachment(
+                      ctx,
+                      type: FileType.any,
+                      messageType: 'file',
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.summarize_outlined),
+                title: const Text('AI chat summary'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _openChatSummary();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.videocam_outlined),
+                title: const Text('Start meeting'),
+                subtitle: const Text('Live speech + transcript'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _openMeeting();
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _attachAction(
+    BuildContext sheetCtx, {
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: SizedBox(
+        width: 88,
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(
-              leading: const Icon(Icons.mic, color: AppColors.primary),
-              title: const Text('Voice message (Whisper)'),
-              subtitle: const Text('Record speech → text → send'),
-              onTap: () {
-                Navigator.pop(ctx);
-                _toggleVoiceMessage();
-              },
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(icon, color: color, size: 28),
             ),
-            ListTile(
-              leading: const Icon(Icons.summarize_outlined),
-              title: const Text('AI chat summary'),
-              onTap: () {
-                Navigator.pop(ctx);
-                _openChatSummary();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.videocam_outlined),
-              title: const Text('Start meeting'),
-              subtitle: const Text('Live speech + chat transcript'),
-              onTap: () {
-                Navigator.pop(ctx);
-                _openMeeting();
-              },
-            ),
+            const SizedBox(height: 8),
+            Text(label,
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _pickAndSendAttachment(
+    BuildContext sheetCtx, {
+    required FileType type,
+    required String messageType,
+  }) async {
+    Navigator.pop(sheetCtx);
+    if (_sendingAttachment || _roomId == null) return;
+
+    final fileSvc = context.read<AppServices>().files;
+    final result = await FilePicker.pickFiles(
+      type: type,
+      allowMultiple: false,
+      withData: true,
+    );
+    if (result == null || result.files.isEmpty) return;
+    final picked = result.files.single;
+    final bytes = picked.bytes;
+    final path = picked.path;
+    if (bytes == null && (path == null || path.isEmpty)) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not read file from device.')),
+      );
+      return;
+    }
+
+    if (!mounted) return;
+    setState(() => _sendingAttachment = true);
+    final upload = await fileSvc.uploadFile(
+      filePath: path ?? '',
+      filename: picked.name,
+      projectId: _projectId,
+      fileBytes: bytes,
+    );
+    if (!mounted) return;
+    setState(() => _sendingAttachment = false);
+
+    if (!upload.isSuccess || upload.data == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(upload.error ?? 'Upload failed')),
+      );
+      return;
+    }
+
+    final caption = _ctrl.text.trim();
+    _ctrl.clear();
+    await _sendAttachmentMessage(
+      fileId: upload.data!.id,
+      messageType: messageType,
+      caption: caption.isNotEmpty ? caption : null,
+      displayName: picked.name,
+    );
+  }
+
+  Future<void> _sendAttachmentMessage({
+    required String fileId,
+    required String messageType,
+    String? caption,
+    String? displayName,
+  }) async {
+    final rid = _roomId;
+    if (rid == null || !mounted) return;
+
+    final ws = _ws ?? context.read<WebSocketManager>();
+    final session = context.read<SessionController>();
+    final myId = session.currentUser?.id ?? '';
+    final displayNameUser = session.currentUser?.displayName ??
+        session.currentUser?.fullName ??
+        'You';
+    final label = caption ?? displayName ?? 'Attachment';
+
+    final pendingId = 'pending_${DateTime.now().millisecondsSinceEpoch}';
+    final now = DateTime.now();
+    setState(() {
+      _messages.add(ChatMessage(
+        id: pendingId,
+        senderId: myId,
+        senderName: displayNameUser,
+        senderInitials: _initialsFromName(displayNameUser),
+        message: label,
+        time: _formatMsgTimeFromDateTime(now),
+        isMe: true,
+        isPending: true,
+        messageType: messageType,
+        fileId: fileId,
+        fileName: displayName,
+        createdAt: now,
+      ));
+    });
+
+    final payload = {
+      'content': label,
+      'message_type': messageType,
+      'file_id': int.tryParse(fileId) ?? fileId,
+    };
+
+    if (!ws.isConnected) {
+      await ws.connect();
+    }
+    if (!mounted) return;
+
+    if (ws.isConnected) {
+      ws.sendChatPayload(rid, payload);
+      unawaited(_confirmPendingViaRestIfNeeded(pendingId, rid, payload));
+    } else {
+      final result =
+          await context.read<AppServices>().chat.sendMessage(rid, payload);
+      _handleSendResult(pendingId, result);
+    }
   }
 
   Future<void> _toggleVoiceMessage() async {
@@ -490,8 +919,10 @@ class _ConversationScreenState extends State<ConversationScreen> {
       setState(() => _recordingVoice = true);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Recording… Tap mic again to transcribe & send.'),
-          duration: Duration(seconds: 2),
+          content: Text(
+            'Recording… Tap mic to send, or ✕ to cancel.',
+          ),
+          duration: Duration(seconds: 3),
         ),
       );
       return;
@@ -539,6 +970,19 @@ class _ConversationScreenState extends State<ConversationScreen> {
     await _send();
   }
 
+  Future<void> _cancelVoiceMessage() async {
+    if (!_recordingVoice || _transcribingVoice) return;
+    await _voiceRecorder.cancelVoiceNote();
+    if (!mounted) return;
+    setState(() => _recordingVoice = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Voice recording cancelled.'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
   Future<void> _send() async {
     final text = _ctrl.text.trim();
     final rid = _roomId;
@@ -555,31 +999,33 @@ class _ConversationScreenState extends State<ConversationScreen> {
       await ws.connect();
     }
     if (!mounted) return;
-    
-    final bool isOnline = ws.isConnected;
 
     final pendingId = 'pending_${DateTime.now().millisecondsSinceEpoch}';
+    final now = DateTime.now();
     final pending = ChatMessage(
       id: pendingId,
       senderId: myId,
       senderName: displayName,
       senderInitials: _initialsFromName(displayName),
       message: text,
-      time: '…',
+      time: _formatMsgTimeFromDateTime(now),
       isMe: true,
       isPending: true,
+      createdAt: now,
     );
+    final payload = {'content': text, 'message_type': 'text'};
     setState(() {
       _messages.add(pending);
       _ctrl.clear();
     });
-    
-    if (isOnline) {
+
+    if (ws.isConnected) {
       ws.sendMessage(rid, text);
+      unawaited(_confirmPendingViaRestIfNeeded(pendingId, rid, payload));
     } else {
-      // Fallback to offline REST queue
-      final svc = context.read<AppServices>();
-      await svc.chat.sendMessage(rid, {'content': text});
+      final result =
+          await context.read<AppServices>().chat.sendMessage(rid, payload);
+      _handleSendResult(pendingId, result);
     }
   }
 
@@ -588,6 +1034,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
     final session = context.watch<SessionController>();
     final myInitials =
         _initialsFromName(session.currentUser?.displayName ?? 'Me');
+    final chatItems = _chatListItems(_messages);
 
     if (_roomId == null && !_loadingHistory) {
       return Scaffold(
@@ -659,16 +1106,24 @@ class _ConversationScreenState extends State<ConversationScreen> {
               onRefresh: _loadHistory,
               child: ListView.builder(
                 padding: const EdgeInsets.all(16),
-                itemCount: _messages.length + 1,
+                itemCount: chatItems.length,
                 itemBuilder: (_, i) {
-                  if (i == 0) {
-                    return const Center(
-                        child: Padding(
-                            padding: EdgeInsets.only(bottom: 12),
-                            child: TChip(label: 'Today', bg: AppColors.border)));
+                  final item = chatItems[i];
+                  if (item.dateLabel != null) {
+                    return Center(
+                      child: Padding(
+                        padding: EdgeInsets.only(
+                          bottom: 12,
+                          top: i > 0 ? 8 : 0,
+                        ),
+                        child: TChip(
+                          label: item.dateLabel!,
+                          bg: AppColors.border,
+                        ),
+                      ),
+                    );
                   }
-                  final m = _messages[i - 1];
-                  return _buildBubble(m, myInitials);
+                  return _buildBubble(item.message!, myInitials);
                 },
               ),
             ),
@@ -681,16 +1136,20 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
   Widget _buildBubble(ChatMessage m, String myInitials) {
     final isMe = m.isMe;
+    final bubbleColor = isMe ? AppColors.primary : Colors.white;
+    final textColor = isMe ? Colors.white : AppColors.textPrimary;
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         mainAxisAlignment:
             isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (!isMe) ...[
-            TAvatar(initials: m.senderInitials, radius: 16, bg: AppColors.primary),
-            const SizedBox(width: 8)
+            TAvatar(
+                initials: m.senderInitials, radius: 16, bg: AppColors.primary),
+            const SizedBox(width: 8),
           ],
           Flexible(
             child: Column(
@@ -698,29 +1157,67 @@ class _ConversationScreenState extends State<ConversationScreen> {
                   isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
               children: [
                 if (!isMe)
-                  Text(m.senderName,
-                      style: const TextStyle(
-                          fontSize: 11, color: AppColors.textSecondary)),
-                const SizedBox(height: 2),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: isMe ? AppColors.primary : Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: isMe ? null : Border.all(color: AppColors.border),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4, left: 4),
+                    child: Text(m.senderName,
+                        style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textSecondary)),
                   ),
-                  child: Text(m.message,
-                      style: TextStyle(
-                          color: isMe ? Colors.white : AppColors.textPrimary,
-                          fontSize: 13)),
+                GestureDetector(
+                  onLongPress: isMe && !m.isPending
+                      ? () => _confirmDeleteMessage(m)
+                      : null,
+                  child: Container(
+                  constraints: const BoxConstraints(maxWidth: 320),
+                  padding: m.hasAttachment && m.isImage
+                      ? const EdgeInsets.all(6)
+                      : const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: bubbleColor,
+                    borderRadius: BorderRadius.only(
+                      topLeft: const Radius.circular(18),
+                      topRight: const Radius.circular(18),
+                      bottomLeft: Radius.circular(isMe ? 18 : 4),
+                      bottomRight: Radius.circular(isMe ? 4 : 18),
+                    ),
+                    border: isMe ? null : Border.all(color: AppColors.border),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (m.hasAttachment)
+                        _ChatAttachmentBody(
+                          message: m,
+                          isMe: isMe,
+                          onOpen: () => _openAttachment(m),
+                        ),
+                      if (m.message.isNotEmpty &&
+                          (!m.hasAttachment || !m.isImage))
+                        Text(
+                          m.message,
+                          style: TextStyle(color: textColor, fontSize: 14),
+                        ),
+                    ],
+                  ),
+                ),
                 ),
                 Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Text(
-                        '${m.time}${m.isPending ? ' · sending' : ''}',
-                        style: const TextStyle(
-                            fontSize: 10, color: AppColors.textSecondary))),
+                  padding: const EdgeInsets.only(top: 4, left: 4, right: 4),
+                  child: Text(
+                    '${m.time}${m.isPending ? ' · sending' : ''}',
+                    style: const TextStyle(
+                        fontSize: 10, color: AppColors.textSecondary),
+                  ),
+                ),
               ],
             ),
           ),
@@ -729,66 +1226,465 @@ class _ConversationScreenState extends State<ConversationScreen> {
             Opacity(
               opacity: m.isPending ? 0.5 : 1,
               child: TAvatar(initials: myInitials, radius: 16),
-            )
+            ),
           ],
         ],
       ),
     );
   }
 
-  Widget _buildInput() => Container(
-        color: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-        child: SafeArea(
-          child: Row(children: [
-            IconButton(
-              icon: const Icon(Icons.add_circle_outline,
-                  color: AppColors.textSecondary),
-              tooltip: 'More',
-              onPressed: _showInputMenu,
-            ),
-            IconButton(
-              icon: Icon(
-                _transcribingVoice
-                    ? Icons.hourglass_top
-                    : _recordingVoice
-                        ? Icons.stop_circle
-                        : Icons.mic_none,
-                color: _recordingVoice
-                    ? const Color(0xFFDC2626)
-                    : AppColors.primary,
-              ),
-              tooltip: 'Voice message',
-              onPressed:
-                  _transcribingVoice ? null : _toggleVoiceMessage,
-            ),
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                decoration: BoxDecoration(
-                    color: AppColors.background,
-                    borderRadius: BorderRadius.circular(24)),
-                child: TextField(
-                  controller: _ctrl,
-                  enabled: !_transcribingVoice,
-                  decoration: InputDecoration(
-                    hintText: _recordingVoice
-                        ? 'Recording voice…'
-                        : _transcribingVoice
-                            ? 'Transcribing with Whisper…'
-                            : 'Type a message...',
-                    border: InputBorder.none,
-                  ),
-                  onSubmitted: (_) => _send(),
-                ),
-              ),
-            ),
-            IconButton(
-                icon: const Icon(Icons.send_rounded, color: AppColors.primary),
-                onPressed: _transcribingVoice ? null : _send),
-          ]),
+  Future<void> _openAttachment(ChatMessage m) async {
+    final fid = m.fileId;
+    if (fid == null || fid.isEmpty) return;
+
+    if (m.isImage) {
+      await showDialog<void>(
+        context: context,
+        barrierColor: Colors.black87,
+        builder: (ctx) => _ChatImageViewerDialog(
+          fileId: fid,
+          title: m.fileName ?? 'Photo',
         ),
       );
+      return;
+    }
+
+    try {
+      final bytes =
+          await context.read<AppServices>().files.downloadFile(fid).unwrap();
+      if (!mounted) return;
+      final name = m.fileName ?? 'attachment';
+      await saveDownloadedBytes(
+        filename: name,
+        bytes: Uint8List.fromList(bytes),
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Downloaded $name')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not open file: $e')),
+      );
+    }
+  }
+
+  Widget _buildInput() => Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 8,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+        child: SafeArea(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Material(
+                color: AppColors.background,
+                shape: const CircleBorder(),
+                child: IconButton(
+                  icon: _sendingAttachment
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.add, color: AppColors.primary),
+                  tooltip: 'Attach photo or file',
+                  onPressed: _sendingAttachment || _transcribingVoice
+                      ? null
+                      : _showInputMenu,
+                ),
+              ),
+              Material(
+                color: _recordingVoice
+                    ? const Color(0xFFFEE2E2)
+                    : AppColors.background,
+                shape: const CircleBorder(),
+                child: IconButton(
+                  icon: Icon(
+                    _transcribingVoice
+                        ? Icons.hourglass_top
+                        : _recordingVoice
+                            ? Icons.stop_circle
+                            : Icons.mic_none,
+                    color: _recordingVoice
+                        ? const Color(0xFFDC2626)
+                        : const Color(0xFF8B5CF6),
+                  ),
+                  tooltip: 'Voice message',
+                  onPressed: _transcribingVoice || _sendingAttachment
+                      ? null
+                      : _toggleVoiceMessage,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: _recordingVoice
+                        ? const Color(0xFFFEF2F2)
+                        : AppColors.background,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: _recordingVoice
+                          ? const Color(0xFFFECACA)
+                          : AppColors.border,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      if (_recordingVoice) ...[
+                        Container(
+                          width: 8,
+                          height: 8,
+                          margin: const EdgeInsets.only(right: 8),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFDC2626),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ],
+                      Expanded(
+                        child: TextField(
+                          controller: _ctrl,
+                          minLines: 1,
+                          maxLines: 5,
+                          enabled: !_transcribingVoice &&
+                              !_sendingAttachment &&
+                              !_recordingVoice,
+                          decoration: InputDecoration(
+                            hintText: _recordingVoice
+                                ? 'Recording… tap mic to send'
+                                : _transcribingVoice
+                                    ? 'Transcribing…'
+                                    : _sendingAttachment
+                                        ? 'Uploading…'
+                                        : 'Type a message…',
+                            border: InputBorder.none,
+                            contentPadding:
+                                const EdgeInsets.symmetric(vertical: 10),
+                          ),
+                          onSubmitted: (_) => _send(),
+                        ),
+                      ),
+                      if (_recordingVoice)
+                        IconButton(
+                          icon: const Icon(
+                            Icons.close_rounded,
+                            color: Color(0xFFDC2626),
+                            size: 22,
+                          ),
+                          tooltip: 'Cancel recording',
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(
+                            minWidth: 36,
+                            minHeight: 36,
+                          ),
+                          onPressed: _cancelVoiceMessage,
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Material(
+                color: AppColors.primary,
+                shape: const CircleBorder(),
+                child: IconButton(
+                  icon: const Icon(Icons.send_rounded, color: Colors.white),
+                  onPressed: _transcribingVoice ||
+                          _sendingAttachment ||
+                          _recordingVoice
+                      ? null
+                      : _send,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+}
+
+/// Inline image or file chip inside a chat bubble.
+class _ChatAttachmentBody extends StatefulWidget {
+  final ChatMessage message;
+  final bool isMe;
+  final VoidCallback onOpen;
+
+  const _ChatAttachmentBody({
+    required this.message,
+    required this.isMe,
+    required this.onOpen,
+  });
+
+  @override
+  State<_ChatAttachmentBody> createState() => _ChatAttachmentBodyState();
+}
+
+class _ChatAttachmentBodyState extends State<_ChatAttachmentBody> {
+  Uint8List? _thumbBytes;
+  bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.message.isImage && widget.message.fileId != null) {
+      _loadThumb();
+    }
+  }
+
+  Future<void> _loadThumb() async {
+    setState(() => _loading = true);
+    try {
+      final bytes = await context
+          .read<AppServices>()
+          .files
+          .downloadFile(widget.message.fileId!)
+          .unwrap();
+      if (mounted) setState(() => _thumbBytes = Uint8List.fromList(bytes));
+    } catch (_) {}
+    if (mounted) setState(() => _loading = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final m = widget.message;
+    if (m.isImage) {
+      return GestureDetector(
+        onTap: widget.onOpen,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: _loading
+              ? const SizedBox(
+                  width: 200,
+                  height: 120,
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              : _thumbBytes != null
+                  ? Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Image.memory(
+                          _thumbBytes!,
+                          width: 220,
+                          fit: BoxFit.cover,
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.black45,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.open_in_full,
+                                  color: Colors.white, size: 14),
+                              SizedBox(width: 4),
+                              Text('Tap to open',
+                                  style: TextStyle(
+                                      color: Colors.white, fontSize: 11)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    )
+                  : Container(
+                      width: 200,
+                      height: 100,
+                      color: Colors.black12,
+                      alignment: Alignment.center,
+                      child: Icon(
+                        Icons.image_outlined,
+                        color: widget.isMe ? Colors.white70 : AppColors.primary,
+                      ),
+                    ),
+        ),
+      );
+    }
+
+    return InkWell(
+      onTap: widget.onOpen,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: widget.isMe
+              ? Colors.white.withValues(alpha: 0.15)
+              : AppColors.primary.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.attach_file,
+              size: 20,
+              color: widget.isMe ? Colors.white : AppColors.primary,
+            ),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                m.fileName ?? m.message,
+                style: TextStyle(
+                  color: widget.isMe ? Colors.white : AppColors.textPrimary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Full-screen image viewer when tapping a chat photo.
+class _ChatImageViewerDialog extends StatefulWidget {
+  final String fileId;
+  final String title;
+
+  const _ChatImageViewerDialog({
+    required this.fileId,
+    required this.title,
+  });
+
+  @override
+  State<_ChatImageViewerDialog> createState() => _ChatImageViewerDialogState();
+}
+
+class _ChatImageViewerDialogState extends State<_ChatImageViewerDialog> {
+  Uint8List? _bytes;
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final data = await context
+          .read<AppServices>()
+          .files
+          .downloadFile(widget.fileId)
+          .unwrap();
+      if (!mounted) return;
+      setState(() {
+        _bytes = Uint8List.fromList(data);
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+      });
+    }
+  }
+
+  Future<void> _download() async {
+    if (_bytes == null) return;
+    final name = widget.title.contains('.')
+        ? widget.title
+        : '${widget.title}.jpg';
+    await saveDownloadedBytes(filename: name, bytes: _bytes!);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Saved $name')),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.all(16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  widget.title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (_bytes != null)
+                IconButton(
+                  icon: const Icon(Icons.download_outlined,
+                      color: Colors.white),
+                  tooltip: 'Download',
+                  onPressed: _download,
+                ),
+              IconButton(
+                icon: const Icon(Icons.close, color: Colors.white),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+          Flexible(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Material(
+                color: Colors.black,
+                child: _loading
+                    ? const SizedBox(
+                        width: 320,
+                        height: 280,
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                          ),
+                        ),
+                      )
+                    : _error != null
+                        ? SizedBox(
+                            width: 320,
+                            height: 200,
+                            child: Center(
+                              child: Text(
+                                _error!,
+                                style: const TextStyle(color: Colors.white70),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          )
+                        : InteractiveViewer(
+                            minScale: 0.5,
+                            maxScale: 4,
+                            child: Image.memory(
+                              _bytes!,
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // ── Chat Summary ──────────────────────────────────────────────────────────────

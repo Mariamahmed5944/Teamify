@@ -8,8 +8,7 @@ import '../core/offline/offline_manager.dart';
 import '../core/offline/offline_mutation.dart';
 import '../core/offline/mutation_id.dart';
 import '../data/models/models.dart';
-import '../data/repositories/project_repository.dart'
-    show ProjectRepository, AvailableMember;
+import '../data/repositories/project_repository.dart' show ProjectRepository;
 import '../data/repositories/stats_repository.dart';
 import '../core/network/request_deduplicator.dart';
 import '../core/cache/swr_helper.dart';
@@ -187,6 +186,12 @@ class ProjectService with ServiceErrorHandler {
   Future<ApiResult<List<ApiUser>>> listMembers(String projectId) =>
       guard(() => _repo.listProjectMembers(projectId));
 
+  Future<ApiResult<List<ApiProjectInvitation>>> listProjectInvitations(
+    String projectId, {
+    String status = '',
+  }) =>
+      guard(() => _repo.listProjectInvitations(projectId, status: status));
+
   Future<ApiResult<void>> addMember(String projectId, String userId) =>
       guardWithOffline(
         () => _repo.addProjectMember(projectId: projectId, userId: userId),
@@ -225,7 +230,7 @@ class ProjectService with ServiceErrorHandler {
 
   /// Fetches all approved, non-guest users eligible to be added as project members.
   /// Results are not cached — always fresh so the list reflects current DB state.
-  Future<ApiResult<List<AvailableMember>>> getAvailableMembers({
+  Future<ApiResult<List<ApiUser>>> getAvailableMembers({
     String search = '',
   }) =>
       guard(() => _repo.getAvailableMembers(search: search));

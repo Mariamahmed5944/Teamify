@@ -107,6 +107,12 @@ class ChatMessage {
   final String id, senderId, senderName, senderInitials, message, time;
   final bool isMe;
   final bool isPending;
+  /// text | image | file
+  final String messageType;
+  final String? fileId;
+  final String? fileName;
+  final String? mimeType;
+  final DateTime? createdAt;
 
   const ChatMessage({
     required this.id,
@@ -117,13 +123,23 @@ class ChatMessage {
     required this.time,
     this.isMe = false,
     this.isPending = false,
+    this.messageType = 'text',
+    this.fileId,
+    this.fileName,
+    this.mimeType,
+    this.createdAt,
   });
+
+  bool get isImage => messageType == 'image';
+  bool get isFile => messageType == 'file';
+  bool get hasAttachment => fileId != null && fileId!.isNotEmpty;
 }
 
 class ChatRoom {
   final String id, name, lastMessage, time, initials;
   final int unread;
   final bool isGroup;
+  final String? projectId;
   const ChatRoom({
     required this.id,
     required this.name,
@@ -132,6 +148,7 @@ class ChatRoom {
     required this.initials,
     this.unread = 0,
     this.isGroup = false,
+    this.projectId,
   });
 }
 

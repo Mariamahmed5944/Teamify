@@ -122,6 +122,7 @@ class AppServices {
     // ── Search & Home ─────────────────────────────────────────────────────
     search = SearchService(repos.search);
     home = HomeService(repos.home, cache);
+    notifications.linkHomeService(home);
 
     // ── Admin (full surface) ──────────────────────────────────────────────
     admin = AdminService(repos.admin, cache);

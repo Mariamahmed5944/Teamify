@@ -40,6 +40,7 @@ from flask_jwt_extended import decode_token
 from models import db
 from models.chat import ChatRoom, ChatRoomMember, Message
 from models.user import User
+from services.chat_message_service import create_chat_message
 
 logger = logging.getLogger(__name__)
 
@@ -391,11 +392,6 @@ def register_chat_events(socketio) -> None:
             emit("error", {"message": "Invalid payload"})
             return
 
-        content = (data.get("content") or "").strip()
-        if not content:
-            emit("error", {"message": "content is required"})
-            return
-
         try:
             room_id = int(data["room_id"])
         except (KeyError, TypeError, ValueError):
@@ -410,12 +406,22 @@ def register_chat_events(socketio) -> None:
             emit("error", {"message": "You are not a member of this room"})
             return
 
-        # Persist
-        msg = Message(room_id=room_id, sender_id=user_id, content=content)
-        db.session.add(msg)
-        db.session.commit()
+        msg, err = create_chat_message(room_id, user_id, data)
+        if err:
+            body, status = err
+            try:
+                payload = body.get_json()
+                emit("error", {"message": payload.get("error", "Send failed")})
+            except Exception:
+                emit("error", {"message": "Send failed"})
+            return
 
         # Broadcast to room
         room_name = f"chat_{room_id}"
         emit("receive_message", msg.to_dict(), to=room_name)
-        logger.info("[WS] msg room=%s user=%s len=%d", room_id, user_id, len(content))
+        logger.info(
+            "[WS] msg room=%s user=%s type=%s",
+            room_id,
+            user_id,
+            msg.message_type,
+        )

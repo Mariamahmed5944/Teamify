@@ -8,6 +8,7 @@ import '../../data/models/api_helpers.dart';
 import '../../services/app_services.dart';
 import '../../services/ai_service.dart';
 import '../../widgets/widgets.dart';
+import 'mentor_skill_ui.dart';
 
 // ── Mentor Main Screen (Tabs Container) ──────────────────────────────────────
 class MentorMainScreen extends StatefulWidget {
@@ -27,7 +28,7 @@ class _MentorMainScreenState extends State<MentorMainScreen>
   void initState() {
     super.initState();
     _tab = TabController(length: 5, vsync: this);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load(forceRefresh: true));
   }
 
   Future<void> _load({bool forceRefresh = false}) async {
@@ -53,7 +54,10 @@ class _MentorMainScreenState extends State<MentorMainScreen>
       if (forceRefresh) {
         await svc.ai.invalidateMentorInsights(user.id);
       }
-      final result = await svc.ai.getMentorInsights(user.id);
+      final result = await svc.ai.getMentorInsights(
+        user.id,
+        forceRefresh: forceRefresh,
+      );
       if (!mounted) return;
       if (result.isSuccess) {
         setState(() {
@@ -157,13 +161,17 @@ class _MentorMainScreenState extends State<MentorMainScreen>
                     ],
                   ),
                 ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.pushNamed(context, R.aiMentorChat),
-        backgroundColor: AppColors.primary,
-        icon: const Icon(Icons.auto_awesome, color: Colors.white),
-        label: const Text('Ask AI Mentor',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-      ),
+      floatingActionButton: _insights == null
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: () =>
+                  MentorGeneralChatArgs.openFromInsights(context, _insights!),
+              backgroundColor: AppColors.primary,
+              icon: const Icon(Icons.auto_awesome, color: Colors.white),
+              label: const Text('Ask AI Mentor',
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
     );
   }
 
@@ -493,12 +501,30 @@ class _DetailedCoursesTabState extends State<_DetailedCoursesTab> {
                 Text('$org • $time',
                     style: const TextStyle(
                         fontSize: 11, color: AppColors.textSecondary)),
+                if (course['fills'] is List &&
+                    (course['fills'] as List).isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      'Closes gap: ${(course['fills'] as List).take(3).join(', ')}',
+                      style: const TextStyle(
+                          fontSize: 10, color: AppColors.primary),
+                    ),
+                  ),
                 const SizedBox(height: 8),
                 Row(children: [
                   const Icon(Icons.star, color: Colors.amber, size: 14),
                   Text(' $rate',
                       style: const TextStyle(
                           fontSize: 12, fontWeight: FontWeight.bold)),
+                  if (course['relevance'] != null) ...[
+                    const SizedBox(width: 8),
+                    Text(
+                      'match ${((course['relevance'] as num) * 100).round()}%',
+                      style: const TextStyle(
+                          fontSize: 10, color: AppColors.textSecondary),
+                    ),
+                  ],
                 ]),
               ])),
           Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
@@ -1058,6 +1084,18 @@ class _MentorOverviewTab extends StatelessWidget {
   final MentorInsights insights;
   const _MentorOverviewTab({required this.insights});
 
+  List<Map<String, dynamic>> _recentTasks(MentorInsights insights) {
+    final raw = insights.rawAnalysis['user_profile'];
+    if (raw is! Map) return const [];
+    final list = raw['recent_tasks'];
+    if (list is! List) return const [];
+    return list
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .where((t) => (t['title']?.toString() ?? '').isNotEmpty)
+        .toList();
+  }
+
   Widget? _mlRatingBanner() {
     final ml = insights.rawAnalysis['ml_rating'];
     if (ml is! Map) return null;
@@ -1109,19 +1147,33 @@ class _MentorOverviewTab extends StatelessWidget {
               style: const TextStyle(
                   color: AppColors.textSecondary, fontSize: 13, height: 1.5),
             ),
-            if (insights.profileSkills.isNotEmpty ||
-                insights.professionalField.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              [
+                insights.careerLevel,
+                if (insights.experienceYears > 0)
+                  '${insights.experienceYears.toStringAsFixed(0)} yrs experience',
+                '${insights.tasksCompleted}/${insights.tasksAssigned} tasks done',
+                '${insights.feedbackCount} feedback',
+              ].join(' · '),
+              style: const TextStyle(
+                  fontSize: 11, color: AppColors.textSecondary),
+            ),
+            if (_recentTasks(insights).isNotEmpty) ...[
               const SizedBox(height: 12),
-              Text(
-                [
-                  if (insights.professionalField.isNotEmpty)
-                    insights.professionalField,
-                  if (insights.experienceYears > 0)
-                    '${insights.experienceYears.toStringAsFixed(0)} yrs experience',
-                  '${insights.tasksCompleted} tasks completed',
-                ].join(' · '),
-                style: const TextStyle(
-                    fontSize: 11, color: AppColors.textSecondary),
+              const Text('Your projects (from database)',
+                  style: TextStyle(
+                      fontWeight: FontWeight.w600, fontSize: 13)),
+              const SizedBox(height: 6),
+              ..._recentTasks(insights).map(
+                (t) => Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(
+                    '• ${t['title']} — ${t['status']}',
+                    style: const TextStyle(
+                        fontSize: 12, color: AppColors.textSecondary),
+                  ),
+                ),
               ),
             ],
           ]),
@@ -1237,144 +1289,86 @@ class _SkillsTab extends StatelessWidget {
   final MentorInsights insights;
   const _SkillsTab({required this.insights});
 
+  List<({String title, double score, bool owned})> _skillRows() {
+    final seen = <String>{};
+    final rows = <({String title, double score, bool owned})>[];
+
+    void add(MentorSkillInsight g) {
+      final key = g.area.trim().toLowerCase();
+      if (key.isEmpty || seen.contains(key)) return;
+      seen.add(key);
+      rows.add((
+        title: g.area,
+        score: g.score.clamp(0, 100),
+        owned: g.severity == 'owned',
+      ));
+    }
+
+    for (final g in insights.skillGaps) {
+      add(g);
+    }
+    for (final w in insights.weaknesses) {
+      if (!seen.contains(w.area.trim().toLowerCase())) add(w);
+    }
+    for (final s in insights.strengths) {
+      if (rows.length >= 8) break;
+      if (!seen.contains(s.area.trim().toLowerCase())) {
+        seen.add(s.area.trim().toLowerCase());
+        rows.add((title: s.area, score: s.score.clamp(0, 100), owned: true));
+      }
+    }
+    for (final name in insights.profileSkills) {
+      if (rows.length >= 10) break;
+      final key = name.trim().toLowerCase();
+      if (key.isEmpty || seen.contains(key)) continue;
+      seen.add(key);
+      rows.add((title: name, score: 72, owned: true));
+    }
+
+    rows.sort((a, b) => b.score.compareTo(a.score));
+    return rows;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final rows = _skillRows();
+
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       children: [
-        const Text('Skills',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22)),
-        const Text('AI-recommended for you',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-        const SizedBox(height: 16),
-        const TCard(
-          color: AppColors.primary,
-          child: Row(children: [
-            Icon(Icons.auto_awesome, color: Colors.white, size: 24),
-            SizedBox(width: 12),
-            Expanded(
-                child: Text(
-                    'Personalized Recommendations based on your performance.',
-                    style: TextStyle(color: Colors.white, fontSize: 13))),
-          ]),
-        ),
-        const SizedBox(height: 20),
-        if (insights.targetRole.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+        if (rows.isEmpty)
+          const Padding(
+            padding: EdgeInsets.only(top: 24),
             child: Text(
-              'Target role: ${insights.targetRole}',
-              style: const TextStyle(
-                  fontWeight: FontWeight.w600, color: AppColors.primary),
+              'Complete projects and add skills to your profile to unlock personalized recommendations.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
             ),
-          ),
-        if (insights.profileSkills.isNotEmpty) ...[
-          const Text('Your profile skills (database)',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: insights.profileSkills
-                .map((s) => TChip(
-                      label: s,
-                      bg: AppColors.success.withValues(alpha: 0.12),
-                      textColor: AppColors.success,
-                    ))
-                .toList(),
-          ),
-          const SizedBox(height: 16),
-        ],
-        const Row(children: [
-          Text('Skills vs. next level',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        ]),
-        const SizedBox(height: 4),
-        const Text(
-          'Scores from teamify_model.pkl skill-demand + your stored profile',
-          style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
-        ),
-        const SizedBox(height: 12),
-        if (insights.skillGaps.isEmpty && insights.weaknesses.isEmpty)
-          const Text(
-              'Add skills to your profile and complete projects — gaps are computed from your DB profile vs. the next career level.',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 13))
+          )
         else
-          ...[
-            ...insights.skillGaps.map(
-              (g) => _skillCard(
-                g.area,
-                g.message,
-                g.score.toInt(),
-                g.severity == 'owned'
-                    ? Icons.check_circle_outline
-                    : (g.severity == 'high'
-                        ? Icons.priority_high
-                        : Icons.trending_up),
-                owned: g.severity == 'owned',
+          ...rows.map(
+            (r) => MentorSkillCard(
+              title: r.title,
+              score: r.score,
+              levelLabel: MentorSkillCard.levelForScore(r.score, owned: r.owned),
+              onExplore: () => MentorSkillCard.openExploreChat(
+                context,
+                skillName: r.title,
+                score: r.score,
+                levelLabel:
+                    MentorSkillCard.levelForScore(r.score, owned: r.owned),
               ),
             ),
-            ...insights.weaknesses
-                .where((w) =>
-                    !insights.skillGaps.any((g) => g.area == w.area))
-                .map(
-              (w) => _skillCard(
-                w.area,
-                w.message,
-                w.score.toInt(),
-                w.severity == 'high' ? Icons.priority_high : Icons.trending_up,
-              ),
-            ),
-          ],
+          ),
       ],
     );
   }
-
-  Widget _skillCard(
-    String title,
-    String message,
-    int score,
-    IconData icon, {
-    bool owned = false,
-  }) =>
-      TCard(
-        margin: const EdgeInsets.only(bottom: 12),
-        child: Column(children: [
-          Row(children: [
-            Icon(icon, color: owned ? AppColors.success : AppColors.primary),
-            const SizedBox(width: 12),
-            Expanded(
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                  Text(title,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 14)),
-                  if (message.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(message,
-                          style: const TextStyle(
-                              fontSize: 12, color: AppColors.textSecondary)),
-                    ),
-                ])),
-            TChip(
-                label: owned ? 'On profile' : '$score/100',
-                bg: (owned ? AppColors.success : AppColors.primary)
-                    .withValues(alpha: 0.1),
-                textColor: owned ? AppColors.success : AppColors.primary),
-          ]),
-          const SizedBox(height: 8),
-          TBar(
-              value: score / 100,
-              color: owned ? AppColors.success : AppColors.primary),
-        ]),
-      );
 }
 
 // ── Career Mentor Chat ────────────────────────────────────────────────────────
 class CareerMentorChatScreen extends StatefulWidget {
   const CareerMentorChatScreen({super.key});
+
   @override
   State<CareerMentorChatScreen> createState() => _CareerMentorChatScreenState();
 }
@@ -1385,6 +1379,8 @@ class _CareerMentorChatScreenState extends State<CareerMentorChatScreen> {
   final List<Map<String, dynamic>> _msgs = [];
   bool _loading = false;
   bool _loadingHistory = true;
+  MentorSkillChatArgs? _skillFocus;
+  MentorGeneralChatArgs? _mlSession;
   List<String> _currentSuggestions = [
     'What should I focus on next?',
     'How do I get promoted?',
@@ -1395,10 +1391,187 @@ class _CareerMentorChatScreenState extends State<CareerMentorChatScreen> {
   static const _greeting =
       "Hi! I'm your AI Career Mentor. I'm here to help you grow in your career. What would you like to focus on today?";
 
+  MentorSkillChatArgs? _readSkillArgs() {
+    final args = ModalRoute.of(context)?.settings.arguments;
+    return args is MentorSkillChatArgs ? args : null;
+  }
+
+  MentorGeneralChatArgs? _readMlArgs() {
+    final args = ModalRoute.of(context)?.settings.arguments;
+    return args is MentorGeneralChatArgs ? args : null;
+  }
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadHistory());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _bootstrapChat());
+  }
+
+  Future<void> _bootstrapChat() async {
+    _skillFocus = _readSkillArgs();
+    _mlSession = _skillFocus == null ? _readMlArgs() : null;
+    if (_skillFocus != null) {
+      await _loadSkillFocusSession();
+    } else if (_mlSession != null) {
+      await _loadMlBackedSession();
+    } else {
+      await _loadHistory();
+    }
+  }
+
+  Future<void> _loadMlBackedSession() async {
+    final ml = _mlSession!;
+    await _loadThreadHistory(
+      threadKey: MentorGeneralChatArgs.threadKey,
+      buildGreeting: () async => ml.buildGreeting(),
+      suggestions: ml.buildSuggestions(),
+      greetingExtras: ml.usesMlModel
+          ? {'mlLabel': _mlLabelFromRating(ml.mlRating)}
+          : null,
+    );
+  }
+
+  String? _mlLabelFromRating(Map<String, dynamic> ml) {
+    final rating = ml['predicted_rating'];
+    final label = ml['percentile_label'] ?? ml['performance_label'];
+    if (rating == null) return null;
+    return 'Teamify ML · $rating/5${label != null ? ' ($label)' : ''}';
+  }
+
+  Future<void> _loadSkillFocusSession() async {
+    final skill = _skillFocus!;
+    await _loadThreadHistory(
+      threadKey: skill.threadKey,
+      buildGreeting: () => _skillGreeting(skill),
+      suggestions: _skillSuggestions(skill),
+    );
+  }
+
+  Future<void> _loadThreadHistory({
+    required String threadKey,
+    required Future<String> Function() buildGreeting,
+    List<String> suggestions = const [],
+    Map<String, dynamic>? greetingExtras,
+  }) async {
+    final ai = context.read<AppServices>().ai;
+    try {
+      final result = await ai.mentorChatHistory(threadKey: threadKey);
+      if (!mounted) return;
+
+      if (!result.isSuccess) {
+        final greet = await buildGreeting();
+        if (!mounted) return;
+        setState(() {
+          _msgs
+            ..clear()
+            ..add({'text': greet, 'isMe': false, ...?greetingExtras});
+          _currentSuggestions = suggestions;
+          _loadingHistory = false;
+        });
+        return;
+      }
+
+      final rows = result.data!;
+      if (!mounted) return;
+
+      if (rows.isEmpty) {
+        final greet = await buildGreeting();
+        if (!mounted) return;
+        setState(() {
+          _msgs
+            ..clear()
+            ..add({'text': greet, 'isMe': false, ...?greetingExtras});
+          _currentSuggestions = suggestions;
+          _loadingHistory = false;
+        });
+      } else {
+        setState(() {
+          _msgs.clear();
+          for (final row in rows) {
+            final content = row['content']?.toString() ?? '';
+            if (content.isEmpty) continue;
+            _msgs.add({
+              'text': content,
+              'isMe': row['role']?.toString() == 'user',
+            });
+          }
+          _loadingHistory = false;
+        });
+      }
+      _scrollToBottom();
+    } catch (_) {
+      if (!mounted) return;
+      final greet = await buildGreeting();
+      if (!mounted) return;
+      setState(() {
+        _msgs
+          ..clear()
+          ..add({'text': greet, 'isMe': false, ...?greetingExtras});
+        _currentSuggestions = suggestions;
+        _loadingHistory = false;
+      });
+    }
+  }
+
+  List<String> _skillSuggestions(MentorSkillChatArgs skill) {
+    final name = skill.skillName;
+    return [
+      'What courses help me master $name?',
+      'How do I improve my $name skills?',
+      'What projects build $name experience?',
+      'How does $name affect my promotion path?',
+    ];
+  }
+
+  Future<String> _skillGreeting(MentorSkillChatArgs skill) async {
+    final session = context.read<SessionController>();
+    final svc = context.read<AppServices>();
+    final user = session.currentUser;
+    final name = skill.skillName;
+    final level = skill.levelLabel;
+    final score = skill.score.round();
+
+    var mlLine = '';
+    var careerLine = '';
+    var courseHint = '';
+
+    if (user != null) {
+      try {
+        final result = await svc.ai.getMentorInsights(user.id);
+        if (result.isSuccess && result.data != null) {
+          final insights = result.data!;
+          final ml = insights.mlRating;
+          final pred = ml['predicted_rating'];
+          final label = ml['percentile_label'] ?? ml['performance_label'];
+          if (pred != null) {
+            mlLine = ml['source'] == 'ml_model'
+                ? 'ML rating (teamify_model.pkl): **$pred/5**${label != null ? ' ($label)' : ''}.'
+                : 'Estimated rating: **$pred/5**.';
+          }
+          careerLine =
+              'Career level **${insights.careerLevel}** · score **${insights.careerScore.toStringAsFixed(0)}/100**.';
+
+          final matched = insights.recommendedCourses.where((c) {
+            final blob =
+                '${c['title'] ?? ''} ${c['skills_covered'] ?? ''} ${c['skill'] ?? ''}'
+                    .toLowerCase();
+            return blob.contains(name.toLowerCase());
+          }).take(2);
+          if (matched.isNotEmpty) {
+            courseHint = matched
+                .map((c) =>
+                    '• **${c['title']}** (${c['platform'] ?? 'Online'}, ${c['hours'] ?? '?'} hrs)')
+                .join('\n');
+          }
+        }
+      } catch (_) {}
+    }
+
+    return "Let's explore **$name** — you're at **$level** level with relevance **$score/100**.\n\n"
+        "${mlLine.isNotEmpty ? '$mlLine\n' : ''}"
+        "${careerLine.isNotEmpty ? '$careerLine\n\n' : ''}"
+        "${courseHint.isNotEmpty ? 'Recommended for this skill:\n$courseHint\n\n' : ''}"
+        "Ask about courses, practice plans, or how **$name** fits your next role.";
   }
 
   Future<String> _dbGreeting() async {
@@ -1430,66 +1603,48 @@ class _CareerMentorChatScreenState extends State<CareerMentorChatScreen> {
   }
 
   Future<void> _loadHistory() async {
-    final ai = context.read<AppServices>().ai;
-    try {
-      final result = await ai.mentorChatHistory();
-      if (!mounted) return;
-      if (!result.isSuccess) {
-        final greet = await _dbGreeting();
-        if (!mounted) return;
-        setState(() {
-          _msgs.add({'text': greet, 'isMe': false});
-          _loadingHistory = false;
-        });
-        return;
-      }
-      final rows = result.data!;
-      if (!mounted) return;
-      final greet = rows.isEmpty ? await _dbGreeting() : null;
-      if (!mounted) return;
-      setState(() {
-        _msgs.clear();
-        if (rows.isEmpty) {
-          _msgs.add({'text': greet ?? _greeting, 'isMe': false});
-        } else {
-          for (final row in rows) {
-            final role = row['role']?.toString() ?? '';
-            final content = row['content']?.toString() ?? '';
-            if (content.isEmpty) continue;
-            _msgs.add({'text': content, 'isMe': role == 'user'});
-          }
-        }
-        _loadingHistory = false;
-      });
-      _scrollToBottom();
-    } catch (_) {
-      if (!mounted) return;
-      final greet = await _dbGreeting();
-      if (!mounted) return;
-      setState(() {
-        _msgs.add({'text': greet, 'isMe': false});
-        _loadingHistory = false;
-      });
-    }
+    await _loadThreadHistory(
+      threadKey: MentorGeneralChatArgs.threadKey,
+      buildGreeting: _dbGreeting,
+      suggestions: _currentSuggestions,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final skill = _skillFocus;
+    final ml = _mlSession;
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios, size: 18),
             onPressed: () => Navigator.pop(context)),
-        title: const Row(children: [
-          Icon(Icons.auto_awesome, color: AppColors.primary, size: 20),
-          SizedBox(width: 8),
-          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('AI Mentor',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-            Text('Teamify ML · Online',
-                style: TextStyle(fontSize: 10, color: AppColors.success)),
-          ]),
+        title: Row(children: [
+          const Icon(Icons.auto_awesome, color: AppColors.primary, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  skill != null
+                      ? 'Explore · ${skill.skillName}'
+                      : 'AI Mentor',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 15),
+                ),
+                Text(
+                  ml != null
+                      ? 'Teamify ML · ${MentorGeneralChatArgs.mlModelPath}'
+                      : 'Teamify ML · Online',
+                  style: const TextStyle(
+                      fontSize: 10, color: AppColors.success),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
         ]),
       ),
       body: Column(children: [
@@ -1567,10 +1722,25 @@ class _CareerMentorChatScreenState extends State<CareerMentorChatScreen> {
     _scrollToBottom();
 
     final svc = context.read<AppServices>();
+    final skill = _skillFocus;
+    final taskContext = skill != null
+        ? {
+            'focus': 'skill_exploration',
+            'skill_name': skill.skillName,
+            'skill_level': skill.levelLabel,
+            'relevance_score': skill.score.round(),
+          }
+        : null;
+    final userContext = _mlSession?.toUserContext();
+    final threadKey = skill?.threadKey ?? MentorGeneralChatArgs.threadKey;
+
     try {
       final result = await svc.ai.mentorChat(
         question: text,
         history: history,
+        taskContext: taskContext,
+        userContext: userContext,
+        threadKey: threadKey,
       );
       if (!mounted) return;
       if (result.isSuccess) {

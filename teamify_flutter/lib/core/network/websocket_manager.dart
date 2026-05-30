@@ -12,6 +12,7 @@ enum SocketEvent {
   connected,
   disconnected,
   chatMessage,
+  messageDeleted,
   meetingPresence,
   notification,
   taskUpdate,
@@ -70,6 +71,7 @@ class WebSocketManager {
   static const Duration _baseDelay = Duration(milliseconds: 1000);
 
   Timer? _reconnectTimer;
+  Completer<bool>? _connectCompleter;
 
   final _controller = StreamController<SocketPayload>.broadcast();
 
@@ -88,16 +90,30 @@ class WebSocketManager {
   /// Establish a Socket.IO connection authenticated via JWT.
   ///
   /// Safe to call multiple times — returns immediately if already connecting
-  /// or connected.
-  Future<void> connect() async {
-    if (_disposed || _isConnecting || isConnected) return;
+  /// or connected. Waits up to [timeout] for the handshake to complete.
+  Future<bool> connect({
+    Duration timeout = const Duration(seconds: 8),
+  }) async {
+    if (_disposed) return false;
+    if (isConnected) return true;
+    if (_isConnecting && _connectCompleter != null) {
+      try {
+        return await _connectCompleter!.future.timeout(timeout);
+      } catch (_) {
+        return isConnected;
+      }
+    }
+
     _isConnecting = true;
+    final completer = Completer<bool>();
+    _connectCompleter = completer;
 
     try {
       final token = await _tokenStorage.readAccessToken();
       if (token == null || token.isEmpty) {
         debugPrint('[WS] No access token — aborting connect');
-        return;
+        if (!completer.isCompleted) completer.complete(false);
+        return false;
       }
 
       // Dispose stale socket before creating a new one.
@@ -122,8 +138,16 @@ class WebSocketManager {
 
       _attachHandlers();
       _socket!.connect();
+
+      try {
+        return await completer.future.timeout(timeout);
+      } on TimeoutException {
+        debugPrint('[WS] Connect timed out after ${timeout.inSeconds}s');
+        return isConnected;
+      }
     } finally {
       _isConnecting = false;
+      _connectCompleter = null;
     }
   }
 
@@ -157,10 +181,15 @@ class WebSocketManager {
 
   /// Send a chat message to a room.
   void sendMessage(String roomId, String content) {
+    sendChatPayload(roomId, {'content': content, 'message_type': 'text'});
+  }
+
+  /// Text, image, or file message (see backend chat_message_service).
+  void sendChatPayload(String roomId, Map<String, dynamic> payload) {
     if (!isConnected) return;
     _socket?.emit('send_message', {
       'room_id': int.tryParse(roomId) ?? roomId,
-      'content': content,
+      ...payload,
     });
   }
 
@@ -188,11 +217,17 @@ class WebSocketManager {
     socket.onConnect((_) {
       _reconnectAttempts = 0;
       debugPrint('[WS] ✓ Connected');
+      if (_connectCompleter != null && !_connectCompleter!.isCompleted) {
+        _connectCompleter!.complete(true);
+      }
       _emit(SocketEvent.connected);
     });
 
     socket.onDisconnect((reason) {
       debugPrint('[WS] ✗ Disconnected — reason: $reason');
+      if (_connectCompleter != null && !_connectCompleter!.isCompleted) {
+        _connectCompleter!.complete(false);
+      }
       _emit(SocketEvent.disconnected, {'reason': reason?.toString() ?? ''});
 
       // Only auto-reconnect for recoverable disconnect reasons.
@@ -206,6 +241,9 @@ class WebSocketManager {
 
     socket.onConnectError((err) {
       debugPrint('[WS] Connection error: $err');
+      if (_connectCompleter != null && !_connectCompleter!.isCompleted) {
+        _connectCompleter!.complete(false);
+      }
       if (!_disposed) _scheduleReconnect();
     });
 
@@ -221,6 +259,10 @@ class WebSocketManager {
 
     socket.on('message', (data) {
       _emit(SocketEvent.chatMessage, _asMap(data));
+    });
+
+    socket.on('message_deleted', (data) {
+      _emit(SocketEvent.messageDeleted, _asMap(data));
     });
 
     socket.on('meeting_presence', (data) {
@@ -268,6 +310,7 @@ class WebSocketManager {
         'receive_message',
         'new_message',
         'message',
+        'message_deleted',
         'new_notification',
         'notification',
         'task_update',

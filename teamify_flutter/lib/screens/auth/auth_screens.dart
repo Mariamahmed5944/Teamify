@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/config/oauth_config.dart';
 import '../../core/cache/cache_manager.dart';
 import '../../core/theme.dart';
 import '../../core/routes.dart';
@@ -104,12 +105,17 @@ void _navigateFromSessionAfterLogin(BuildContext context, {bool isNew = false}) 
   });
 }
 
-String _displayNameFrom(String name, String email) {
-  final fromName = name.trim().replaceAll(RegExp(r'\s+'), '_').toLowerCase();
-  if (fromName.isNotEmpty) return fromName;
-  final fromEmail =
-      email.split('@').first.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_');
-  return fromEmail.isNotEmpty ? fromEmail : 'teamify_user';
+void _navigateAfterOAuth(BuildContext context) {
+  final session = context.read<SessionController>();
+  if (session.currentUser?.needsProfileSetup ?? false) {
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      R.oauthProfileSetup,
+      (_) => false,
+    );
+    return;
+  }
+  _navigateFromSession(context);
 }
 
 // ── Teamify Logo Widget ───────────────────────────────────────────────────────
@@ -136,6 +142,8 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  String? _statusMessage;
+
   @override
   void initState() {
     super.initState();
@@ -143,9 +151,46 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _boot() async {
-    // Detect Google OAuth redirect before normal session restore.
-    // The browser reloads the app at the origin with the id_token in the
-    // URL fragment (#id_token=...) after the user authenticates with Google.
+    final cache = context.read<CacheManager>();
+
+    // OAuth params captured from the browser URL in main() before routing.
+    final pending = await cache.getMap(
+      'auth',
+      'pending_oauth',
+      maxAge: const Duration(minutes: 10),
+    );
+    if (pending != null) {
+      await cache.invalidate('auth', 'pending_oauth');
+      final provider = pending['provider']?.toString() ?? '';
+      if (provider == 'google') {
+        final oauthError = pending['error']?.toString();
+        if (oauthError != null && oauthError.isNotEmpty) {
+          if (!mounted) return;
+          _showAuthError(
+            context,
+            pending['error_description']?.toString().isNotEmpty == true
+                ? pending['error_description'].toString()
+                : 'Google sign-in was cancelled.',
+          );
+          Navigator.pushReplacementNamed(context, R.login);
+          return;
+        }
+        final idToken = pending['id_token']?.toString();
+        if (idToken != null && idToken.isNotEmpty) {
+          await _handleGoogleOAuthReturn(idToken);
+          return;
+        }
+      }
+      if (provider == 'github') {
+        final code = pending['code']?.toString();
+        if (code != null && code.isNotEmpty) {
+          await _handleGithubOAuthReturn(code);
+          return;
+        }
+      }
+    }
+
+    // Fallback: read OAuth params directly from URL (non-web / legacy).
     final fragment = Uri.base.fragment;
     if (fragment.isNotEmpty) {
       final params = Uri.splitQueryString(fragment);
@@ -168,19 +213,33 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> _handleGoogleOAuthReturn(String idToken) async {
     if (!mounted) return;
+    setState(() => _statusMessage = 'Signing in with Google…');
     final services = context.read<AppServices>();
     try {
       final cache = context.read<CacheManager>();
-      final saved = await cache.getMap('auth', 'google_role',
+      final saved = await cache.getMap('auth', 'google_oauth',
           maxAge: const Duration(hours: 1));
-      final role = saved?['selected_role']?.toString() ?? 'Freelancer';
+      final legacyRole = await cache.getMap('auth', 'google_role',
+          maxAge: const Duration(hours: 1));
+      final role = saved?['selected_role']?.toString() ??
+          legacyRole?['selected_role']?.toString() ??
+          'Freelancer';
 
       final res =
           await services.auth.loginWithGoogle(idToken, userType: role.toLowerCase());
       if (!mounted) return;
       res.when(
-        success: (user) =>
-            _navigateFromSession(context, isNew: user?.isPending ?? false),
+        success: (user) {
+          if (user == null) {
+            _showAuthError(
+              context,
+              'Sign-in succeeded but your session could not start. Please try again.',
+            );
+            Navigator.pushReplacementNamed(context, R.login);
+            return;
+          }
+          _navigateAfterOAuth(context);
+        },
         failure: (e) {
           _showAuthError(context, e);
           Navigator.pushReplacementNamed(context, R.login);
@@ -195,19 +254,38 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> _handleGithubOAuthReturn(String code) async {
     if (!mounted) return;
+    setState(() => _statusMessage = 'Signing in with GitHub…');
     final services = context.read<AppServices>();
     try {
       final cache = context.read<CacheManager>();
-      final saved = await cache.getMap('auth', 'github_role',
+      final saved = await cache.getMap('auth', 'github_oauth',
           maxAge: const Duration(hours: 1));
-      final role = saved?['selected_role']?.toString() ?? 'Freelancer';
+      final legacyRole = await cache.getMap('auth', 'github_role',
+          maxAge: const Duration(hours: 1));
+      final role = saved?['selected_role']?.toString() ??
+          legacyRole?['selected_role']?.toString() ??
+          'Freelancer';
+      final redirectUri = saved?['redirect_uri']?.toString() ??
+          OAuthConfig.redirectUri();
 
-      final res =
-          await services.auth.loginWithGithub(code, userType: role.toLowerCase());
+      final res = await services.auth.loginWithGithub(
+        code,
+        userType: role.toLowerCase(),
+        redirectUri: redirectUri,
+      );
       if (!mounted) return;
       res.when(
-        success: (user) =>
-            _navigateFromSession(context, isNew: user?.isPending ?? false),
+        success: (user) {
+          if (user == null) {
+            _showAuthError(
+              context,
+              'Sign-in succeeded but your session could not start. Please try again.',
+            );
+            Navigator.pushReplacementNamed(context, R.login);
+            return;
+          }
+          _navigateAfterOAuth(context);
+        },
         failure: (e) {
           _showAuthError(context, e);
           Navigator.pushReplacementNamed(context, R.login);
@@ -237,13 +315,13 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
       backgroundColor: Colors.white,
       body: Center(
         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          _TeamifyLogo(size: 150),
-          SizedBox(height: 16),
-          Text(
+          const _TeamifyLogo(size: 150),
+          const SizedBox(height: 16),
+          const Text(
             'Teamify',
             style: TextStyle(
               fontSize: 32,
@@ -252,6 +330,16 @@ class _SplashScreenState extends State<SplashScreen> {
               letterSpacing: 1.0,
             ),
           ),
+          if (_statusMessage != null) ...[
+            const SizedBox(height: 24),
+            Text(
+              _statusMessage!,
+              style: const TextStyle(
+                  color: AppColors.textSecondary, fontSize: 14),
+            ),
+            const SizedBox(height: 12),
+            const CircularProgressIndicator(strokeWidth: 2),
+          ],
         ]),
       ),
     );
@@ -616,20 +704,14 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleGoogleLogin(String role) async {
     try {
       final cache = context.read<CacheManager>();
-      await cache.putMap('auth', 'google_role', {'selected_role': role});
+      await cache.putMap('auth', 'google_oauth', {
+        'selected_role': role,
+        'redirect_uri': OAuthConfig.redirectUri(),
+      });
     } catch (_) {}
 
-    const clientId = '854339507790-tntdbhvs0onvvpms12frchr32mq4eud5.apps.googleusercontent.com';
-    final redirect = '${Uri.base.origin}/';
     final nonce = DateTime.now().millisecondsSinceEpoch.toString();
-    final url = Uri.parse(
-      'https://accounts.google.com/o/oauth2/auth'
-      '?client_id=$clientId'
-      '&redirect_uri=${Uri.encodeComponent(redirect)}'
-      '&response_type=id_token'
-      '&scope=openid%20email%20profile'
-      '&nonce=$nonce',
-    );
+    final url = OAuthConfig.googleAuthorizeUri(nonce: nonce);
     if (await canLaunchUrl(url)) {
       await launchUrl(url, webOnlyWindowName: '_self');
     }
@@ -637,12 +719,14 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleGithubLogin(String role) async {
     try {
       final cache = context.read<CacheManager>();
-      await cache.putMap('auth', 'github_role', {'selected_role': role});
+      final redirectUri = OAuthConfig.redirectUri();
+      await cache.putMap('auth', 'github_oauth', {
+        'selected_role': role,
+        'redirect_uri': redirectUri,
+      });
     } catch (_) {}
 
-    const clientId = 'Ov23liRUeYFAPsv1xgtd';
-    final redirect = '${Uri.base.origin}/';
-    final url = Uri.parse('https://github.com/login/oauth/authorize?client_id=$clientId&redirect_uri=$redirect&scope=user:email');
+    final url = OAuthConfig.githubAuthorizeUri();
     if (await canLaunchUrl(url)) {
       await launchUrl(url, webOnlyWindowName: '_self');
     }
@@ -859,7 +943,6 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
     setState(() => _loading = true);
     try {
       await context.read<SessionController>().register(
-            displayName: _displayNameFrom(_nameCtrl.text, _emailCtrl.text),
             fullName: _nameCtrl.text.trim(),
             email: _emailCtrl.text.trim(),
             password: _passwordCtrl.text,
@@ -1021,7 +1104,6 @@ class _FreelancerSignupScreenState extends State<FreelancerSignupScreen> {
     setState(() => _loading = true);
     try {
       await context.read<SessionController>().register(
-        displayName: _displayNameFrom(_nameCtrl.text, _emailCtrl.text),
         fullName: _nameCtrl.text.trim(),
         email: _emailCtrl.text.trim(),
         password: _passwordCtrl.text,
@@ -1430,7 +1512,6 @@ class _StudentSignupScreenState extends State<StudentSignupScreen> {
     setState(() => _loading = true);
     try {
       await context.read<SessionController>().register(
-        displayName: _displayNameFrom(_nameCtrl.text, _emailCtrl.text),
         fullName: _nameCtrl.text.trim(),
         email: _emailCtrl.text.trim(),
         password: _passwordCtrl.text,

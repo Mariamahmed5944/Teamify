@@ -102,10 +102,17 @@ class Message(db.Model):
         nullable=False,
     )
     content = db.Column(db.Text, nullable=False)
+    message_type = db.Column(db.String(20), nullable=False, default="text")
+    file_id = db.Column(
+        db.Integer,
+        db.ForeignKey("file_metadata.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     # Relationship to user
     sender = db.relationship("User", backref="messages", lazy=True)
+    attachment = db.relationship("FileMetadata", foreign_keys=[file_id], lazy=True)
 
     __table_args__ = (
         db.Index("ix_msg_room_created", "room_id", "created_at"),
@@ -118,12 +125,24 @@ class Message(db.Model):
         sender_name = ""
         if self.sender:
             sender_name = self.sender.full_name or self.sender.display_name or ""
+        attachment: dict | None = None
+        if self.file_id and self.attachment:
+            f = self.attachment
+            attachment = {
+                "file_id": f.id,
+                "filename": f.original_filename,
+                "mime_type": f.mime_type,
+                "size_bytes": f.size_bytes,
+            }
         return {
             "id": self.id,
             "room_id": self.room_id,
             "sender_id": self.sender_id,
             "sender_name": sender_name,
             "content": self.content,
+            "message_type": self.message_type or "text",
+            "file_id": self.file_id,
+            "attachment": attachment,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 

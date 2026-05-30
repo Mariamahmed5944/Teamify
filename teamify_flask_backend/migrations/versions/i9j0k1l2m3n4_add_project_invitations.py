@@ -6,6 +6,7 @@ Create Date: 2026-05-24
 """
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy import inspect
 
 
 revision = "i9j0k1l2m3n4"
@@ -15,6 +16,8 @@ depends_on = None
 
 
 def upgrade():
+    if 'project_invitations' in inspect(op.get_bind()).get_table_names():
+        return
     op.create_table(
         "project_invitations",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),

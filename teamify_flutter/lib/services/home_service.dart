@@ -33,6 +33,11 @@ class HomeService with ServiceErrorHandler {
     await _cache.invalidate(_box, 'dashboard');
   }
 
+  /// Clear every cached dashboard snapshot (e.g. after notification read changes).
+  Future<void> invalidateAllDashboards() async {
+    await _cache.invalidateBox(_box);
+  }
+
   Future<ApiResult<Map<String, dynamic>>> getDashboard({
     String? userId,
     bool forceRefresh = false,

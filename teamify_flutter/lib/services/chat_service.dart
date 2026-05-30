@@ -118,4 +118,7 @@ class ChatService with ServiceErrorHandler {
       offlineManager: _offlineManager,
     );
   }
+
+  Future<ApiResult<void>> deleteMessage(String roomId, String messageId) =>
+      guard(() => _repo.deleteMessage(roomId, messageId));
 }

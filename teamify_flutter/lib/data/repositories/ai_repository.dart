@@ -204,10 +204,13 @@ class AIRepository {
   }
 
   /// GET /api/ai/mentor/chat/history
-  Future<List<Map<String, dynamic>>> mentorChatHistory({int limit = 50}) async {
+  Future<List<Map<String, dynamic>>> mentorChatHistory({
+    int limit = 50,
+    String threadKey = 'general',
+  }) async {
     final response = await _client.get<dynamic>(
       '/api/ai/mentor/chat/history',
-      queryParameters: {'limit': limit},
+      queryParameters: {'limit': limit, 'thread_key': threadKey},
     );
     return responseList(response.data, ['messages', 'data'])
         .cast<Map<String, dynamic>>();
@@ -222,6 +225,9 @@ class AIRepository {
     required String question,
     List<Map<String, dynamic>> history = const [],
     Map<String, dynamic>? taskContext,
+    Map<String, dynamic>? userContext,
+    bool persistHistory = true,
+    String threadKey = 'general',
   }) async {
     final response = await _client.post<Map<String, dynamic>>(
       '/api/ai/mentor/chat',
@@ -229,6 +235,9 @@ class AIRepository {
         'question': question,
         'history': history,
         if (taskContext != null) 'task_context': taskContext,
+        if (userContext != null) 'user_context': userContext,
+        'persist_history': persistHistory,
+        'thread_key': threadKey,
       },
     );
     return responseMap(response.data);

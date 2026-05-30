@@ -62,6 +62,13 @@ class ChatRepository {
     return responseMap(response.data);
   }
 
+  /// DELETE /api/chat/rooms/<roomId>/messages/<messageId>
+  Future<void> deleteMessage(String roomId, String messageId) async {
+    await _client.delete<Map<String, dynamic>>(
+      '/api/chat/rooms/$roomId/messages/$messageId',
+    );
+  }
+
   /// POST /api/chat/rooms/<roomId>/meetings/start
   Future<Map<String, dynamic>> startMeetingSession(String roomId) async {
     final response = await _client.post<Map<String, dynamic>>(

@@ -65,9 +65,13 @@ class Config:
     # (i.e. it is a session cookie, not a persistent cookie).
     JWT_SESSION_COOKIE = False            # Use expiring cookies, not session cookies
 
-    # GitHub OAuth
-    GITHUB_CLIENT_ID     = os.getenv('GITHUB_CLIENT_ID', '')
-    GITHUB_CLIENT_SECRET = os.getenv('GITHUB_CLIENT_SECRET', '')
+    # OAuth — defaults match the Flutter web client IDs; override in .env for prod.
+    GOOGLE_CLIENT_ID = os.getenv(
+        "GOOGLE_CLIENT_ID",
+        "854339507790-tntdbhvs0onvvpms12frchr32mq4eud5.apps.googleusercontent.com",
+    )
+    GITHUB_CLIENT_ID = os.getenv("GITHUB_CLIENT_ID", "Ov23liRUeYFAPsv1xgtd")
+    GITHUB_CLIENT_SECRET = os.getenv("GITHUB_CLIENT_SECRET", "")
 
     # ── AI / ML Model Settings ────────────────────────────────────────────────
     # Base directory where all .pkl model artifacts live.

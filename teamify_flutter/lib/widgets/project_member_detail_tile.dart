@@ -34,7 +34,6 @@ class ProjectMemberDetailTile extends StatelessWidget {
     final name = user.primaryName;
     final role = useAccountRole ? user.displayRole : user.projectRoleLabel;
     final meta = _metaLine(user);
-    final skills = user.skillsSummary;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -92,17 +91,10 @@ class ProjectMemberDetailTile extends StatelessWidget {
                     ),
                   ),
                 ),
-              if (showSkills && skills.isNotEmpty)
+              if (showSkills)
                 Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text(
-                    'Skills: $skills',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: AppColors.textSecondary,
-                      height: 1.35,
-                    ),
-                  ),
+                  padding: const EdgeInsets.only(top: 6),
+                  child: _skillsSection(user.skills),
                 ),
               if (showJoinedAt && user.joinedAt.isNotEmpty)
                 Padding(
@@ -128,6 +120,46 @@ class ProjectMemberDetailTile extends StatelessWidget {
     return '${d.day}/${d.month}/${d.year}';
   }
 
+  Widget _skillsSection(List<String> skills) {
+    final visible = skills.where((s) => s.trim().isNotEmpty).take(8).toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Skills',
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 4),
+        if (visible.isEmpty)
+          const Text(
+            'No skills listed',
+            style: TextStyle(
+              fontSize: 11,
+              color: AppColors.textSecondary,
+              fontStyle: FontStyle.italic,
+            ),
+          )
+        else
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: visible
+                .map(
+                  (skill) => TChip(
+                    label: skill,
+                    fontSize: 10,
+                  ),
+                )
+                .toList(),
+          ),
+      ],
+    );
+  }
+
   String _metaLine(api.ApiUser user) {
     final parts = <String>[];
     if (user.email.isNotEmpty) parts.add(user.email);
@@ -137,8 +169,21 @@ class ProjectMemberDetailTile extends StatelessWidget {
     if (user.professionalField.isNotEmpty) {
       parts.add(user.professionalField);
     }
+    if (user.major.isNotEmpty) parts.add(user.major);
     if (user.availability.isNotEmpty) parts.add(user.availability);
     if (user.experienceLevel.isNotEmpty) parts.add(user.experienceLevel);
+    if (user.memberExperienceYears > 0) {
+      parts.add('${user.memberExperienceYears}y experience');
+    }
+    if (user.tasksCompleted > 0) {
+      parts.add('${user.tasksCompleted} tasks done');
+    }
+    if (user.qualityScore > 0) {
+      parts.add('Quality ${user.qualityScore.toStringAsFixed(0)}%');
+    }
+    if (user.attendanceRate > 0) {
+      parts.add('Attendance ${user.attendanceRate.toStringAsFixed(0)}%');
+    }
     return parts.join(' · ');
   }
 }

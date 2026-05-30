@@ -90,6 +90,22 @@ class ApiUser {
   /// Account approval workflow removed — always false.
   bool get isPending => accountStatus.toLowerCase() == 'pending';
 
+  /// True when OAuth or minimal sign-up left extended profile fields empty.
+  bool get needsProfileSetup {
+    if (isStudent) {
+      return major.isEmpty ||
+          currentLevel.isEmpty ||
+          skills.isEmpty;
+    }
+    if (isFreelancer || userType.isEmpty) {
+      return professionalField.isEmpty ||
+          experienceLevel.isEmpty ||
+          availability.isEmpty ||
+          skills.isEmpty;
+    }
+    return false;
+  }
+
   String get accountStatusLabel {
     switch (accountStatus.toLowerCase()) {
       case 'approved':

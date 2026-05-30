@@ -11,12 +11,14 @@ import '../core/offline/mutation_id.dart';
 import '../core/offline/offline_mutation.dart';
 import '../data/models/models.dart';
 import '../data/repositories/notification_repository.dart';
+import 'home_service.dart';
 
 class NotificationService with ServiceErrorHandler {
   final NotificationRepository _repo;
   final CacheManager _cache;
   final WebSocketManager? _ws;
   final OfflineManager _offline;
+  HomeService? _home;
 
   static const _box = 'notifications';
 
@@ -29,6 +31,17 @@ class NotificationService with ServiceErrorHandler {
        _offline = offline {
     _swr = SwrHelper(_cache);
     _subscribeToWebSocket();
+  }
+
+  void linkHomeService(HomeService home) => _home = home;
+
+  Future<void> _syncUnreadBadge() async {
+    await _cache.invalidateBox(_box);
+    await _home?.invalidateAllDashboards();
+    final countResult = await getUnreadCount();
+    if (countResult.isSuccess && countResult.data != null) {
+      _unreadCountController.add(countResult.data!);
+    }
   }
 
   final RequestDeduplicator _dedup = RequestDeduplicator();
@@ -95,7 +108,7 @@ class NotificationService with ServiceErrorHandler {
   Future<ApiResult<void>> markRead(String id) => guardWithOffline(
         () async {
           await _repo.markRead(id);
-          await _cache.invalidateBox(_box);
+          await _syncUnreadBadge();
         },
         mutation: OfflineMutation(
           id: MutationId.generate(),
@@ -110,7 +123,8 @@ class NotificationService with ServiceErrorHandler {
   Future<ApiResult<void>> markAllRead() => guardWithOffline(
         () async {
           await _repo.markAllAsRead();
-          await _cache.invalidateBox(_box);
+          _unreadCountController.add(0);
+          await _syncUnreadBadge();
         },
         mutation: OfflineMutation(
           id: MutationId.generate(),

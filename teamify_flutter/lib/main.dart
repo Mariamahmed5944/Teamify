@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'core/theme.dart';
 import 'core/theme_controller.dart';
 import 'core/routes.dart';
+import 'core/auth/oauth_redirect_capture.dart';
 import 'core/cache/cache_manager.dart';
 import 'core/network/websocket_manager.dart';
 import 'core/session/session_controller.dart';
@@ -15,6 +16,7 @@ import 'data/models/api_user.dart';
 import 'services/app_services.dart';
 
 import 'screens/auth/auth_screens.dart';
+import 'screens/auth/oauth_profile_setup_screen.dart';
 import 'screens/home/home_screens.dart';
 import 'screens/home/new_user_home_screen.dart';
 import 'screens/features/feature_screens.dart';
@@ -34,6 +36,7 @@ void main() async {
   // ── Infrastructure ──────────────────────────────────────────────────────
   final cache = CacheManager();
   await cache.init();
+  await stashOAuthRedirectIfPresent(cache);
 
   final repositories = AppRepositories();
 
@@ -138,6 +141,7 @@ class TeamifyApp extends StatelessWidget {
         R.confirmationAdmin: (_) => const ConfirmationAdminScreen(),
         R.confirmationFreelancer: (_) => const ConfirmationFreelancerScreen(),
         R.confirmationStudent: (_) => const ConfirmationStudentScreen(),
+        R.oauthProfileSetup: (_) => protected(const OAuthProfileSetupScreen()),
 
         // ── Home ─────────────────────────────────────────────────────────────
         R.freelancerHome: (_) => protected(const FreelancerHomeScreen()),

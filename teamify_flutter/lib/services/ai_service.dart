@@ -78,13 +78,19 @@ class AIService with ServiceErrorHandler {
 
   /// Fetches the full mentor analysis for a user,
   /// combining recommendations + performance + courses.
-  Future<ApiResult<MentorInsights>> getMentorInsights(String userId) =>
+  Future<ApiResult<MentorInsights>> getMentorInsights(
+    String userId, {
+    bool forceRefresh = false,
+  }) =>
       _dedup.deduplicate('mentor_insights_$userId', () => guard(() async {
-            // Check SWR cache first
-            final cached = await _cache.getMap(_box, 'mentor_insights_$userId');
+            if (forceRefresh) {
+              await _cache.invalidate(_box, 'mentor_insights_$userId');
+            }
+            final cached = forceRefresh
+                ? null
+                : await _cache.getMap(_box, 'mentor_insights_$userId');
             if (cached != null) {
               final insights = _parseMentorInsights(cached);
-              // Background revalidation
               _fetchAndCacheMentorInsights(userId);
               return insights;
             }
@@ -96,8 +102,9 @@ class AIService with ServiceErrorHandler {
 
   Future<ApiResult<List<Map<String, dynamic>>>> mentorChatHistory({
     int limit = 50,
+    String threadKey = 'general',
   }) =>
-      guard(() => _ai.mentorChatHistory(limit: limit));
+      guard(() => _ai.mentorChatHistory(limit: limit, threadKey: threadKey));
 
   Future<MentorInsights> _fetchAndCacheMentorInsights(String userId) async {
     final payload = await _ai.mentorInsights(userId);
@@ -205,26 +212,31 @@ class AIService with ServiceErrorHandler {
     final profile = profileRaw is Map
         ? Map<String, dynamic>.from(profileRaw)
         : <String, dynamic>{};
-    final profileSkills = (profile['skills'] as List?)
-            ?.map((e) => e.toString())
-            .where((s) => s.isNotEmpty)
-            .toList() ??
-        const <String>[];
+    final profileSkills = _normalizeProfileSkills(profile['skills']);
 
     final mlRating = analysis['ml_rating'] is Map
         ? Map<String, dynamic>.from(analysis['ml_rating'] as Map)
         : <String, dynamic>{};
 
+    final dbSummary = analysis['db_summary']?.toString().trim() ?? '';
     final summary = analysis['summary']?.toString().trim() ?? '';
-    final careerSummary = summary.isNotEmpty
-        ? summary
-        : _extractCareerSummary(analysis['mentor_report']?.toString());
+    final careerSummary = dbSummary.isNotEmpty
+        ? dbSummary
+        : (summary.isNotEmpty
+            ? summary
+            : _extractCareerSummary(analysis['mentor_report']?.toString()));
+
+    final careerLevel = analysis['career_level']?.toString() ??
+        profile['career_level']?.toString() ??
+        progress['level']?.toString() ??
+        profile['experience_level']?.toString() ??
+        'Developer';
 
     return MentorInsights(
       careerScore: careerScore,
       performanceOverall: perfOverall ?? careerScore,
       careerSummary: careerSummary,
-      careerLevel: progress['level']?.toString() ?? 'Developer',
+      careerLevel: careerLevel,
       strengths: _parseSkillInsights(analysis['strengths']),
       weaknesses: _parseSkillInsights(analysis['weaknesses']),
       skillGaps: skillGaps,
@@ -253,6 +265,36 @@ class AIService with ServiceErrorHandler {
       tasksCompleted: (profile['tasks_completed'] as num?)?.toInt() ?? 0,
       generatedAt: analysis['generated_at']?.toString() ?? '',
     );
+  }
+
+  /// DB skills may be a list, comma string, or legacy per-character list.
+  static List<String> _normalizeProfileSkills(dynamic raw) {
+    if (raw == null) return const [];
+    if (raw is String) {
+      final text = raw.trim();
+      if (text.isEmpty) return const [];
+      return text
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.length > 1)
+          .toList();
+    }
+    if (raw is List) {
+      final items =
+          raw.map((e) => e.toString().trim()).where((s) => s.isNotEmpty).toList();
+      if (items.isEmpty) return const [];
+      final shortCount = items.where((s) => s.length <= 2).length;
+      if (items.length >= 5 && shortCount / items.length > 0.6) {
+        final joined = items.join();
+        return joined
+            .split(',')
+            .map((e) => e.trim())
+            .where((e) => e.length > 1)
+            .toList();
+      }
+      return items.where((s) => s.length > 1).toList();
+    }
+    return const [];
   }
 
   static String _extractCareerSummary(String? report) {
@@ -296,12 +338,18 @@ class AIService with ServiceErrorHandler {
     required String question,
     List<Map<String, dynamic>> history = const [],
     Map<String, dynamic>? taskContext,
+    Map<String, dynamic>? userContext,
+    bool persistHistory = true,
+    String threadKey = 'general',
   }) =>
-      _dedup.deduplicate('mentor_chat', () => guard(() async {
+      guard(() async {
         final data = await _ai.mentorChat(
           question: question,
           history: history,
           taskContext: taskContext,
+          userContext: userContext,
+          persistHistory: persistHistory,
+          threadKey: threadKey,
         );
         final ml = data['ml'];
         return MentorChatReply(
@@ -312,7 +360,7 @@ class AIService with ServiceErrorHandler {
               const [],
           ml: ml is Map ? Map<String, dynamic>.from(ml) : const {},
         );
-      }));
+      });
 
   /// Summarises chat transcript text into key points / actions (backend AI).
   Future<ApiResult<Map<String, dynamic>>> summarizeChat(

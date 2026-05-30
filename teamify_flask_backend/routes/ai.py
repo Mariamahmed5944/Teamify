@@ -1216,6 +1216,24 @@ def api_cv_build():
 
 # ─── GET /api/ai/mentor/chat/history ──────────────────────────────────────────
 
+def _mentor_thread_key(
+    body: dict[str, Any],
+    task_context: dict[str, Any],
+) -> str:
+    explicit = (body.get("thread_key") or "").strip()
+    if explicit:
+        return explicit[:120]
+    if (
+        isinstance(task_context, dict)
+        and task_context.get("focus") == "skill_exploration"
+        and task_context.get("skill_name")
+    ):
+        name = str(task_context["skill_name"]).strip().lower()
+        if name:
+            return f"skill:{name}"[:120]
+    return "general"
+
+
 @ai_bp.route("/mentor/chat/history", methods=["GET"])
 @auth_required
 def api_mentor_chat_history():
@@ -1224,13 +1242,14 @@ def api_mentor_chat_history():
 
     user_id = int(get_jwt_identity())
     limit = min(request.args.get("limit", 50, type=int), 100)
+    thread_key = (request.args.get("thread_key") or "general").strip()[:120]
     rows = (
-        MentorChatMessage.query.filter_by(user_id=user_id)
+        MentorChatMessage.query.filter_by(user_id=user_id, thread_key=thread_key)
         .order_by(MentorChatMessage.created_at.asc())
         .limit(limit)
         .all()
     )
-    return jsonify({"messages": [m.to_dict() for m in rows]}), 200
+    return jsonify({"messages": [m.to_dict() for m in rows], "thread_key": thread_key}), 200
 
 
 # ─── POST /api/ai/mentor/chat ─────────────────────────────────────────────────
@@ -1310,6 +1329,18 @@ def api_mentor_chat():
         return jsonify({"error": "question is required"}), 400
 
     history: list[dict[str, Any]] = body.get("history") or []
+    persist_history: bool = body.get("persist_history", True)
+    task_context: dict[str, Any] = body.get("task_context") or {}
+    user_context: dict[str, Any] = body.get("user_context") or {}
+    skill_context: dict[str, Any] = {}
+    if isinstance(task_context, dict) and task_context.get("focus") == "skill_exploration":
+        skill_context = {
+            "name": task_context.get("skill_name"),
+            "level": task_context.get("skill_level"),
+            "score": task_context.get("relevance_score"),
+        }
+
+    thread_key = _mentor_thread_key(body, task_context)
 
     try:
         mentor_data = generate_mentor_report(current_user_id)
@@ -1320,9 +1351,15 @@ def api_mentor_chat():
     if "error" in mentor_data:
         return jsonify(mentor_data), 404
 
-    db.session.add(
-        MentorChatMessage(user_id=current_user_id, role="user", content=question)
-    )
+    if persist_history:
+        db.session.add(
+            MentorChatMessage(
+                user_id=current_user_id,
+                role="user",
+                content=question,
+                thread_key=thread_key,
+            )
+        )
 
     ml_meta: dict[str, Any] = {}
     suggestions: list[str] = []
@@ -1361,8 +1398,21 @@ def api_mentor_chat():
                 f"Skill gaps: {', '.join(skill_gaps) or 'none'}.\n"
                 f"Strengths: {', '.join(strength_list) or 'none'}.\n"
                 f"Courses: {', '.join(c.get('title', '') for c in top_courses)}.\n"
-                "Give specific, actionable advice. Be concise (2-3 paragraphs max)."
             )
+            if skill_context.get("name"):
+                system_prompt += (
+                    f"\nThe user is exploring the skill **{skill_context.get('name')}** "
+                    f"({skill_context.get('level', 'Intermediate')}, relevance "
+                    f"{skill_context.get('score', '—')}/100). "
+                    "Tailor every answer to that skill."
+                )
+            if user_context.get("models"):
+                models = ", ".join(str(m) for m in user_context.get("models", []))
+                system_prompt += (
+                    f"\nUse Teamify ML models ({models}) and the user's live profile "
+                    "when answering. Reference ML rating and career score when relevant."
+                )
+            system_prompt += " Give specific, actionable advice. Be concise (2-3 paragraphs max)."
 
             messages: list[dict[str, Any]] = []
             for h in history[-10:]:
@@ -1400,7 +1450,7 @@ def api_mentor_chat():
 
     if not reply_text:
         reply_text, suggestions, ml_meta = generate_mentor_chat_reply(
-            current_user_id, question, mentor_data
+            current_user_id, question, mentor_data, skill_context=skill_context or None
         )
     elif not ml_meta:
         ml_meta = {
@@ -1412,17 +1462,24 @@ def api_mentor_chat():
             "model": "Profiles&AI Rating/teamify_model.pkl",
         }
 
-    db.session.add(
-        MentorChatMessage(
-            user_id=current_user_id, role="assistant", content=reply_text
+    if persist_history:
+        db.session.add(
+            MentorChatMessage(
+                user_id=current_user_id,
+                role="assistant",
+                content=reply_text,
+                thread_key=thread_key,
+            )
         )
-    )
-    db.session.commit()
+        db.session.commit()
+    else:
+        db.session.rollback()
 
     return jsonify({
         "reply": reply_text,
         "suggestions": suggestions[:3],
         "ml": ml_meta,
+        "thread_key": thread_key,
     }), 200
 
 

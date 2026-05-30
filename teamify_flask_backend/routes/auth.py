@@ -188,12 +188,14 @@ def register():
             "messages": _format_validation_errors(err),
         }), 400
 
-    display_name = data.get("display_name")
-    full_name = data.get("full_name")
+    from utils.user_names import generate_unique_display_name
+
+    full_name = (data.get("full_name") or "").strip()
     email = data.get("email")
     password = data.get("password")
     role = data.get("role")
     user_type = data.get("user_type")
+    display_name = generate_unique_display_name()
 
     # Check if an authenticated admin is making the request
     is_admin_caller = False
@@ -218,8 +220,6 @@ def register():
         }), 400
 
     # --- Check duplicates ---
-    if User.query.filter_by(display_name=display_name).first():
-        return jsonify({"error": "Conflict", "message": "Display name already exists"}), 409
     if User.query.filter_by(email=email).first():
         return jsonify({"error": "Conflict", "message": "Email already exists"}), 409
 
@@ -874,9 +874,12 @@ def google_login():
       401:
         description: Invalid or expired Google token
     """
-    import os
-    from google.oauth2 import id_token as google_id_token  # type: ignore[import-untyped]
-    from google.auth.transport import requests as google_requests  # type: ignore[import-untyped]
+    from services.oauth_user_service import (
+        extract_oauth_profile,
+        find_or_create_google_user,
+        normalize_user_type,
+        verify_google_id_token,
+    )
 
     data = _request_json()
     raw_token = str(data.get("id_token", "")).strip()
@@ -884,67 +887,44 @@ def google_login():
     if not raw_token:
         return jsonify({"error": "Bad Request", "message": "id_token is required"}), 400
 
-    # -- Verify the token against Google's public keys ----------------------
-    # GOOGLE_CLIENT_ID must be set in .env (your OAuth 2.0 web client ID)
-    client_id = os.getenv("GOOGLE_CLIENT_ID")
     try:
-        id_info = google_id_token.verify_oauth2_token(
-            raw_token,
-            google_requests.Request(),
-            audience=client_id,  # None = skip audience check (dev only)
-        )
+        id_info = verify_google_id_token(raw_token)
     except ValueError as exc:
         return jsonify({"error": "Unauthorized", "message": f"Invalid Google token: {exc}"}), 401
 
-    google_email = id_info.get("email", "")
-    google_name  = id_info.get("name", "") or id_info.get("email", "").split("@")[0]
-    google_sub   = id_info.get("sub", "")  # Unique Google user ID
+    google_email = str(id_info.get("email", "")).strip()
+    google_name = (
+        str(id_info.get("name", "")).strip()
+        or google_email.split("@")[0]
+    )
+    google_sub = str(id_info.get("sub", "")).strip()
 
-    if not google_email:
-        return jsonify({"error": "Unauthorized", "message": "Could not retrieve email from Google token"}), 401
+    if not google_email or not google_sub:
+        return jsonify({
+            "error": "Unauthorized",
+            "message": "Could not retrieve email from Google token",
+        }), 401
 
-    # -- Find or create the user --------------------------------------------
-    user = User.query.filter_by(email=google_email).first()
-    is_new = False
+    user_type = normalize_user_type(data.get("user_type"))
+    profile = extract_oauth_profile(data)
 
-    if not user:
-        # First-time Google login: create a new account
-        is_new = True
-        VALID_USER_TYPES = {"freelancer", "student", "admin"}
-        raw_user_type = data.get("user_type", "").strip().lower()
-        user_type = raw_user_type if raw_user_type in VALID_USER_TYPES else None
-
-        # Build a safe display_name from Google name, ensure uniqueness
-        base_name = re.sub(r"[^\w]", "_", google_name)[:30] or "user"
-        display_name = base_name
-        suffix = 1
-        while User.query.filter_by(display_name=display_name).first():
-            display_name = f"{base_name}_{suffix}"
-            suffix += 1
-
-        user = User(
-            display_name=display_name,
-            full_name=google_name,
+    try:
+        user, is_new = find_or_create_google_user(
             email=google_email,
-            # Google-authenticated users have no local password
-            password=bcrypt.generate_password_hash(google_sub).decode("utf-8"),
-            role="member",        # default role for OAuth sign-ups
+            full_name=google_name,
+            google_sub=google_sub,
             user_type=user_type,
+            bcrypt=bcrypt,
+            profile=profile if profile else None,
         )
-        db.session.add(user)
-        db.session.flush()
+    except Exception as exc:
+        db.session.rollback()
+        return jsonify({
+            "error": "Internal Server Error",
+            "message": f"Could not save Google account: {exc}",
+        }), 500
 
-        log = Log(
-            action="REGISTER_GOOGLE",
-            entity="User",
-            entity_id=user.id,
-            details=f"User '{display_name}' registered via Google OAuth",
-            user_id=user.id,
-        )
-        db.session.add(log)
-        db.session.commit()
-    else:
-        # Returning Google user: log the login event
+    if not is_new:
         log = Log(
             action="LOGIN_GOOGLE",
             entity="User",
@@ -956,8 +936,7 @@ def google_login():
         db.session.commit()
         _record_login_attempt(user.id, "success")
 
-    # -- Issue JWT tokens ---------------------------------------------------
-    access_token  = create_access_token(identity=str(user.id))
+    access_token = create_access_token(identity=str(user.id))
     refresh_token = create_refresh_token(identity=str(user.id))
 
     status_code = 201 if is_new else 200
@@ -968,7 +947,6 @@ def google_login():
         "refresh_token": refresh_token,
         "is_new_user": is_new,
     }), status_code)
-    # Set tokens in HttpOnly cookies (VULN-002 pattern)
     set_access_cookies(response, access_token)
     set_refresh_cookies(response, refresh_token)
     return response
@@ -1207,36 +1185,59 @@ def github_login():
       500:
         description: GitHub API error
     """
-    import os, requests as _req
+    import os
+    import requests as _req
+    from flask import current_app
+    from services.oauth_user_service import (
+        extract_oauth_profile,
+        find_or_create_github_user,
+        normalize_user_type,
+    )
+
     data = request.get_json(silent=True, force=True) or {}
     code = data.get("code", "").strip()
     if not code:
         return jsonify({"error": "code is required"}), 400
 
-    client_id     = os.getenv("GITHUB_CLIENT_ID", "")
-    client_secret = os.getenv("GITHUB_CLIENT_SECRET", "")
+    client_id = current_app.config.get("GITHUB_CLIENT_ID") or os.getenv("GITHUB_CLIENT_ID", "")
+    client_secret = current_app.config.get("GITHUB_CLIENT_SECRET") or os.getenv("GITHUB_CLIENT_SECRET", "")
 
-    user_type_raw = data.get("user_type", "").strip().lower()
-    VALID_USER_TYPES = {"freelancer", "student", "admin"}
-    user_type = user_type_raw if user_type_raw in VALID_USER_TYPES else None
+    if not client_id or not client_secret:
+        return jsonify({
+            "error": "Service Unavailable",
+            "message": (
+                "GitHub OAuth is not configured on the server. "
+                "Set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET in .env"
+            ),
+        }), 503
 
-    # Step 1: Exchange code for GitHub access token
+    user_type = normalize_user_type(data.get("user_type"))
+    profile = extract_oauth_profile(data)
+
+    redirect_uri = (data.get("redirect_uri") or "").strip()
+    token_payload: dict[str, str] = {
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "code": code,
+    }
+    if redirect_uri:
+        token_payload["redirect_uri"] = redirect_uri
+
     token_resp = _req.post(
         "https://github.com/login/oauth/access_token",
-        json={"client_id": client_id, "client_secret": client_secret, "code": code},
+        json=token_payload,
         headers={"Accept": "application/json"},
         timeout=10,
     )
     if token_resp.status_code != 200:
         return jsonify({"error": "Failed to reach GitHub token endpoint"}), 502
 
-    token_data   = token_resp.json()
+    token_data = token_resp.json()
     github_token = token_data.get("access_token")
     if not github_token:
         err = token_data.get("error_description", token_data.get("error", "Unknown error"))
         return jsonify({"error": f"GitHub OAuth error: {err}"}), 400
 
-    # Step 2: Fetch GitHub user profile
     profile_resp = _req.get(
         "https://api.github.com/user",
         headers={"Authorization": f"Bearer {github_token}", "Accept": "application/json"},
@@ -1245,13 +1246,12 @@ def github_login():
     if profile_resp.status_code != 200:
         return jsonify({"error": "Failed to fetch GitHub user profile"}), 502
 
-    gh_user    = profile_resp.json()
-    github_id  = str(gh_user.get("id", ""))
-    gh_email   = gh_user.get("email") or ""
-    gh_name    = gh_user.get("name") or gh_user.get("login") or "github_user"
-    gh_login   = gh_user.get("login") or f"gh_{github_id}"
+    gh_user = profile_resp.json()
+    github_id = str(gh_user.get("id", ""))
+    gh_email = gh_user.get("email") or ""
+    gh_name = gh_user.get("name") or gh_user.get("login") or "github_user"
+    gh_login = gh_user.get("login") or f"gh_{github_id}"
 
-    # Step 3: Fetch primary email if not public
     if not gh_email:
         emails_resp = _req.get(
             "https://api.github.com/user/emails",
@@ -1267,58 +1267,53 @@ def github_login():
     if not github_id:
         return jsonify({"error": "Could not retrieve GitHub user ID"}), 400
 
-    # Step 4: Find or create user
-    user = User.query.filter_by(github_id=github_id).first()
-    if not user and gh_email:
-        user = User.query.filter_by(email=gh_email).first()
-        if user:
-            user.github_id = github_id  # link existing account
-
-    if not user:
-        # Auto-register a new user via GitHub
-        import secrets as _sec
-        dummy_pw = bcrypt.generate_password_hash(_sec.token_hex(32)).decode("utf-8")
-        # Ensure unique display_name
-        base_name = gh_login[:78]
-        display_name = base_name
-        counter = 1
-        while User.query.filter_by(display_name=display_name).first():
-            display_name = f"{base_name}_{counter}"
-            counter += 1
-
-        user = User(
-            display_name=display_name,
-            full_name=gh_name[:150] if gh_name else None,
-            email=gh_email or f"{github_id}@github.noemail",
-            password=dummy_pw,
-            role="member",
+    try:
+        user, is_new = find_or_create_github_user(
             github_id=github_id,
+            email=gh_email,
+            full_name=gh_name,
+            gh_login=gh_login,
             user_type=user_type,
+            bcrypt=bcrypt,
+            profile=profile if profile else None,
         )
-        db.session.add(user)
-        db.session.flush()
+    except Exception as exc:
+        db.session.rollback()
+        return jsonify({
+            "error": "Internal Server Error",
+            "message": f"Could not save GitHub account: {exc}",
+        }), 500
+
+    if not is_new:
         db.session.add(Log(
-            action="GITHUB_REGISTER", entity="User", entity_id=user.id,
-            details=f"GitHub OAuth registration for login '{gh_login}'",
+            action="GITHUB_LOGIN",
+            entity="User",
+            entity_id=user.id,
+            details=f"User '{user.display_name}' logged in via GitHub OAuth",
             user_id=user.id,
         ))
         db.session.commit()
 
-    # Step 5: Issue app JWT
-    access_token  = create_access_token(identity=str(user.id))
+    access_token = create_access_token(identity=str(user.id))
     refresh_token = create_refresh_token(identity=str(user.id))
 
     ip = request.remote_addr or "unknown"
     _record_login_attempt(user.id, "success")
-    log_security_event("GITHUB_LOGIN_SUCCESS", user_id=user.id, ip=ip,
-                       details={"github_login": gh_login})
+    log_security_event(
+        "GITHUB_LOGIN_SUCCESS",
+        user_id=user.id,
+        ip=ip,
+        details={"github_login": gh_login, "is_new_user": is_new},
+    )
 
+    status_code = 201 if is_new else 200
     response = make_response(jsonify({
-        "message":       "GitHub login successful",
-        "user":          user.to_dict(),
-        "access_token":  access_token,
+        "message": "GitHub login successful",
+        "user": user.to_dict(),
+        "access_token": access_token,
         "refresh_token": refresh_token,
-    }), 200)
+        "is_new_user": is_new,
+    }), status_code)
     set_access_cookies(response, access_token)
     set_refresh_cookies(response, refresh_token)
     return response

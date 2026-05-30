@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -36,39 +38,62 @@ Future<void> handleNotificationTap(
   BuildContext context,
   api.ApiNotification n, {
   VoidCallback? onUpdated,
+  void Function(String id)? onMarkReadLocally,
 }) async {
-  if (!n.isRead) {
-    final result = await context.read<AppServices>().notifications.markRead(n.id);
-    result.when(success: (_) => onUpdated?.call(), failure: (_) {});
+  if (!context.mounted) return;
+
+  final notification = n.isRead ? n : n.copyWith(isRead: true);
+  final type = notification.type.toLowerCase();
+  final et = notification.entityType.toLowerCase();
+  final isProjectInvitation = type == 'project_invitation' ||
+      et == 'projectinvitation' ||
+      et == 'project_invitation';
+
+  if (isProjectInvitation) {
+    // Mark read locally/API without refreshing the list yet — refreshing would
+    // deactivate the ListView item context before the sheet closes.
+    if (!n.isRead && n.id.isNotEmpty) {
+      onMarkReadLocally?.call(n.id);
+      unawaited(
+        context.read<AppServices>().notifications.markRead(n.id),
+      );
+    }
+    await _showProjectInvitationSheet(
+      context,
+      notification,
+    );
+    onUpdated?.call();
+    return;
+  }
+
+  if (!n.isRead && n.id.isNotEmpty) {
+    onMarkReadLocally?.call(n.id);
+    final result =
+        await context.read<AppServices>().notifications.markRead(n.id);
+    result.when(
+      success: (_) => onUpdated?.call(),
+      failure: (_) => onUpdated?.call(),
+    );
   }
 
   if (!context.mounted) return;
 
-  final type = n.type.toLowerCase();
-  final et = n.entityType.toLowerCase();
-  if (type == 'project_invitation' ||
-      et == 'projectinvitation' ||
-      et == 'project_invitation') {
-    await _showProjectInvitationSheet(context, n, onUpdated: onUpdated);
+  if (et == 'task' && notification.entityId.isNotEmpty) {
+    await _openTaskDetailFromNotification(context, notification,
+        onUpdated: onUpdated);
     return;
   }
 
-  if (et == 'task' && n.entityId.isNotEmpty) {
-    await _openTaskDetailFromNotification(context, n, onUpdated: onUpdated);
-    return;
-  }
-
-  await _showNotificationSheet(context, n, onUpdated: onUpdated);
+  await _showNotificationSheet(context, notification, onUpdated: onUpdated);
 }
 
 Future<void> _showProjectInvitationSheet(
   BuildContext context,
-  api.ApiNotification n, {
-  VoidCallback? onUpdated,
-}) async {
+  api.ApiNotification n,
+) async {
   final invitationId = n.entityId;
   if (invitationId.isEmpty) {
-    await _showNotificationSheet(context, n, onUpdated: onUpdated);
+    await _showNotificationSheet(context, n);
     return;
   }
 
@@ -83,11 +108,8 @@ Future<void> _showProjectInvitationSheet(
     ),
     builder: (sheetCtx) {
       return _ProjectInvitationSheetBody(
-        sheetCtx: sheetCtx,
-        hostContext: context,
         notification: n,
         invitationId: invitationId,
-        onUpdated: onUpdated,
       );
     },
   );
@@ -95,18 +117,12 @@ Future<void> _showProjectInvitationSheet(
 
 class _ProjectInvitationSheetBody extends StatefulWidget {
   const _ProjectInvitationSheetBody({
-    required this.sheetCtx,
-    required this.hostContext,
     required this.notification,
     required this.invitationId,
-    this.onUpdated,
   });
 
-  final BuildContext sheetCtx;
-  final BuildContext hostContext;
   final api.ApiNotification notification;
   final String invitationId;
-  final VoidCallback? onUpdated;
 
   @override
   State<_ProjectInvitationSheetBody> createState() =>
@@ -116,16 +132,27 @@ class _ProjectInvitationSheetBody extends StatefulWidget {
 class _ProjectInvitationSheetBodyState extends State<_ProjectInvitationSheetBody> {
   bool _responding = false;
   String? _error;
+  AppServices? _services;
+  ScaffoldMessengerState? _messenger;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _services = context.read<AppServices>();
+    _messenger = ScaffoldMessenger.maybeOf(context);
+  }
 
   Future<void> _respond(bool accept) async {
     if (_responding) return;
+    final services = _services;
+    if (services == null) return;
+
     setState(() {
       _responding = true;
       _error = null;
     });
 
     try {
-      final services = widget.hostContext.read<AppServices>();
       final result = accept
           ? await services.projects.acceptInvitation(widget.invitationId)
           : await services.projects.declineInvitation(widget.invitationId);
@@ -133,21 +160,16 @@ class _ProjectInvitationSheetBodyState extends State<_ProjectInvitationSheetBody
       if (!mounted) return;
 
       if (result.isSuccess) {
-        if (widget.sheetCtx.mounted) {
-          Navigator.pop(widget.sheetCtx);
-        }
-        if (widget.hostContext.mounted) {
-          ScaffoldMessenger.of(widget.hostContext).showSnackBar(
-            SnackBar(
-              content: Text(
-                accept ? 'You joined the project' : 'Invitation declined',
-              ),
-              backgroundColor:
-                  accept ? AppColors.success : AppColors.textSecondary,
+        Navigator.pop(context);
+        _messenger?.showSnackBar(
+          SnackBar(
+            content: Text(
+              accept ? 'You joined the project' : 'Invitation declined',
             ),
-          );
-        }
-        widget.onUpdated?.call();
+            backgroundColor:
+                accept ? AppColors.success : AppColors.textSecondary,
+          ),
+        );
         return;
       }
 

@@ -11,6 +11,7 @@ the current UTC timestamp so NOT NULL is satisfied without data loss.
 from alembic import op
 import sqlalchemy as sa
 from datetime import datetime, timezone
+from sqlalchemy import inspect
 
 
 revision = 'c9d1e2f3a4b5'
@@ -20,6 +21,9 @@ depends_on = None
 
 
 def upgrade():
+    bind = op.get_bind()
+    if 'joined_at' in {c['name'] for c in inspect(bind).get_columns('project_members')}:
+        return
     # Add column as nullable first to allow back-fill on existing rows
     with op.batch_alter_table('project_members', schema=None) as batch_op:
         batch_op.add_column(

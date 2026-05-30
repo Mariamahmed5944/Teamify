@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:provider/provider.dart';
 import '../../core/network/api_result.dart';
 import '../../core/theme.dart';
@@ -32,6 +33,30 @@ class FreelancerHomeScreen extends StatefulWidget {
 class _FreelancerHomeScreenState extends State<FreelancerHomeScreen> {
   int _dashVersion = 0;
   int _notifVersion = 0;
+  int _liveUnread = -1;
+  StreamSubscription<int>? _unreadSub;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _bindUnreadStream());
+  }
+
+  @override
+  void dispose() {
+    _unreadSub?.cancel();
+    super.dispose();
+  }
+
+  void _bindUnreadStream() {
+    _unreadSub ??= context
+        .read<AppServices>()
+        .notifications
+        .unreadCountStream
+        .listen((count) {
+      if (mounted) setState(() => _liveUnread = count);
+    });
+  }
 
   void _bumpHomeData() {
     final userId = context.read<SessionController>().currentUser?.id;
@@ -68,6 +93,7 @@ class _FreelancerHomeScreenState extends State<FreelancerHomeScreen> {
               final atRisk = dash['at_risk_tasks'] as List<dynamic>? ?? [];
               final unread =
                   (dash['unread_notifications'] as num?)?.toInt() ?? 0;
+              final badgeUnread = _liveUnread >= 0 ? _liveUnread : unread;
               final activeCount = counts['activeProjects']!;
               final completed = counts['completed']!;
               final inProg = counts['inProgress']!;
@@ -99,10 +125,14 @@ class _FreelancerHomeScreenState extends State<FreelancerHomeScreen> {
                           IconButton(
                             icon: const Icon(Icons.notifications_outlined,
                                 color: AppColors.textPrimary, size: 26),
-                            onPressed: () =>
-                                Navigator.pushNamed(context, R.notifications),
+                            onPressed: () async {
+                              await Navigator.pushNamed(
+                                  context, R.notifications);
+                              if (!mounted) return;
+                              _bumpHomeData();
+                            },
                           ),
-                          if (unread > 0)
+                          if (badgeUnread > 0)
                             Positioned(
                               top: 8,
                               right: 8,
@@ -111,7 +141,7 @@ class _FreelancerHomeScreenState extends State<FreelancerHomeScreen> {
                                 decoration: const BoxDecoration(
                                     color: Colors.red, shape: BoxShape.circle),
                                 child: Text(
-                                  unread > 9 ? '9+' : '$unread',
+                                  badgeUnread > 9 ? '9+' : '$badgeUnread',
                                   style: const TextStyle(
                                       color: Colors.white, fontSize: 8),
                                 ),
@@ -140,7 +170,7 @@ class _FreelancerHomeScreenState extends State<FreelancerHomeScreen> {
                     subtitle: atRisk.isNotEmpty
                         ? '${atRisk.length} tasks flagged as at-risk — review due dates in Tasks.'
                         : 'No at-risk tasks on your latest dashboard sync.',
-                    badge: unread > 0 ? '$unread unread' : '',
+                    badge: badgeUnread > 0 ? '$badgeUnread unread' : '',
                     onTap: () => Navigator.pushNamed(context, R.aiInsights),
                   ),
                   const SizedBox(height: 10),
@@ -1733,20 +1763,49 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  late Future<List<api.ApiNotification>> _future;
+  List<api.ApiNotification> _notifications = [];
+  bool _loading = true;
+  String? _error;
   bool _markingAll = false;
 
   @override
   void initState() {
     super.initState();
-    _future = _load();
+    _load();
   }
 
-  Future<List<api.ApiNotification>> _load() => context
-      .read<AppServices>()
-      .notifications
-      .listNotifications(forceRefresh: true)
-      .unwrap();
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final list = await context
+          .read<AppServices>()
+          .notifications
+          .listNotifications(forceRefresh: true)
+          .unwrap();
+      if (!mounted) return;
+      setState(() {
+        _notifications = list;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = e.toString().replaceFirst('Exception: ', '');
+      });
+    }
+  }
+
+  void _markReadLocally(String id) {
+    setState(() {
+      _notifications = _notifications
+          .map((n) => n.id == id ? n.copyWith(isRead: true) : n)
+          .toList();
+    });
+  }
 
   Future<void> _markAllRead() async {
     setState(() => _markingAll = true);
@@ -1754,8 +1813,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       await context.read<AppServices>().notifications.markAllRead().unwrap();
       if (!mounted) return;
       setState(() {
-        _future = _load();
+        _notifications =
+            _notifications.map((n) => n.copyWith(isRead: true)).toList();
       });
+      await _load();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1794,50 +1855,41 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ),
           ),
           Expanded(
-            child: FutureBuilder<List<api.ApiNotification>>(
-              future: _future,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting &&
-                    !snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(snapshot.error.toString(),
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                  color: AppColors.textSecondary)),
-                          const SizedBox(height: 16),
-                          TextButton(
-                            onPressed: () => setState(() {
-                              _future = _load();
-                            }),
-                            child: const Text('Retry'),
+            child: _loading && _notifications.isEmpty
+                ? const Center(child: CircularProgressIndicator())
+                : _error != null && _notifications.isEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(_error!,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                      color: AppColors.textSecondary)),
+                              const SizedBox(height: 16),
+                              TextButton(
+                                onPressed: _load,
+                                child: const Text('Retry'),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-                final notifs = snapshot.data ?? [];
-                if (notifs.isEmpty) {
-                  return const Center(
-                    child: Text(
-                      "You're all caught up! No notifications.",
-                      style: TextStyle(color: AppColors.textSecondary),
-                    ),
-                  );
-                }
-                return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: notifs.length,
-                  itemBuilder: (_, i) {
-                    final n = notifs[i];
+                        ),
+                      )
+                    : _notifications.isEmpty
+                        ? const Center(
+                            child: Text(
+                              "You're all caught up! No notifications.",
+                              style: TextStyle(color: AppColors.textSecondary),
+                            ),
+                          )
+                        : ListView.builder(
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 16),
+                            itemCount: _notifications.length,
+                            itemBuilder: (_, i) {
+                              final n = _notifications[i];
 
                     Color iconBg;
                     IconData icon;
@@ -1888,7 +1940,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       onTap: () => handleNotificationTap(
                         context,
                         n,
-                        onUpdated: () => setState(() => _future = _load()),
+                        onMarkReadLocally: _markReadLocally,
+                        onUpdated: _load,
                       ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1945,9 +1998,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       ),
                     );
                   },
-                );
-              },
-            ),
+                ),
           ),
         ],
       ),

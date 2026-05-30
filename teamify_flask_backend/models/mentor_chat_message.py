@@ -16,6 +16,13 @@ class MentorChatMessage(db.Model):
     )
     role = db.Column(db.String(20), nullable=False)  # user | assistant
     content = db.Column(db.Text, nullable=False)
+    thread_key = db.Column(
+        db.String(120),
+        nullable=False,
+        default="general",
+        server_default="general",
+        index=True,
+    )
     created_at = db.Column(
         db.DateTime,
         default=lambda: datetime.now(timezone.utc),
@@ -31,5 +38,6 @@ class MentorChatMessage(db.Model):
             "user_id": self.user_id,
             "role": self.role,
             "content": self.content,
+            "thread_key": self.thread_key or "general",
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }

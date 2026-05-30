@@ -51,18 +51,16 @@ class AuthRepository {
   }
 
   Future<AuthResult> register({
-    required String displayName,
+    required String fullName,
     required String email,
     required String password,
     required String role,
     required String userType,
-    String? fullName,
     Map<String, dynamic> extra = const {},
   }) async {
     final response = await _client.post<Map<String, dynamic>>(
       '/api/auth/register',
       data: {
-        'display_name': displayName,
         'full_name': fullName,
         'email': email,
         'password': password,
@@ -143,23 +141,35 @@ class AuthRepository {
       options: Options(extra: {'skipAuth': true}),
     );
     await _saveTokens(response.data);
-    final user = _extractUser(response.data);
+    var user = _extractUser(response.data);
+    if (user == null && await hasSavedSession()) {
+      user = await me();
+    }
     return AuthResult(
         user: user, message: asString(response.data?['message']));
   }
 
   /// POST /api/auth/github
-  Future<AuthResult> loginWithGithub(String code, {String? userType}) async {
+  Future<AuthResult> loginWithGithub(
+    String code, {
+    String? userType,
+    String? redirectUri,
+  }) async {
     final response = await _client.post<Map<String, dynamic>>(
       '/api/auth/github',
       data: {
         'code': code,
         if (userType != null) 'user_type': userType,
+        if (redirectUri != null && redirectUri.isNotEmpty)
+          'redirect_uri': redirectUri,
       },
       options: Options(extra: {'skipAuth': true}),
     );
     await _saveTokens(response.data);
-    final user = _extractUser(response.data);
+    var user = _extractUser(response.data);
+    if (user == null && await hasSavedSession()) {
+      user = await me();
+    }
     return AuthResult(
         user: user, message: asString(response.data?['message']));
   }

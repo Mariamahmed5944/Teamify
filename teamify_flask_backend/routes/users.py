@@ -22,37 +22,20 @@ def get_available_members():
     Return all approved, non-guest users suitable for project member assignment.
     Excludes the calling user by default (they will be the project owner).
     """
+    from utils.user_directory import available_member_dict, query_available_members
+
     current_user_id = int(get_jwt_identity())
     search = request.args.get("search", "").strip()
     exclude_self = request.args.get("exclude_self", "true").lower() != "false"
 
-    q = User.query.filter(User.role != "guest")
-
-    if exclude_self:
-        q = q.filter(User.id != current_user_id)
-
-    if search:
-        q = q.filter(
-            or_(
-                User.full_name.ilike(f"%{search}%"),
-                User.display_name.ilike(f"%{search}%"),
-                User.email.ilike(f"%{search}%"),
-            )
-        )
-
-    users = q.order_by(User.full_name, User.display_name).all()
+    users = query_available_members(
+        current_user_id=current_user_id,
+        search=search,
+        exclude_self=exclude_self,
+    )
 
     return jsonify({
-        "users": [
-            {
-                "id": u.id,
-                "name": u.full_name or u.display_name,
-                "display_name": u.display_name,
-                "email": u.email,
-                "user_type": u.user_type,
-            }
-            for u in users
-        ],
+        "users": [available_member_dict(u) for u in users],
         "total": len(users),
     }), 200
 
@@ -174,16 +157,19 @@ def update_profile():
     errors = []
 
     if "display_name" in data:
+        from utils.user_names import validate_username
+
         new_name = data["display_name"].strip()
-        if not new_name:
-            errors.append("display_name cannot be empty")
-        else:
+        username_err = validate_username(new_name)
+        if username_err:
+            errors.append(username_err)
+        elif new_name != user.display_name:
             taken = User.query.filter(
                 User.display_name == new_name,
-                User.id != user.id
+                User.id != user.id,
             ).first()
             if taken:
-                return jsonify({"error": "Conflict", "message": "Display name already taken"}), 409
+                return jsonify({"error": "Conflict", "message": "Username already taken"}), 409
             user.display_name = new_name
 
     if "full_name" in data:
@@ -253,13 +239,10 @@ def update_profile():
                 setattr(user, field, val)
 
     if "skills" in data:
-        raw_skills = data["skills"]
-        if isinstance(raw_skills, list):
-            user.skills = [str(s).strip() for s in raw_skills if str(s).strip()]
-        elif isinstance(raw_skills, str):
-            user.skills = [s.strip() for s in raw_skills.split(",") if s.strip()] or None
-        else:
-            user.skills = None
+        from utils.skills import normalize_skills_list
+
+        normalized = normalize_skills_list(data["skills"])
+        user.skills = normalized or None
 
     if "looking_for_team" in data:
         user.looking_for_team = data["looking_for_team"]

@@ -292,33 +292,19 @@ def get_available_members_for_project():
     Same as GET /api/users/available-members — exposed on projects blueprint
     so the path is registered before /<int:project_id> dynamic routes.
     """
+    from utils.user_directory import available_member_dict, query_available_members
+
     current_user_id = get_current_user_id()
     search = request.args.get("search", "").strip()
     exclude_self = request.args.get("exclude_self", "true").lower() != "false"
 
-    q = _User.query.filter(_User.role != "guest")
-    if exclude_self:
-        q = q.filter(_User.id != current_user_id)
-    if search:
-        q = q.filter(
-            or_(
-                _User.full_name.ilike(f"%{search}%"),
-                _User.display_name.ilike(f"%{search}%"),
-                _User.email.ilike(f"%{search}%"),
-            )
-        )
-    users = q.order_by(_User.full_name, _User.display_name).all()
+    users = query_available_members(
+        current_user_id=current_user_id,
+        search=search,
+        exclude_self=exclude_self,
+    )
     return jsonify({
-        "users": [
-            {
-                "id": u.id,
-                "name": u.full_name or u.display_name,
-                "display_name": u.display_name,
-                "email": u.email,
-                "user_type": u.user_type,
-            }
-            for u in users
-        ],
+        "users": [available_member_dict(u) for u in users],
         "total": len(users),
     }), 200
 
@@ -430,12 +416,23 @@ def list_project_invitations(project_id):
     out = []
     for inv in rows:
         invitee = _User.query.get(inv.invitee_id)
-        row = inv.to_dict(project_name=project.name, inviter_name=None)
+        inviter = _User.query.get(inv.inviter_id)
+        row = inv.to_dict(
+            project_name=project.name,
+            inviter_name=(
+                (inviter.full_name or inviter.display_name or inviter.email)
+                if inviter
+                else None
+            ),
+        )
         row["invitee_name"] = (
             (invitee.full_name or invitee.display_name or invitee.email)
             if invitee
             else None
         )
+        row["invitee_email"] = invitee.email if invitee else None
+        row["invitee_display_name"] = invitee.display_name if invitee else None
+        row["invitee_skills"] = invitee.skills if invitee and invitee.skills else []
         out.append(row)
     return jsonify({"invitations": out, "total": len(out)}), 200
 

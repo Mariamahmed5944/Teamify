@@ -288,9 +288,10 @@ def _enrich_result(result: dict, text: str) -> dict:
 
     result["key_points"] = key_points
     result["summary"] = _build_summary_text(text, key_points, participants, action_items)
-    result["speech_transcript"] = [
-        f"{ln['speaker']}: {ln['content']}" for ln in transcript_lines
-    ]
+    if not result.get("speech_transcript"):
+        result["speech_transcript"] = [
+            f"{ln['speaker']}: {ln['content']}" for ln in transcript_lines
+        ]
     return result
 
 

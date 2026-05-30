@@ -16,14 +16,20 @@ class MeetingSpeechRecorder {
 
   bool get isEnabled => _enabled;
 
+  /// Requests microphone access. On web this calls [getUserMedia] and shows the
+  /// browser permission prompt when needed.
   Future<bool> ensurePermission() async {
-    return _recorder.hasPermission();
+    try {
+      return await _recorder.hasPermission();
+    } catch (_) {
+      return false;
+    }
   }
 
   /// Starts periodic capture. [onChunk] receives raw audio bytes and a filename.
   void start({
-    Duration interval = const Duration(seconds: 10),
-    Duration chunkDuration = const Duration(seconds: 6),
+    Duration interval = const Duration(seconds: 8),
+    Duration chunkDuration = const Duration(seconds: 5),
     required Future<void> Function(Uint8List bytes, String filename) onChunk,
     bool Function()? shouldCapture,
   }) {
@@ -35,7 +41,11 @@ class MeetingSpeechRecorder {
       await _captureOnce(chunkDuration, onChunk);
     }
 
+    // First chunk quickly so the user sees activity without waiting a full interval.
     tick();
+    if (kIsWeb) {
+      Future.delayed(const Duration(seconds: 3), tick);
+    }
     _intervalTimer = Timer.periodic(interval, (_) => tick());
   }
 
@@ -84,6 +94,22 @@ class MeetingSpeechRecorder {
       await _recorder.start(config, path: path);
     }
     return true;
+  }
+
+  /// Discard an in-progress voice note without transcribing.
+  Future<void> cancelVoiceNote() async {
+    if (!await _recorder.isRecording()) {
+      _busy = false;
+      return;
+    }
+    try {
+      await _recorder.cancel();
+    } catch (_) {
+      try {
+        await _recorder.stop();
+      } catch (_) {}
+    }
+    _busy = false;
   }
 
   /// Stop voice note and return audio bytes for Whisper transcription.

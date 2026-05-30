@@ -14,6 +14,7 @@ class R {
   static const confirmationAdmin = '/confirmation-admin';
   static const confirmationFreelancer = '/confirmation-freelancer';
   static const confirmationStudent = '/confirmation-student';
+  static const oauthProfileSetup = '/oauth-profile-setup';
 
   // Home
   static const freelancerHome = '/freelancer-home';

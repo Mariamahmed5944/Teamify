@@ -13,6 +13,7 @@ from models.meeting_session import MeetingSession
 from models.project import Project
 from models.project_member import ProjectMember
 from models.user import User
+from services.chat_message_service import create_chat_message, delete_chat_message
 from services.chat_room_service import (
     add_room_member,
     ensure_project_chat_room,
@@ -21,6 +22,38 @@ from services.chat_room_service import (
 )
 
 chat_bp = Blueprint("chat", __name__, url_prefix="/api/chat")
+
+
+def _dedupe_transcript(transcript: list) -> list:
+    """Drop duplicate lines and browser-STT partial repeats."""
+    out = []
+    for item in transcript or []:
+        if not isinstance(item, dict):
+            continue
+        content = (item.get("content") or item.get("text") or "").strip()
+        if not content:
+            continue
+        entry = dict(item)
+        entry["content"] = content
+        if out and entry.get("source") == "speech":
+            prev = out[-1]
+            if prev.get("source") == "speech":
+                prev_text = (prev.get("content") or "").strip()
+                if content == prev_text:
+                    continue
+                if content.startswith(prev_text) and len(content) > len(prev_text):
+                    out.pop()
+                elif prev_text.startswith(content):
+                    continue
+        if any(
+            (e.get("source") == entry.get("source"))
+            and (e.get("content") or "").strip() == content
+            and str(e.get("sender_id")) == str(entry.get("sender_id"))
+            for e in out
+        ):
+            continue
+        out.append(entry)
+    return out
 
 
 def _transcript_to_text(transcript: list) -> str:
@@ -36,10 +69,11 @@ def _transcript_to_text(transcript: list) -> str:
 
 
 def _summarize_meeting_transcript(transcript: list) -> dict:
+    transcript = _dedupe_transcript(transcript)
     text = _transcript_to_text(transcript)
     speech_lines = []
-    for item in transcript or []:
-        if isinstance(item, dict) and item.get("source") == "speech":
+    for item in transcript:
+        if item.get("source") == "speech":
             name = (item.get("sender_name") or "User").strip()
             content = (item.get("content") or "").strip()
             if content:
@@ -56,9 +90,14 @@ def _summarize_meeting_transcript(transcript: list) -> dict:
 
     from services.chat_summarization_service import summarize_chat
 
-    result = summarize_chat(text, top_n=6)
-    if speech_lines and not result.get("speech_transcript"):
-        result["speech_transcript"] = speech_lines
+    result = summarize_chat(text, top_n=5)
+    result["speech_transcript"] = speech_lines
+    # Prefer a short narrative summary over dumping raw speech.
+    summary = (result.get("summary") or "").strip()
+    if len(summary) > 520:
+        cut = summary[:520]
+        dot = cut.rfind(".")
+        result["summary"] = cut[: dot + 1] if dot > 200 else cut + "…"
     return result
 
 
@@ -90,6 +129,20 @@ def _broadcast_message(msg: Message) -> None:
         )
     except Exception:
         # REST path must succeed even if no WS clients are connected.
+        pass
+
+
+def _broadcast_message_deleted(room_id: int, message_id: int) -> None:
+    """Notify room members that a message was removed."""
+    try:
+        from app import socketio
+
+        socketio.emit(
+            "message_deleted",
+            {"room_id": room_id, "message_id": message_id},
+            to=_room_channel(room_id),
+        )
+    except Exception:
         pass
 
 
@@ -368,17 +421,32 @@ def send_message(room_id):
         return jsonify({"error": "You are not a member of this room"}), 403
 
     data = request.get_json(silent=True) or {}
-    content = (data.get("content") or "").strip()
-    if not content:
-        return jsonify({"error": "content is required"}), 400
-
-    msg = Message(room_id=room_id, sender_id=user_id, content=content)
-    db.session.add(msg)
-    db.session.commit()
+    msg, err = create_chat_message(room_id, user_id, data)
+    if err:
+        return err
 
     _broadcast_message(msg)
 
     return jsonify({"message": "Message sent", "data": msg.to_dict()}), 201
+
+
+@chat_bp.route("/rooms/<int:room_id>/messages/<int:message_id>", methods=["DELETE"])
+@auth_required
+def delete_message(room_id, message_id):
+    """Delete a chat message (sender only)."""
+    user_id = int(get_jwt_identity())
+    _, _, err = _require_room_member(user_id, room_id)
+    if err:
+        return err
+
+    ok, del_err = delete_chat_message(room_id, message_id, user_id)
+    if del_err:
+        return del_err
+    if not ok:
+        return jsonify({"error": "Message not found"}), 404
+
+    _broadcast_message_deleted(room_id, message_id)
+    return jsonify({"message": "Message deleted", "message_id": message_id}), 200
 
 
 def _require_room_member(user_id: int, room_id: int):

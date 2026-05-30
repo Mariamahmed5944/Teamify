@@ -25,7 +25,10 @@ class NotificationRepository {
 
   // PATCH /api/notifications/<id>/read
   Future<void> markRead(String id) async {
-    await _client.patch<dynamic>('/api/notifications/$id/read');
+    await _client.patch<dynamic>(
+      '/api/notifications/$id/read',
+      data: const {},
+    );
   }
 
   // POST /api/notifications/mark-all-read

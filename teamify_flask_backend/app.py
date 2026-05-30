@@ -62,26 +62,50 @@ def _apply_runtime_schema_patches(app: Flask) -> None:
 
     try:
         insp = inspect(db.engine)
-        if "meeting_sessions" not in insp.get_table_names():
-            return
-        col_names = {c["name"] for c in insp.get_columns("meeting_sessions")}
-        if "ai_summary" in col_names:
-            return
+        if "meeting_sessions" in insp.get_table_names():
+            col_names = {c["name"] for c in insp.get_columns("meeting_sessions")}
+            if "ai_summary" not in col_names:
+                dialect = db.engine.dialect.name
+                if dialect == "postgresql":
+                    sql = (
+                        "ALTER TABLE meeting_sessions "
+                        "ADD COLUMN IF NOT EXISTS ai_summary JSONB"
+                    )
+                else:
+                    sql = "ALTER TABLE meeting_sessions ADD COLUMN ai_summary JSON"
 
-        dialect = db.engine.dialect.name
-        if dialect == "postgresql":
-            sql = (
-                "ALTER TABLE meeting_sessions "
-                "ADD COLUMN IF NOT EXISTS ai_summary JSONB"
-            )
-        else:
-            sql = "ALTER TABLE meeting_sessions ADD COLUMN ai_summary JSON"
-
-        with db.engine.begin() as conn:
-            conn.execute(text(sql))
-        app.logger.info("Schema patch: added meeting_sessions.ai_summary")
+                with db.engine.begin() as conn:
+                    conn.execute(text(sql))
+                app.logger.info("Schema patch: added meeting_sessions.ai_summary")
     except Exception as exc:
         app.logger.warning("Schema patch meeting_sessions.ai_summary skipped: %s", exc)
+
+    try:
+        insp = inspect(db.engine)
+        if "mentor_chat_messages" not in insp.get_table_names():
+            return
+        col_names = {c["name"] for c in insp.get_columns("mentor_chat_messages")}
+        if "thread_key" not in col_names:
+            dialect = db.engine.dialect.name
+            if dialect == "postgresql":
+                sql = (
+                    "ALTER TABLE mentor_chat_messages "
+                    "ADD COLUMN IF NOT EXISTS thread_key VARCHAR(120) "
+                    "NOT NULL DEFAULT 'general'"
+                )
+            else:
+                sql = (
+                    "ALTER TABLE mentor_chat_messages "
+                    "ADD COLUMN thread_key VARCHAR(120) NOT NULL DEFAULT 'general'"
+                )
+
+            with db.engine.begin() as conn:
+                conn.execute(text(sql))
+            app.logger.info("Schema patch: added mentor_chat_messages.thread_key")
+    except Exception as exc:
+        app.logger.warning(
+            "Schema patch mentor_chat_messages.thread_key skipped: %s", exc
+        )
 
 
 def create_app(test_config=None):

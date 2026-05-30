@@ -37,6 +37,28 @@ class ApiNotification {
   bool get hasLinkedEntity =>
       entityType.isNotEmpty && entityId.isNotEmpty;
 
+  ApiNotification copyWith({
+    String? id,
+    String? title,
+    String? body,
+    bool? isRead,
+    String? createdAt,
+    String? type,
+    String? entityType,
+    String? entityId,
+  }) {
+    return ApiNotification(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      body: body ?? this.body,
+      isRead: isRead ?? this.isRead,
+      createdAt: createdAt ?? this.createdAt,
+      type: type ?? this.type,
+      entityType: entityType ?? this.entityType,
+      entityId: entityId ?? this.entityId,
+    );
+  }
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'title': title,

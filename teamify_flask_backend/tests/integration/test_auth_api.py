@@ -130,9 +130,11 @@ class TestAuthAPIIntegration:
 
     @patch("requests.get")
     @patch("requests.post")
-    def test_github_login(self, mock_post, mock_get, client):
+    def test_github_login(self, mock_post, mock_get, client, monkeypatch):
         """Test GitHub OAuth login flow."""
-        # Mock the token response
+        monkeypatch.setenv("GITHUB_CLIENT_ID", "test-github-client")
+        monkeypatch.setenv("GITHUB_CLIENT_SECRET", "test-github-secret")
+
         mock_token_resp = MagicMock()
         mock_token_resp.status_code = 200
         mock_token_resp.json.return_value = {"access_token": "gho_fake_token"}
@@ -154,9 +156,10 @@ class TestAuthAPIIntegration:
         payload = {"code": "fake_oauth_code"}
         resp = client.post("/api/auth/github", json=payload)
         
-        assert resp.status_code == 200
+        assert resp.status_code == 201
         data = resp.get_json()
         assert data["message"] == "GitHub login successful"
+        assert data["is_new_user"] is True
         assert "access_token" in data
         assert data["user"]["github_id"] == "123456"
         assert data["user"]["email"] == "github@example.com"
@@ -168,3 +171,65 @@ class TestAuthAPIIntegration:
             assert user is not None
             assert user.email == "github@example.com"
             assert user.role == "member"
+
+    @patch("services.oauth_user_service.verify_google_id_token")
+    def test_google_login_creates_user_with_profile(self, mock_verify, client):
+        """OAuth sign-up can persist the same profile fields as email register."""
+        mock_verify.return_value = {
+            "email": "google-profile@example.com",
+            "name": "Google Profile User",
+            "sub": "google-sub-profile",
+        }
+
+        resp = client.post(
+            "/api/auth/google",
+            json={
+                "id_token": "fake-token",
+                "user_type": "freelancer",
+                "professional_field": "Developer",
+                "experience_level": "Senior",
+                "availability": "Full Time",
+                "skills": "Flutter,Backend Development",
+            },
+        )
+
+        assert resp.status_code == 201
+        data = resp.get_json()
+        assert data["is_new_user"] is True
+        assert data["user"]["professional_field"] == "Developer"
+        assert "Flutter" in data["user"]["skills"]
+
+        with client.application.app_context():
+            user = User.query.filter_by(email="google-profile@example.com").first()
+            assert user is not None
+            assert user.professional_field == "Developer"
+            assert user.experience_level == "Senior"
+            assert user.availability == "Full Time"
+            assert user.skills == ["Flutter", "Backend Development"]
+
+    @patch("services.oauth_user_service.verify_google_id_token")
+    def test_google_login_creates_user(self, mock_verify, client):
+        """Test Google OAuth login persists a new user."""
+        mock_verify.return_value = {
+            "email": "google@example.com",
+            "name": "Google User",
+            "sub": "google-sub-123",
+        }
+
+        resp = client.post(
+            "/api/auth/google",
+            json={"id_token": "fake-token", "user_type": "freelancer"},
+        )
+
+        assert resp.status_code == 201
+        data = resp.get_json()
+        assert data["is_new_user"] is True
+        assert data["user"]["email"] == "google@example.com"
+        assert data["user"]["full_name"] == "Google User"
+        assert "access_token" in data
+
+        with client.application.app_context():
+            user = User.query.filter_by(email="google@example.com").first()
+            assert user is not None
+            assert user.user_type == "freelancer"
+            assert user.display_name.startswith("user_")
