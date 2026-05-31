@@ -468,7 +468,12 @@ def get_system_settings():
         "ai_mentorship_enabled": "true",
         "mfa_required": "false",
         "session_timeout_minutes": "60",
-        "max_login_attempts": "5"
+        "max_login_attempts": "5",
+        "rate_limiting_enabled": "true",
+        "api_requests_per_minute": "100",
+        "login_attempts_per_hour": "5",
+        "encryption_at_rest": "true",
+        "encryption_in_transit": "true",
     }
     settings = {}
     for key, def_val in defaults.items():
@@ -485,7 +490,12 @@ def get_system_settings():
         "ai_mentorship_enabled": settings["ai_mentorship_enabled"].lower() == "true",
         "mfa_required": settings["mfa_required"].lower() == "true",
         "session_timeout_minutes": int(settings["session_timeout_minutes"]),
-        "max_login_attempts": int(settings["max_login_attempts"])
+        "max_login_attempts": int(settings["max_login_attempts"]),
+        "rate_limiting_enabled": settings["rate_limiting_enabled"].lower() == "true",
+        "api_requests_per_minute": int(settings["api_requests_per_minute"]),
+        "login_attempts_per_hour": int(settings["login_attempts_per_hour"]),
+        "encryption_at_rest": settings["encryption_at_rest"].lower() == "true",
+        "encryption_in_transit": settings["encryption_in_transit"].lower() == "true",
     }
 
 def update_system_settings(data):

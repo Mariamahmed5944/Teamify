@@ -7,6 +7,7 @@ class ApiUser {
   final String fullName;
   final String email;
   final String role;
+  final String systemRole;
   final String projectRole;
   final String userType;
   final List<String> skills;
@@ -27,6 +28,7 @@ class ApiUser {
   final double qualityScore;
   final double attendanceRate;
   final double memberOnTimeRate;
+  final bool totpEnabled;
 
   const ApiUser({
     required this.id,
@@ -34,6 +36,7 @@ class ApiUser {
     required this.fullName,
     required this.email,
     required this.role,
+    this.systemRole = '',
     this.projectRole = '',
     required this.userType,
     this.skills = const [],
@@ -54,6 +57,7 @@ class ApiUser {
     this.qualityScore = 0,
     this.attendanceRate = 0,
     this.memberOnTimeRate = 0,
+    this.totpEnabled = false,
   });
 
   /// Best label for lists (full name, else @display_name).
@@ -84,7 +88,9 @@ class ApiUser {
     return '';
   }
 
-  bool get isAdmin => role.toLowerCase() == 'admin';
+  bool get isAdmin =>
+      (systemRole.isNotEmpty ? systemRole : role).toLowerCase() == 'admin';
+  bool get needsAdmin2faSetup => isAdmin && !totpEnabled;
   bool get isStudent => userType.toLowerCase() == 'student';
   bool get isFreelancer => userType.toLowerCase() == 'freelancer';
   /// Account approval workflow removed — always false.
@@ -142,7 +148,10 @@ class ApiUser {
       displayName: display,
       fullName: asString(json['full_name'] ?? json['fullName'], display),
       email: asString(json['email']),
-      role: projectRole.isNotEmpty ? projectRole : systemRole,
+      systemRole: systemRole,
+      role: systemRole.toLowerCase() == 'admin'
+          ? systemRole
+          : (projectRole.isNotEmpty ? projectRole : systemRole),
       projectRole: projectRole.isNotEmpty ? projectRole : systemRole,
       userType: asString(json['user_type'] ?? json['userType'], 'freelancer'),
       skills: asStringList(json['skills']),
@@ -183,6 +192,7 @@ class ApiUser {
       memberOnTimeRate: asDouble(
         json['member_on_time_rate'] ?? json['memberOnTimeRate'],
       ),
+      totpEnabled: asBool(json['totp_enabled'] ?? json['totpEnabled']),
     );
   }
 

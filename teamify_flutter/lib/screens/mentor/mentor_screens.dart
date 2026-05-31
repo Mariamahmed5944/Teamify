@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme.dart';
-import '../../core/routes.dart';
 import '../../core/session/session_controller.dart';
 import '../../data/models/api_helpers.dart';
 import '../../services/app_services.dart';

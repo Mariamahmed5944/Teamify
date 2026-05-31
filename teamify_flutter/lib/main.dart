@@ -16,6 +16,7 @@ import 'data/models/api_user.dart';
 import 'services/app_services.dart';
 
 import 'screens/auth/auth_screens.dart';
+import 'screens/auth/admin_two_fa_setup_screen.dart';
 import 'screens/auth/oauth_profile_setup_screen.dart';
 import 'screens/home/home_screens.dart';
 import 'screens/home/new_user_home_screen.dart';
@@ -146,7 +147,8 @@ class TeamifyApp extends StatelessWidget {
         // ── Home ─────────────────────────────────────────────────────────────
         R.freelancerHome: (_) => protected(const FreelancerHomeScreen()),
         R.studentHome: (_) => protected(const StudentHomeScreen()),
-        R.adminHome: (_) => protected(const AdminHomeScreen()),
+        R.adminHome: (_) => protected(const AdminShellScreen()),
+        R.adminTwoFaSetup: (_) => protected(const AdminTwoFASetupScreen()),
         R.newUserHome: (_) => const NewUserHomeScreen(),
         R.search: (_) => protected(const SearchScreen()),
         R.completeProfile: (_) => protected(const CompleteProfileScreen()),
@@ -298,7 +300,8 @@ class AdminRoute extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<SessionController>().currentUser;
+    final session = context.watch<SessionController>();
+    final user = session.currentUser;
     if (user?.isAdmin != true) {
       return Scaffold(
         appBar: AppBar(
@@ -335,6 +338,9 @@ class AdminRoute extends StatelessWidget {
           ),
         ),
       );
+    }
+    if (session.needsAdmin2faStep) {
+      return const AdminTwoFASetupScreen();
     }
     return child;
   }

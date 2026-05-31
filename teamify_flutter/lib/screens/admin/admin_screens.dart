@@ -1,4 +1,5 @@
 export 'admin_dashboard_screen.dart';
+export 'admin_users_screen.dart';
 export 'admin_projects_screen.dart';
 export 'admin_tasks_screen.dart';
 export 'admin_ai_screen.dart';
@@ -8,6 +9,9 @@ export 'admin_files_screen.dart';
 export 'admin_logs_screen.dart';
 export 'admin_security_screen.dart';
 export 'admin_settings_screen.dart';
+export 'admin_shell_screen.dart';
+export 'admin_analytics_screen.dart';
+export 'admin_leaderboard_screen.dart';
 
 import 'dart:typed_data';
 
@@ -26,6 +30,7 @@ import '../../core/session/session_controller.dart';
 import '../../services/app_services.dart';
 import '../../services/ai_service.dart';
 import '../../widgets/widgets.dart';
+import '../../widgets/admin_user_picker.dart';
 
 // ── Admin Bottom Nav ──────────────────────────────────────────────────────────
 class _AdminBottomNav extends StatelessWidget {
@@ -436,276 +441,6 @@ class _AdminHomeData {
   });
 }
 
-// ── Admin Users ───────────────────────────────────────────────────────────────
-class AdminUsersScreen extends StatefulWidget {
-  const AdminUsersScreen({super.key});
-
-  @override
-  State<AdminUsersScreen> createState() => _AdminUsersScreenState();
-}
-
-class _AdminUsersScreenState extends State<AdminUsersScreen> {
-  late Future<List<api.ApiUser>> _usersFuture;
-  final _searchCtrl = TextEditingController();
-  String _query = '';
-  int _totalUsers = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _usersFuture = _loadUsers();
-    _searchCtrl.addListener(() {
-      setState(() => _query = _searchCtrl.text.trim().toLowerCase());
-    });
-  }
-
-  @override
-  void dispose() {
-    _searchCtrl.dispose();
-    super.dispose();
-  }
-
-  Future<List<api.ApiUser>> _loadUsers() async {
-    final res = await context
-        .read<AppServices>()
-        .admin
-        .listUsers(perPage: 200)
-        .unwrap();
-    final items = res['items'] as List? ?? [];
-    if (mounted) {
-      setState(() => _totalUsers = res['total'] as int? ?? items.length);
-    }
-    return items
-        .map((item) => api.ApiUser.fromJson(item as Map<String, dynamic>))
-        .toList();
-  }
-
-  void _retryUsers() {
-    setState(() {
-      _usersFuture = _loadUsers();
-    });
-  }
-
-  Future<void> _openAddUser() async {
-    final created = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(builder: (_) => const AddUserScreen()),
-    );
-    if (created == true && mounted) _retryUsers();
-  }
-
-  void _openUserDetails(api.ApiUser u) {
-    Navigator.push<bool>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => UserDetailsAdminScreen(initialUser: u),
-      ),
-    ).then((removed) {
-      if (removed == true && mounted) _retryUsers();
-    });
-  }
-
-  Widget _userCard(api.ApiUser u) {
-    final status = u.accountStatusLabel;
-    final statusColor = u.accountStatus.toLowerCase() == 'approved'
-        ? AppColors.success
-        : u.isPending
-            ? AppColors.warning
-            : AppColors.error;
-    final meta = <String>[
-      if (u.email.isNotEmpty) u.email,
-      if (u.phone.isNotEmpty) u.phone,
-      if (u.userType.isNotEmpty) u.displayRole,
-    ].join(' · ');
-
-    return TCard(
-      margin: const EdgeInsets.only(bottom: 10),
-      onTap: () => _openUserDetails(u),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          TAvatar(initials: u.initials, radius: 22),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  u.primaryName,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                if (meta.isNotEmpty)
-                  Text(
-                    meta,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                if (u.bio.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    u.bio,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ],
-                if (u.skills.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    'Skills: ${u.skillsSummary}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              TChip(
-                label: status,
-                bg: statusColor.withValues(alpha: 0.12),
-                textColor: statusColor,
-              ),
-              const SizedBox(height: 4),
-              TChip(
-                label: u.displayRole,
-                bg: AppColors.primary.withValues(alpha: 0.1),
-                textColor: AppColors.primary,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios, size: 18),
-            onPressed: () => Navigator.canPop(context)
-                ? Navigator.pop(context)
-                : Navigator.pushReplacementNamed(context, R.adminHome)),
-        title: const Text('Users Management',
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        actions: [
-          IconButton(
-              icon: const Icon(Icons.person_add_outlined,
-                  color: AppColors.primary),
-              onPressed: _openAddUser)
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          if (_totalUsers > 0)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Text(
-                '$_totalUsers users in database',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.border)),
-            child: TextField(
-                controller: _searchCtrl,
-                decoration: const InputDecoration(
-                    hintText: 'Search users...',
-                    border: InputBorder.none,
-                    prefixIcon:
-                        Icon(Icons.search, color: AppColors.textSecondary))),
-          ),
-          const SizedBox(height: 12),
-          FutureBuilder<List<api.ApiUser>>(
-            future: _usersFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting &&
-                  !snapshot.hasData) {
-                return const Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Center(child: CircularProgressIndicator()),
-                );
-              }
-              if (snapshot.hasError || !snapshot.hasData) {
-                return Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    children: [
-                      Text(
-                        snapshot.error?.toString() ?? 'Unable to load users.',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: AppColors.textSecondary),
-                      ),
-                      TextButton(
-                        onPressed: _retryUsers,
-                        child: const Text('Retry'),
-                      ),
-                    ],
-                  ),
-                );
-              }
-              final allUsers = snapshot.data!;
-              final users = _query.isEmpty
-                  ? allUsers
-                  : allUsers.where((u) {
-                      final name = u.primaryName.toLowerCase();
-                      final role = u.displayRole.toLowerCase();
-                      final email = u.email.toLowerCase();
-                      final phone = u.phone.toLowerCase();
-                      final bio = u.bio.toLowerCase();
-                      return name.contains(_query) ||
-                          role.contains(_query) ||
-                          email.contains(_query) ||
-                          phone.contains(_query) ||
-                          bio.contains(_query);
-                    }).toList();
-              if (users.isEmpty) {
-                return Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Center(
-                      child: Text(
-                          _query.isEmpty ? 'No users found' : 'No results for "$_query"',
-                          style: const TextStyle(color: AppColors.textSecondary))),
-                );
-              }
-              return Column(
-                children: users.map(_userCard).toList(),
-              );
-            },
-          ),
-        ],
-      ),
-      bottomNavigationBar: _AdminBottomNav(current: 3, ctx: context),
-    );
-  }
-}
-
 // ── Admin Roles ───────────────────────────────────────────────────────────────
 class AdminRolesScreen extends StatefulWidget {
   const AdminRolesScreen({super.key});
@@ -746,7 +481,7 @@ class _AdminRolesScreenState extends State<AdminRolesScreen> {
   }
 
   Future<Map<String, dynamic>> _load() =>
-      context.read<AppServices>().admin.getAnalyticsOverview().unwrap();
+      context.read<AppServices>().admin.listRolePermissions().unwrap();
 
   @override
   Widget build(BuildContext context) {
@@ -903,16 +638,38 @@ class _SecurityChecklistScreenState extends State<SecurityChecklistScreen> {
   final List<Map<String, dynamic>> _items = [
     {
       'label': 'Enable Two-Factor Authentication',
-      'done': true,
+      'done': false,
       'priority': 'High'
     },
     {'label': 'Review Security Alerts', 'done': false, 'priority': 'High'},
     {'label': 'Update Password Policy', 'done': true, 'priority': 'Medium'},
     {'label': 'Audit User Permissions', 'done': false, 'priority': 'Medium'},
-    {'label': 'Enable Login Monitoring', 'done': true, 'priority': 'High'},
+    {'label': 'Enable Login Monitoring', 'done': false, 'priority': 'High'},
     {'label': 'Configure Rate Limiting', 'done': false, 'priority': 'Low'},
     {'label': 'Backup Encryption Keys', 'done': true, 'priority': 'High'},
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final admin = context.read<AppServices>().admin;
+      final summary = await admin.getSecuritySummary().unwrap();
+      final settings = await admin.getSettings().unwrap();
+      if (!mounted) return;
+      setState(() {
+        _items[0]['done'] = settings['mfa_required'] == true;
+        _items[1]['done'] = ((summary['open_alerts'] as num?) ?? 1) == 0;
+        _items[4]['done'] = (summary['recent_logins'] as List?)?.isNotEmpty == true;
+        _items[5]['done'] = settings['rate_limiting_enabled'] == true;
+      });
+    } catch (_) {}
+  }
+
   @override
   Widget build(BuildContext context) {
     final done = _items.where((i) => i['done'] == true).length;
@@ -2052,9 +1809,56 @@ class _RateLimitingScreenState extends State<RateLimitingScreen> {
   double _apiLimit = 100;
   double _loginLimit = 5;
   bool _enabled = true;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final settings = await context.read<AppServices>().admin.getSettings().unwrap();
+      if (mounted) {
+        setState(() {
+          _enabled = settings['rate_limiting_enabled'] as bool? ?? true;
+          _apiLimit = (settings['api_requests_per_minute'] as num?)?.toDouble() ?? 100;
+          _loginLimit = (settings['login_attempts_per_hour'] as num?)?.toDouble() ?? 5;
+        });
+      }
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _save() async {
+    try {
+      await context.read<AppServices>().admin.updateSettings({
+        'rate_limiting_enabled': _enabled,
+        'api_requests_per_minute': _apiLimit.toInt(),
+        'login_attempts_per_hour': _loginLimit.toInt(),
+      }).unwrap();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Rate limiting settings saved'), backgroundColor: AppColors.success),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Save failed: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -2122,17 +1926,51 @@ class _RateLimitingScreenState extends State<RateLimitingScreen> {
               activeColor: AppColors.primary),
         ])),
         const SizedBox(height: 16),
-        TButton(label: 'Save Settings', onTap: () {}),
+        TButton(label: 'Save Settings', onTap: _save),
       ]),
     );
   }
 }
 
 // ── Encryption Status ─────────────────────────────────────────────────────────
-class EncryptionStatusScreen extends StatelessWidget {
+class EncryptionStatusScreen extends StatefulWidget {
   const EncryptionStatusScreen({super.key});
   @override
+  State<EncryptionStatusScreen> createState() => _EncryptionStatusScreenState();
+}
+
+class _EncryptionStatusScreenState extends State<EncryptionStatusScreen> {
+  bool _atRest = true;
+  bool _inTransit = true;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final settings = await context.read<AppServices>().admin.getSettings().unwrap();
+      if (mounted) {
+        setState(() {
+          _atRest = settings['encryption_at_rest'] as bool? ?? true;
+          _inTransit = settings['encryption_in_transit'] as bool? ?? true;
+        });
+      }
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    final allSecure = _atRest && _inTransit;
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -2147,22 +1985,28 @@ class EncryptionStatusScreen extends StatelessWidget {
           Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                  color: AppColors.success.withValues(alpha: 0.1),
+                  color: (allSecure ? AppColors.success : AppColors.warning)
+                      .withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12)),
-              child: const Icon(Icons.lock_outline,
-                  color: AppColors.success, size: 28)),
+              child: Icon(Icons.lock_outline,
+                  color: allSecure ? AppColors.success : AppColors.warning,
+                  size: 28)),
           const SizedBox(width: 14),
-          const Expanded(
+          Expanded(
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                Text('All Data Encrypted',
-                    style: TextStyle(
+                Text(
+                    allSecure ? 'All Data Encrypted' : 'Encryption review needed',
+                    style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         color: AppColors.textPrimary,
                         fontSize: 16)),
-                Text('Military-grade encryption active',
-                    style: TextStyle(
+                Text(
+                    _atRest && _inTransit
+                        ? 'Military-grade encryption active'
+                        : 'At rest: ${_atRest ? 'on' : 'off'} · In transit: ${_inTransit ? 'on' : 'off'}',
+                    style: const TextStyle(
                         fontSize: 12, color: AppColors.textSecondary)),
               ])),
         ])),
@@ -2171,20 +2015,30 @@ class EncryptionStatusScreen extends StatelessWidget {
           {
             'label': 'Database Encryption',
             'alg': 'AES-256',
-            'status': 'Active'
+            'status': _atRest ? 'Active' : 'Inactive'
           },
           {
             'label': 'File Storage Encryption',
             'alg': 'RSA-2048',
-            'status': 'Active'
+            'status': _atRest ? 'Active' : 'Inactive'
           },
-          {'label': 'API Communication', 'alg': 'TLS 1.3', 'status': 'Active'},
-          {'label': 'Backup Encryption', 'alg': 'AES-256', 'status': 'Active'},
-        ].map((e) => TCard(
+          {
+            'label': 'API Communication',
+            'alg': 'TLS 1.3',
+            'status': _inTransit ? 'Active' : 'Inactive'
+          },
+          {
+            'label': 'Backup Encryption',
+            'alg': 'AES-256',
+            'status': _atRest ? 'Active' : 'Inactive'
+          },
+        ].map((e) {
+          final active = e['status'] == 'Active';
+          return TCard(
             margin: const EdgeInsets.only(bottom: 10),
             child: Row(children: [
-              const Icon(Icons.lock_outline,
-                  color: AppColors.success, size: 20),
+              Icon(Icons.lock_outline,
+                  color: active ? AppColors.success : AppColors.error, size: 20),
               const SizedBox(width: 12),
               Expanded(
                   child: Column(
@@ -2200,9 +2054,11 @@ class EncryptionStatusScreen extends StatelessWidget {
                   ])),
               TChip(
                   label: e['status']!,
-                  bg: AppColors.success.withValues(alpha: 0.1),
-                  textColor: AppColors.success),
-            ]))),
+                  bg: (active ? AppColors.success : AppColors.error)
+                      .withValues(alpha: 0.1),
+                  textColor: active ? AppColors.success : AppColors.error),
+            ]));
+        }),
       ]),
     );
   }
@@ -2216,11 +2072,35 @@ class TwoFAStatusScreen extends StatefulWidget {
 }
 
 class _TwoFAStatusScreenState extends State<TwoFAStatusScreen> {
-  bool _enabled = true;
+  bool _enabled = false;
   String _method = 'Authenticator App';
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final settings = await context.read<AppServices>().admin.getSettings().unwrap();
+      if (mounted) {
+        setState(() {
+          _enabled = settings['mfa_required'] == true;
+          _loading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -3966,6 +3846,26 @@ class SecurityMentorScreen extends StatelessWidget {
 // ── Force Logout ──────────────────────────────────────────────────────────────
 class ForceLogoutScreen extends StatelessWidget {
   const ForceLogoutScreen({super.key});
+
+  Future<void> _revokeUser(BuildContext context) async {
+    final user = await showAdminUserPicker(context, title: 'Force logout user');
+    if (user == null || !context.mounted) return;
+    try {
+      await context.read<AppServices>().admin.revokeSessions(user.id).unwrap();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Sessions revoked for ${user.primaryName}'), backgroundColor: AppColors.success),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Revoke failed: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final devices = [
@@ -4084,6 +3984,10 @@ class ForceLogoutScreen extends StatelessWidget {
                   label: 'Logout All Devices',
                   onTap: () =>
                       Navigator.pushNamed(context, R.logoutAllDevices)),
+              const SizedBox(height: 8),
+              TButton(
+                  label: 'Admin: Revoke User Sessions',
+                  onTap: () => _revokeUser(context)),
             ])),
       ]),
       bottomNavigationBar: _AdminBottomNav(current: 2, ctx: context),

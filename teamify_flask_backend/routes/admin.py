@@ -24,6 +24,8 @@ from models.log import Log
 
 from sqlalchemy import func
 import services.admin_service as admin_service
+from services.analytics_snapshot_service import compute_user_retention
+from utils.admin_audit import log_admin_action
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 bcrypt = Bcrypt()
@@ -90,18 +92,18 @@ def create_user():
     user_dict, err = admin_service.create_admin_user(
         full_name, email, password, role, bcrypt
     )
-    if err:
-        status = 409 if "already exists" in err.lower() else 400
-        return jsonify({"error": err}), status
+    if err or not user_dict:
+        status = 409 if err and "already exists" in err.lower() else 400
+        return jsonify({"error": err or "User creation failed"}), status
 
     admin_id = int(get_jwt_identity())
-    db.session.add(Log(
+    log_admin_action(
+        admin_id=admin_id,
         action="ADMIN_CREATE_USER",
         entity="User",
         entity_id=user_dict["id"],
         details=f"Admin {admin_id} created user {user_dict.get('email')}",
-        user_id=admin_id,
-    ))
+    )
     db.session.commit()
 
     return jsonify({"message": "User created successfully", "user": user_dict}), 201
@@ -124,14 +126,13 @@ def change_user_status(user_id):
 
     # Log action
     admin_id = int(get_jwt_identity())
-    log = Log(
+    log_admin_action(
+        admin_id=admin_id,
         action=f"USER_{action.upper()}",
         entity="User",
         entity_id=user_id,
         details=f"Admin {admin_id} executed action {action} on User {user_id}. Reason: {reason}",
-        user_id=admin_id
     )
-    db.session.add(log)
     db.session.commit()
 
     return jsonify({"message": f"User status updated successfully", "user": result}), 200
@@ -154,14 +155,13 @@ def change_user_role(user_id):
     db.session.commit()
 
     admin_id = int(get_jwt_identity())
-    log = Log(
+    log_admin_action(
+        admin_id=admin_id,
         action="CHANGE_ROLE",
         entity="User",
         entity_id=user_id,
         details=f"Admin {admin_id} changed User {user_id} role to {role}",
-        user_id=admin_id
     )
-    db.session.add(log)
     db.session.commit()
 
     return jsonify({"message": "User role updated successfully", "user": user.to_dict()}), 200
@@ -184,14 +184,14 @@ def reset_user_password(user_id):
     db.session.commit()
 
     admin_id = int(get_jwt_identity())
-    log = Log(
+    log_admin_action(
+        admin_id=admin_id,
         action="RESET_PASSWORD",
         entity="User",
         entity_id=user_id,
         details=f"Admin {admin_id} reset password of User {user_id}",
-        user_id=admin_id
+        severity="WARNING",
     )
-    db.session.add(log)
     db.session.commit()
 
     return jsonify({"message": "User password reset successfully"}), 200
@@ -213,14 +213,14 @@ def force_delete_user(user_id):
             "message": err or "Could not delete user",
         }), status
 
-    log = Log(
+    log_admin_action(
+        admin_id=admin_id,
         action="DELETE_USER",
         entity="User",
         entity_id=user_id,
         details=f"Admin {admin_id} deleted User {user_id}",
-        user_id=admin_id,
+        severity="WARNING",
     )
-    db.session.add(log)
     db.session.commit()
 
     return jsonify({"message": f"User {user_id} successfully deleted"}), 200
@@ -261,14 +261,13 @@ def reassign_project(project_id):
         return jsonify({"error": err}), 400
 
     admin_id = int(get_jwt_identity())
-    log = Log(
+    log_admin_action(
+        admin_id=admin_id,
         action="REASSIGN_PROJECT",
         entity="Project",
         entity_id=project_id,
         details=f"Admin {admin_id} reassigned Project {project_id} to User {new_owner_id}",
-        user_id=admin_id
     )
-    db.session.add(log)
     db.session.commit()
 
     return jsonify({"message": "Project owner reassigned successfully", "project": result}), 200
@@ -286,14 +285,14 @@ def force_delete_project(project_id):
     db.session.commit()
 
     admin_id = int(get_jwt_identity())
-    log = Log(
+    log_admin_action(
+        admin_id=admin_id,
         action="DELETE_PROJECT",
         entity="Project",
         entity_id=project_id,
         details=f"Admin {admin_id} deleted Project {project_id}",
-        user_id=admin_id
+        severity="WARNING",
     )
-    db.session.add(log)
     db.session.commit()
 
     return jsonify({"message": f"Project {project_id} deleted successfully"}), 200
@@ -348,14 +347,13 @@ def edit_task(task_id):
     db.session.commit()
 
     admin_id = int(get_jwt_identity())
-    log = Log(
+    log_admin_action(
+        admin_id=admin_id,
         action="UPDATE_TASK",
         entity="Task",
         entity_id=task_id,
         details=f"Admin {admin_id} updated Task {task_id}",
-        user_id=admin_id
     )
-    db.session.add(log)
     db.session.commit()
 
     return jsonify({"message": "Task updated successfully", "task": task.to_dict()}), 200
@@ -373,14 +371,14 @@ def force_delete_task(task_id):
     db.session.commit()
 
     admin_id = int(get_jwt_identity())
-    log = Log(
+    log_admin_action(
+        admin_id=admin_id,
         action="DELETE_TASK",
         entity="Task",
         entity_id=task_id,
         details=f"Admin {admin_id} deleted Task {task_id}",
-        user_id=admin_id
+        severity="WARNING",
     )
-    db.session.add(log)
     db.session.commit()
 
     return jsonify({"message": f"Task {task_id} deleted successfully"}), 200
@@ -464,14 +462,13 @@ def resolve_dispute(dispute_id):
 
     db.session.commit()
 
-    log = Log(
+    log_admin_action(
+        admin_id=admin_id,
         action="RESOLVE_DISPUTE",
         entity="Dispute",
         entity_id=dispute_id,
         details=f"Admin {admin_id} resolved Dispute {dispute_id} as {dispute.status}. Notes: {resolution}",
-        user_id=admin_id
     )
-    db.session.add(log)
     db.session.commit()
 
     return jsonify({"message": f"Dispute marked as {dispute.status}", "dispute": dispute.to_dict()}), 200
@@ -495,6 +492,25 @@ def broadcast_notification():
         return jsonify({"error": "title and body fields are required"}), 400
 
     notif_count = admin_service.send_system_announcement(target, title, body, specific_user_id)
+
+    admin_id = int(get_jwt_identity())
+    from models.admin_panel import BroadcastHistory
+
+    broadcast = BroadcastHistory()
+    broadcast.admin_id = admin_id
+    broadcast.target_audience = target
+    broadcast.title = title
+    broadcast.body = body
+    broadcast.recipient_count = notif_count
+    db.session.add(broadcast)
+    log_admin_action(
+        admin_id=admin_id,
+        action="BROADCAST_NOTIFICATION",
+        entity="Notification",
+        details=f"Broadcast '{title}' to {target} ({notif_count} recipients)",
+    )
+    db.session.commit()
+
     return jsonify({"message": f"Broadcast successfully sent to {notif_count} users"}), 200
 
 
@@ -546,14 +562,14 @@ def force_delete_file(file_id):
     db.session.commit()
 
     admin_id = int(get_jwt_identity())
-    log = Log(
+    log_admin_action(
+        admin_id=admin_id,
         action="DELETE_FILE",
         entity="FileMetadata",
         entity_id=file_id,
         details=f"Admin {admin_id} deleted File {file_id}",
-        user_id=admin_id
+        severity="WARNING",
     )
-    db.session.add(log)
     db.session.commit()
 
     return jsonify({"message": f"File pointer {file_id} successfully deleted"}), 200
@@ -574,6 +590,7 @@ def list_logs():
     action = request.args.get("action", "").strip()
     entity = request.args.get("entity", "").strip()
     user_id = request.args.get("user_id", type=int)
+    search = request.args.get("search", "").strip()
 
     if action:
         q = q.filter(Log.action == action.upper())
@@ -581,6 +598,10 @@ def list_logs():
         q = q.filter(Log.entity == entity)
     if user_id:
         q = q.filter(Log.user_id == user_id)
+    if search:
+        from sqlalchemy import or_
+        pattern = f"%{search}%"
+        q = q.filter(or_(Log.action.ilike(pattern), Log.entity.ilike(pattern), Log.details.ilike(pattern)))
 
     p = q.order_by(Log.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
     
@@ -628,14 +649,14 @@ def revoke_user_sessions(user_id):
     db.session.commit()
 
     admin_id = int(get_jwt_identity())
-    log = Log(
+    log_admin_action(
+        admin_id=admin_id,
         action="REVOKE_SESSION",
         entity="User",
         entity_id=user_id,
         details=f"Admin {admin_id} revoked all active sessions of User {user_id}",
-        user_id=admin_id
+        severity="WARNING",
     )
-    db.session.add(log)
     db.session.commit()
 
     return jsonify({"message": f"Sessions revoked successfully for User {user_id}"}), 200
@@ -684,7 +705,7 @@ def get_analytics():
         "most_active_users": active_users,
         "task_completion_rate": task_completion_rate,
         "project_success_rate": 100.0 if projects else 0.0,
-        "user_retention": 98.4  # Calculated retention metric
+        "user_retention": compute_user_retention()
     }), 200
 
 
@@ -708,14 +729,13 @@ def update_settings():
     updated = admin_service.update_system_settings(data)
     
     admin_id = int(get_jwt_identity())
-    log = Log(
+    log_admin_action(
+        admin_id=admin_id,
         action="UPDATE_SETTINGS",
         entity="SystemSetting",
         entity_id=0,
         details=f"Admin {admin_id} updated system-wide settings",
-        user_id=admin_id
     )
-    db.session.add(log)
     db.session.commit()
 
     return jsonify({"message": "Settings updated successfully", "settings": updated}), 200
@@ -878,6 +898,14 @@ def resolve_alert(alert_id):
     alert.resolved    = True
     alert.resolved_at = datetime.now(timezone.utc)
     alert.resolved_by = int(get_jwt_identity())
+    admin_id = int(get_jwt_identity())
+    log_admin_action(
+        admin_id=admin_id,
+        action="RESOLVE_ALERT",
+        entity="Alert",
+        entity_id=alert_id,
+        details=f"Admin {admin_id} resolved alert {alert_id}",
+    )
     db.session.commit()
     return jsonify({"message": "Alert resolved", "alert": alert.to_dict()}), 200
 
@@ -988,3 +1016,7 @@ def list_activity():
         "pages":    p.pages,
         "per_page": p.per_page,
     }), 200
+
+
+# Register extended admin panel routes (audit logs, analytics, roles, export)
+import routes.admin_panel_routes  # noqa: F401,E402

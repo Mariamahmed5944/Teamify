@@ -4,6 +4,7 @@ import '../../core/theme.dart';
 import '../../core/network/api_result.dart';
 import '../../services/app_services.dart';
 import '../../widgets/widgets.dart';
+import '../../widgets/admin_user_picker.dart';
 
 class AdminTasksScreen extends StatefulWidget {
   const AdminTasksScreen({super.key});
@@ -320,33 +321,10 @@ class _AdminTasksScreenState extends State<AdminTasksScreen> {
     );
   }
 
-  void _showReassignDialog(String taskId) {
-    final assignedToCtrl = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Reassign Task'),
-          content: TextField(
-            controller: assignedToCtrl,
-            decoration: const InputDecoration(hintText: 'Enter new User ID'),
-            keyboardType: TextInputType.number,
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-            ElevatedButton(
-              onPressed: () {
-                final id = assignedToCtrl.text.trim();
-                if (id.isEmpty) return;
-                Navigator.pop(context);
-                _updateTask(taskId, assignedTo: id);
-              },
-              child: const Text('Assign'),
-            ),
-          ],
-        );
-      },
-    );
+  Future<void> _showReassignDialog(String taskId) async {
+    final user = await showAdminUserPicker(context, title: 'Assign Task To');
+    if (user == null || !mounted) return;
+    await _updateTask(taskId, assignedTo: user.id);
   }
 
   void _showStatusDialog(String taskId, String currentStatus) {

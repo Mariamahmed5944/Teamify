@@ -14,12 +14,18 @@ class ApiResult<T> {
   /// UI should show an "offline / pending sync" indicator when this is true.
   final bool isOfflineQueued;
 
+  /// Human-readable failure message plus optional auth flags from the API.
+  final bool requires2fa;
+  final bool requires2faSetup;
+
   const ApiResult._({
     this.data,
     this.error,
     this.statusCode,
     this.isNetworkError = false,
     this.isOfflineQueued = false,
+    this.requires2fa = false,
+    this.requires2faSetup = false,
   });
 
   // ── Constructors ─────────────────────────────────────────────────────────
@@ -33,12 +39,16 @@ class ApiResult<T> {
     int? statusCode,
     bool isNetworkError = false,
     bool isOfflineQueued = false,
+    bool requires2fa = false,
+    bool requires2faSetup = false,
   }) =>
       ApiResult._(
         error: error,
         statusCode: statusCode,
         isNetworkError: isNetworkError,
         isOfflineQueued: isOfflineQueued,
+        requires2fa: requires2fa,
+        requires2faSetup: requires2faSetup,
       );
 
   /// Special constructor: mutation queued for later sync.
@@ -71,6 +81,8 @@ class ApiResult<T> {
       statusCode: statusCode,
       isNetworkError: isNetworkError,
       isOfflineQueued: isOfflineQueued,
+      requires2fa: requires2fa,
+      requires2faSetup: requires2faSetup,
     );
   }
 

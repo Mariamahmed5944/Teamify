@@ -150,7 +150,26 @@ def init_scheduler(app):
         name="Check task deadlines and send reminders",
         replace_existing=True,
     )
+    scheduler.add_job(
+        func=lambda: _run_analytics_snapshot(app),
+        trigger="cron",
+        hour=2,
+        minute=0,
+        id="admin_analytics_snapshot",
+        name="Daily admin analytics snapshot",
+        replace_existing=True,
+    )
     scheduler.start()
     # Run once immediately at startup
     check_reminders(app)
+    _run_analytics_snapshot(app)
     return scheduler
+
+
+def _run_analytics_snapshot(app):
+    with app.app_context():
+        from services.analytics_snapshot_service import create_daily_snapshot
+        try:
+            create_daily_snapshot()
+        except Exception:
+            pass

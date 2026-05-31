@@ -441,6 +441,27 @@ def login():
             "message": f"Your account has been rejected. Reason: {reason}",
         }), 403
 
+    # ─── Admin 2FA enforcement ─────────────────────────────────────────────────
+    requires_2fa_setup = False
+    requires_2fa_login = False
+    token_claims = {}
+    if (user.role or "").lower() == "admin":
+        if not user.totp_enabled or not user.totp_secret:
+            requires_2fa_setup = True
+        else:
+            totp_code = (data.get("totp_code") or data.get("token") or "").strip()
+            if not totp_code:
+                requires_2fa_login = True
+                token_claims["admin_2fa_pending"] = True
+            else:
+                from services.totp_service import verify_totp
+                if not verify_totp(user.totp_secret, str(totp_code)):
+                    log_security_event(
+                        "ADMIN_2FA_FAILED",
+                        user_id=user.id, ip=ip, severity="WARNING",
+                    )
+                    return jsonify({"error": "Invalid 2FA code"}), 401
+
     # --- Log the login ---
     log = Log(
         action="LOGIN",
@@ -459,7 +480,10 @@ def login():
     )
 
     # --- Generate JWT access + refresh tokens ---
-    access_token = create_access_token(identity=str(user.id))
+    access_token = create_access_token(
+        identity=str(user.id),
+        additional_claims=token_claims or None,
+    )
     refresh_token = create_refresh_token(identity=str(user.id))
 
     # ── VULN-002 FIX ─────────────────────────────────────────────────────────
@@ -471,6 +495,8 @@ def login():
         "user": user.to_dict(),
         "access_token": access_token,
         "refresh_token": refresh_token,
+        "requires_2fa_setup": requires_2fa_setup,
+        "requires_2fa_login": requires_2fa_login,
     }), 200)
     set_access_cookies(response, access_token)
     set_refresh_cookies(response, refresh_token)
@@ -993,7 +1019,10 @@ def setup_2fa():
         return jsonify({"error": "User not found"}), 404
 
     if user.totp_enabled:
-        return jsonify({"error": "Conflict", "message": "2FA is already enabled for this account."}), 409
+        claims = get_jwt() or {}
+        if not claims.get("admin_2fa_pending"):
+            return jsonify({"error": "Conflict", "message": "2FA is already enabled for this account."}), 409
+        user.totp_enabled = False
 
     # Generate a new secret (not yet confirmed / enabled)
     secret = generate_totp_secret()
@@ -1081,16 +1110,94 @@ def verify_2fa():
         return jsonify({"error": "Invalid or expired TOTP token"}), 400
 
     # First successful verification activates 2FA
+    activated = False
     if not user.totp_enabled:
         user.totp_enabled = True
         db.session.commit()
+        activated = True
 
     log_security_event(
         "2FA_VERIFIED",
         user_id=user_id,
         ip=request.remote_addr or "unknown",
     )
-    return jsonify({"message": "2FA verified successfully. Two-factor authentication is now active."}), 200
+
+    payload = {
+        "message": "2FA verified successfully. Two-factor authentication is now active.",
+        "user": user.to_dict(),
+    }
+
+    claims = get_jwt() or {}
+    if activated or claims.get("admin_2fa_pending"):
+        access_token = create_access_token(identity=str(user.id))
+        refresh_token = create_refresh_token(identity=str(user.id))
+        payload["access_token"] = access_token
+        payload["refresh_token"] = refresh_token
+        response = make_response(jsonify(payload), 200)
+        set_access_cookies(response, access_token)
+        set_refresh_cookies(response, refresh_token)
+        return response
+
+    return jsonify(payload), 200
+
+
+# ─── POST /api/auth/2fa/confirm-login ─────────────────────────────────────────
+# Admin login step 2: confirm TOTP after password login issued a pending token.
+
+@auth_bp.route("/2fa/confirm-login", methods=["POST"])
+@jwt_required()
+def confirm_2fa_login():
+    """Verify admin TOTP after password login and issue a full admin session."""
+    from services.totp_service import verify_totp
+    from services.audit_log_service import log_security_event
+
+    user_id = int(get_jwt_identity())
+    user = User.query.filter_by(id=user_id).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    if (user.role or "").lower() != "admin":
+        return jsonify({"error": "Forbidden", "message": "Admin access required."}), 403
+
+    if not user.totp_enabled or not user.totp_secret:
+        return jsonify({
+            "error": "Bad Request",
+            "message": "Complete 2FA setup before confirming login.",
+            "requires_2fa_setup": True,
+        }), 400
+
+    data = request.get_json(silent=True, force=True) or {}
+    token = (data.get("token") or data.get("totp_code") or "").strip()
+    if not token:
+        return jsonify({"error": "Bad Request", "message": "Authenticator code is required."}), 400
+
+    if not verify_totp(user.totp_secret, str(token)):
+        log_security_event(
+            "ADMIN_2FA_FAILED",
+            user_id=user_id,
+            ip=request.remote_addr or "unknown",
+            severity="WARNING",
+        )
+        return jsonify({"error": "Invalid or expired TOTP token"}), 400
+
+    access_token = create_access_token(identity=str(user.id))
+    refresh_token = create_refresh_token(identity=str(user.id))
+
+    log_security_event(
+        "ADMIN_2FA_LOGIN_CONFIRMED",
+        user_id=user_id,
+        ip=request.remote_addr or "unknown",
+    )
+
+    response = make_response(jsonify({
+        "message": "Admin login confirmed.",
+        "user": user.to_dict(),
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+    }), 200)
+    set_access_cookies(response, access_token)
+    set_refresh_cookies(response, refresh_token)
+    return response
 
 
 # ─── DELETE /api/auth/2fa/disable ────────────────────────────────────────────

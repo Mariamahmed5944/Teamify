@@ -184,6 +184,7 @@ class User(db.Model):
             "workload_ratio": self.workload_ratio,
             "account_status": self.account_status,
             "account_status_note": self.account_status_note,
+            "totp_enabled": bool(self.totp_enabled),
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }

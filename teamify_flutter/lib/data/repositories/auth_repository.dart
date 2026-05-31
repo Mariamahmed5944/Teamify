@@ -9,11 +9,15 @@ class AuthResult {
   final ApiUser? user;
   final bool pendingApproval;
   final String message;
+  final bool requires2faSetup;
+  final bool requires2faLogin;
 
   const AuthResult({
     this.user,
     this.pendingApproval = false,
     this.message = '',
+    this.requires2faSetup = false,
+    this.requires2faLogin = false,
   });
 }
 
@@ -32,10 +36,19 @@ class AuthRepository {
   Future<AuthResult> login({
     required String email,
     required String password,
+    String? totpCode,
   }) async {
+    final data = <String, dynamic>{
+      'email': email,
+      'password': password,
+    };
+    if (totpCode != null && totpCode.isNotEmpty) {
+      data['totp_code'] = totpCode;
+    }
+
     final response = await _client.post<Map<String, dynamic>>(
       '/api/auth/login',
-      data: {'email': email, 'password': password},
+      data: data,
       options: Options(extra: {'skipAuth': true}),
     );
     final payload = responseMap(response.data);
@@ -47,6 +60,8 @@ class AuthRepository {
     return AuthResult(
       user: user,
       message: asString(payload['message']),
+      requires2faSetup: payload['requires_2fa_setup'] == true,
+      requires2faLogin: payload['requires_2fa_login'] == true,
     );
   }
 
@@ -185,11 +200,23 @@ class AuthRepository {
   }
 
   /// POST /api/auth/2fa/verify
-  Future<void> verify2fa(String token) async {
-    await _client.post<dynamic>(
+  Future<ApiUser?> verify2fa(String token) async {
+    final response = await _client.post<Map<String, dynamic>>(
       '/api/auth/2fa/verify',
       data: {'token': token},
     );
+    await _saveTokens(response.data);
+    return _extractUser(response.data);
+  }
+
+  /// POST /api/auth/2fa/confirm-login
+  Future<ApiUser?> confirm2faLogin(String token) async {
+    final response = await _client.post<Map<String, dynamic>>(
+      '/api/auth/2fa/confirm-login',
+      data: {'token': token},
+    );
+    await _saveTokens(response.data);
+    return _extractUser(response.data);
   }
 
   /// DELETE /api/auth/2fa/disable

@@ -25,6 +25,10 @@ class _AdminLogsScreenState extends State<AdminLogsScreen> {
   void initState() {
     super.initState();
     _loadLogs();
+    _searchCtrl.addListener(() {
+      setState(() => _currentPage = 1);
+      _loadLogs();
+    });
   }
 
   @override
@@ -41,6 +45,7 @@ class _AdminLogsScreenState extends State<AdminLogsScreen> {
       final res = await context.read<AppServices>().admin.listLogs(
         action: _searchAction,
         entity: _searchEntity,
+        search: _searchCtrl.text.trim(),
         page: _currentPage,
         perPage: 20,
       ).unwrap();
@@ -81,7 +86,26 @@ class _AdminLogsScreenState extends State<AdminLogsScreen> {
           // Filter Row
           Padding(
             padding: const EdgeInsets.all(12),
-            child: Row(
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: TextField(
+                    controller: _searchCtrl,
+                    decoration: const InputDecoration(
+                      hintText: 'Search logs by action, entity, or details…',
+                      border: InputBorder.none,
+                      prefixIcon: Icon(Icons.search, color: AppColors.textSecondary, size: 20),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
               children: [
                 Expanded(
                   child: Container(
@@ -143,6 +167,8 @@ class _AdminLogsScreenState extends State<AdminLogsScreen> {
                     ),
                   ),
                 ),
+              ],
+            ),
               ],
             ),
           ),

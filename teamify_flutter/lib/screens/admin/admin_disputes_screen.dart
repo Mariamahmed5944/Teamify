@@ -68,6 +68,90 @@ class _AdminDisputesScreenState extends State<AdminDisputesScreen> {
     }
   }
 
+  Future<void> _openDisputeDetail(String disputeId) async {
+    try {
+      final res = await context.read<AppServices>().admin.getDisputeDetail(disputeId).unwrap();
+      if (!mounted) return;
+      final dispute = res['dispute'] as Map<String, dynamic>? ?? {};
+      final reporter = dispute['reporter'] as Map<String, dynamic>?;
+      final accused = dispute['accused'] as Map<String, dynamic>?;
+      final resolutionCtrl = TextEditingController();
+
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        builder: (ctx) {
+          return Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Dispute #${dispute['id']}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                  const SizedBox(height: 8),
+                  Text(dispute['subject']?.toString() ?? '', style: const TextStyle(fontWeight: FontWeight.w600)),
+                  Text('Category: ${dispute['category']}', style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                  const SizedBox(height: 12),
+                  Text(dispute['description']?.toString() ?? ''),
+                  const Divider(height: 24),
+                  if (reporter != null)
+                    Text('Reporter: ${reporter['full_name'] ?? reporter['display_name']} (${reporter['email']})'),
+                  if (accused != null)
+                    Text('Accused: ${accused['full_name'] ?? accused['display_name']} (${accused['email']})'),
+                  if (dispute['project_name'] != null) Text('Project: ${dispute['project_name']}'),
+                  if (dispute['status'] == 'open' || dispute['status'] == 'pending') ...[
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: resolutionCtrl,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        labelText: 'Resolution notes',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.pop(ctx);
+                              _resolveDispute(disputeId, 'resolve', resolutionCtrl.text.trim());
+                            },
+                            child: const Text('Resolve'),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () {
+                              Navigator.pop(ctx);
+                              _resolveDispute(disputeId, 'reject', resolutionCtrl.text.trim());
+                            },
+                            child: const Text('Dismiss'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ] else if (dispute['resolution'] != null)
+                    Text('Resolution: ${dispute['resolution']}', style: const TextStyle(fontStyle: FontStyle.italic)),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not load dispute: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -163,6 +247,7 @@ class _AdminDisputesScreenState extends State<AdminDisputesScreen> {
 
                             return TCard(
                               margin: const EdgeInsets.only(bottom: 10),
+                              onTap: () => _openDisputeDetail(d['id'].toString()),
                               child: Padding(
                                 padding: const EdgeInsets.all(14),
                                 child: Column(

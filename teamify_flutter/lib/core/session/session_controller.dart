@@ -17,11 +17,17 @@ class SessionController extends ChangeNotifier {
   SessionStatus status = SessionStatus.unknown;
   ApiUser? currentUser;
   String? lastMessage;
+  bool admin2faLoginPending = false;
+  bool admin2faSetupRequired = false;
 
   SessionController(this._authRepository);
 
   bool get isAuthenticated => status == SessionStatus.authenticated;
   bool get isPendingApproval => status == SessionStatus.pendingApproval;
+  bool get needsAdmin2faStep =>
+      currentUser?.needsAdmin2faSetup == true ||
+      admin2faLoginPending ||
+      admin2faSetupRequired;
 
   Future<void> restoreSession() async {
     status = SessionStatus.unknown;
@@ -51,9 +57,10 @@ class SessionController extends ChangeNotifier {
   Future<AuthResult> login({
     required String email,
     required String password,
+    String? totpCode,
   }) async {
     final result =
-        await _authRepository.login(email: email, password: password);
+        await _authRepository.login(email: email, password: password, totpCode: totpCode);
     currentUser = result.user;
     final hasSession = await _authRepository.hasSavedSession();
     if (currentUser == null && hasSession) {
@@ -62,6 +69,8 @@ class SessionController extends ChangeNotifier {
       } catch (_) {}
     }
     lastMessage = result.message;
+    admin2faLoginPending = result.requires2faLogin;
+    admin2faSetupRequired = result.requires2faSetup;
     if (currentUser == null && !hasSession) {
       status = SessionStatus.unauthenticated;
     } else {
@@ -98,6 +107,12 @@ class SessionController extends ChangeNotifier {
     return result;
   }
 
+  void clearAdmin2faLoginPending() {
+    admin2faLoginPending = false;
+    admin2faSetupRequired = false;
+    notifyListeners();
+  }
+
   /// Update in-memory user after profile edits (avoids extra /me round-trip).
   void setCurrentUser(ApiUser? user) {
     currentUser = user;
@@ -114,6 +129,8 @@ class SessionController extends ChangeNotifier {
   Future<void> logout() async {
     await _authRepository.logout();
     currentUser = null;
+    admin2faLoginPending = false;
+    admin2faSetupRequired = false;
     status = SessionStatus.unauthenticated;
     globalDisposableRegistry.disposeAll();
     notifyListeners();

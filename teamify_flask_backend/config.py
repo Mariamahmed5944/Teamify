@@ -90,3 +90,9 @@ class Config:
 
     # Optional: Anthropic Claude API key for mentor report generation
     ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+
+    # Redis (optional — falls back to in-memory when unset)
+    REDIS_URL = os.getenv("REDIS_URL", "")
+    CACHE_TYPE = "RedisCache" if REDIS_URL else "SimpleCache"
+    CACHE_REDIS_URL = REDIS_URL or None
+    CACHE_DEFAULT_TIMEOUT = int(os.getenv("CACHE_DEFAULT_TIMEOUT", 300))

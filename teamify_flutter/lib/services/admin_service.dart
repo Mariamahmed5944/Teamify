@@ -186,15 +186,17 @@ class AdminService with ServiceErrorHandler {
   Future<ApiResult<Map<String, dynamic>>> listLogs({
     String action = '',
     String entity = '',
+    String search = '',
     int? userId,
     int page = 1,
     int perPage = 50,
   }) =>
       _dedup.deduplicate(
-        'admin_logs_${action}_${entity}_${userId}_$page',
+        'admin_logs_${action}_${entity}_${search}_${userId}_$page',
         () => guard(() => _repo.listLogs(
               action: action,
               entity: entity,
+              search: search,
               userId: userId,
               page: page,
               perPage: perPage,
@@ -296,8 +298,40 @@ class AdminService with ServiceErrorHandler {
   }
 
   Future<ApiResult<void>> resolveAlert(String id) async {
-    return ApiResult.success(null);
+    return guard(() => _repo.resolveAlert(id));
   }
+
+  Future<ApiResult<Map<String, dynamic>>> getDisputeDetail(String id) =>
+      guard(() => _repo.getDisputeDetail(id));
+
+  Future<ApiResult<Map<String, dynamic>>> getAnalyticsTimeSeries({String metric = 'users', int days = 30}) =>
+      guard(() => _repo.getAnalyticsTimeSeries(metric: metric, days: days));
+
+  Future<ApiResult<Map<String, dynamic>>> listBroadcastHistory({int page = 1}) =>
+      guard(() => _repo.listBroadcastHistory(page: page));
+
+  Future<ApiResult<Map<String, dynamic>>> listRolePermissions() =>
+      guard(() => _repo.listRolePermissions());
+
+  Future<ApiResult<void>> updateRolePermissions(String role, Map<String, dynamic> permissions) =>
+      guard(() => _repo.updateRolePermissions(role, permissions));
+
+  Future<ApiResult<Map<String, dynamic>>> getRatingsLeaderboard({int page = 1}) =>
+      guard(() => _repo.getRatingsLeaderboard(page: page));
+
+  Future<ApiResult<Map<String, dynamic>>> getFeedbackLeaderboard({int page = 1}) =>
+      guard(() => _repo.getFeedbackLeaderboard(page: page));
+
+  Future<ApiResult<String>> exportAnalytics(String type) =>
+      guard(() => _repo.exportAnalytics(type));
+
+  Future<ApiResult<Map<String, dynamic>>> listAuditLogs({
+    String action = '',
+    String severity = '',
+    String search = '',
+    int page = 1,
+  }) =>
+      guard(() => _repo.listAuditLogs(action: action, severity: severity, search: search, page: page));
 
   Future<ApiResult<List<dynamic>>> getAdminActivity() async {
     final logsResult = await listLogs(perPage: 10);

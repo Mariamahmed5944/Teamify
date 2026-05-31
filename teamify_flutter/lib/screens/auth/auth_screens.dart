@@ -15,7 +15,10 @@ import 'package:url_launcher/url_launcher.dart';
 Future<void> _navigateToCorrectHome(BuildContext context, String role,
     {String? email, String? name, bool isNew = false}) async {
   if (role == 'Admin') {
-    Navigator.pushNamedAndRemoveUntil(context, R.adminHome, (_) => false);
+    final session = context.read<SessionController>();
+    final route =
+        session.needsAdmin2faStep ? R.adminTwoFaSetup : R.adminHome;
+    Navigator.pushNamedAndRemoveUntil(context, route, (_) => false);
     return;
   }
 
@@ -64,7 +67,9 @@ Future<void> _navigateToCorrectHome(BuildContext context, String role,
 String _homeRouteForSession(SessionController session) {
   final user = session.currentUser;
   if (user == null) return R.roleSelection;
-  if (user.isAdmin) return R.adminHome;
+  if (user.isAdmin) {
+    return session.needsAdmin2faStep ? R.adminTwoFaSetup : R.adminHome;
+  }
   if (user.isStudent) return R.studentHome;
   return R.freelancerHome;
 }
@@ -86,11 +91,16 @@ void _navigateFromSession(BuildContext context, {bool isNew = false}) {
 }
 
 void _showAuthError(BuildContext context, Object error) {
-  final message = error is ApiException
-      ? error.message
-      : error is Exception || error is Error
-          ? error.toString().replaceFirst('Exception: ', '')
-          : 'Something went wrong. Please try again.';
+  final String message;
+  if (error is ApiException) {
+    message = error.message;
+  } else if (error is String && error.trim().isNotEmpty) {
+    message = error;
+  } else if (error is Exception || error is Error) {
+    message = error.toString().replaceFirst('Exception: ', '');
+  } else {
+    message = 'Something went wrong. Please try again.';
+  }
   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
 }
 
@@ -676,27 +686,36 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_loading) return;
     setState(() => _loading = true);
     final session = context.read<SessionController>();
-    try {
-      await session.login(
-        email: _emailCtrl.text.trim(),
-        password: _passwordCtrl.text,
-      );
-      if (!mounted) return;
+    final auth = context.read<AppServices>().auth;
+    final result = await auth.login(
+      email: _emailCtrl.text.trim(),
+      password: _passwordCtrl.text,
+    );
+    if (!mounted) return;
+
+    if (result.isSuccess) {
       if (session.isAuthenticated || session.isPendingApproval) {
         _navigateFromSessionAfterLogin(context);
-        return;
+      } else {
+        _showAuthError(context, 'Login failed. Please check your credentials.');
       }
-      _showAuthError(context, 'Login failed. Please check your credentials.');
-    } catch (error) {
-      if (!mounted) return;
-      if (session.isAuthenticated || session.isPendingApproval) {
-        _navigateFromSessionAfterLogin(context);
-        return;
-      }
-      _showAuthError(context, error);
-    } finally {
-      if (mounted) setState(() => _loading = false);
+      setState(() => _loading = false);
+      return;
     }
+
+    // Session may still be valid if tokens were saved before a follow-up error.
+    if (session.isAuthenticated || session.isPendingApproval) {
+      setState(() => _loading = false);
+      _navigateFromSessionAfterLogin(context);
+      return;
+    }
+
+    setState(() => _loading = false);
+    final err = result.error?.trim();
+    _showAuthError(
+      context,
+      (err != null && err.isNotEmpty) ? err : 'Login failed. Please check your credentials.',
+    );
   }
 
   // Uses OAuth 2.0 implicit flow — redirects to Google, returns id_token in URL fragment.

@@ -21,6 +21,11 @@ from flasgger import Swagger
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_socketio import SocketIO
+
+try:
+    from flask_caching import Cache  # pyright: ignore[reportMissingImports]
+except ImportError:  # pragma: no cover
+    Cache = None  # type: ignore[misc,assignment]
 from config import Config
 from models import db
 
@@ -30,7 +35,11 @@ from models import db
 # ---------------------------------------------------------------------------
 
 # Module-level limiter so routes can import it without circular deps
-limiter = Limiter(key_func=get_remote_address, storage_uri="memory://")
+_redis_url = os.getenv("REDIS_URL", "").strip()
+_limiter_storage = _redis_url if _redis_url else "memory://"
+limiter = Limiter(key_func=get_remote_address, storage_uri=_limiter_storage)
+
+cache = Cache() if Cache is not None else None
 
 # SocketIO singleton — do NOT pass the app yet; we call init_app() inside
 # create_app() so test configs are respected.
@@ -145,6 +154,8 @@ def create_app(test_config=None):
     jwt = JWTManager(app)
     Bcrypt(app)
     limiter.init_app(app)
+    if cache is not None:
+        cache.init_app(app)
 
     # Re-initialise SocketIO with the concrete app instance.
     # All parameters are already set on the singleton; init_app() just wires
@@ -267,7 +278,6 @@ def create_app(test_config=None):
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(search_bp)
     app.register_blueprint(admin_bp)
-    app.register_blueprint(admin_bp, url_prefix="/admin", name="admin_legacy")
     app.register_blueprint(files_bp)
     app.register_blueprint(comments_bp)
     app.register_blueprint(feedback_bp)
@@ -332,6 +342,12 @@ def create_app(test_config=None):
         from models.meeting_session import MeetingSession  # noqa: F401
         from models.mentor_chat_message import MentorChatMessage  # noqa: F401
         from models.token_blocklist import TokenBlocklist  # noqa: F401
+        from models.admin_panel import (  # noqa: F401
+            AdminAnalyticsSnapshot,
+            BroadcastHistory,
+            RolePermission,
+            AdminSession,
+        )
 
         db.create_all()
         _apply_runtime_schema_patches(app)

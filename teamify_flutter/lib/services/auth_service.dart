@@ -29,11 +29,15 @@ class AuthService with ServiceErrorHandler {
   Future<ApiResult<ApiUser?>> login({
     required String email,
     required String password,
+    String? totpCode,
   }) =>
       guard(() async {
-        // Prevent cross-account data leakage from SWR/offline caches.
         await _cache.clearAll();
-        final result = await _session.login(email: email, password: password);
+        final result = await _session.login(
+          email: email,
+          password: password,
+          totpCode: totpCode,
+        );
         return result.user;
       });
 
@@ -106,8 +110,11 @@ class AuthService with ServiceErrorHandler {
   Future<ApiResult<Map<String, dynamic>>> setup2fa() =>
       guard(() => _repo.setup2fa());
 
-  Future<ApiResult<void>> verify2fa(String token) =>
+  Future<ApiResult<ApiUser?>> verify2fa(String token) =>
       guard(() => _repo.verify2fa(token));
+
+  Future<ApiResult<ApiUser?>> confirm2faLogin(String token) =>
+      guard(() => _repo.confirm2faLogin(token));
 
   Future<ApiResult<void>> disable2fa(String token) =>
       guard(() => _repo.disable2fa(token));

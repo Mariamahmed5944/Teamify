@@ -45,6 +45,20 @@ mixin ServiceErrorHandler {
         return ApiResult.failure(
           detail,
           statusCode: apiError.statusCode,
+          requires2fa: apiError.requires2fa,
+          requires2faSetup: apiError.requires2faSetup,
+        );
+      }
+      if (e.response?.data != null) {
+        final parsed = ApiException.fromResponse(
+          e.response?.statusCode,
+          e.response?.data,
+        );
+        return ApiResult.failure(
+          parsed.message,
+          statusCode: parsed.statusCode,
+          requires2fa: parsed.requires2fa,
+          requires2faSetup: parsed.requires2faSetup,
         );
       }
       if (_isDioNetworkError(e)) {

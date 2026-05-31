@@ -224,6 +224,7 @@ class AdminRepository {
   Future<Map<String, dynamic>> listLogs({
     String action = '',
     String entity = '',
+    String search = '',
     int? userId,
     int page = 1,
     int perPage = 50,
@@ -231,6 +232,7 @@ class AdminRepository {
     final Map<String, dynamic> qParams = {
       'action': action,
       'entity': entity,
+      'search': search,
       'page': page,
       'per_page': perPage,
     };
@@ -241,6 +243,86 @@ class AdminRepository {
       queryParameters: qParams,
     );
     return responseMap(response.data);
+  }
+
+  Future<void> resolveAlert(String id) async {
+    await _client.patch<dynamic>('/admin/alerts/$id/resolve');
+  }
+
+  Future<Map<String, dynamic>> listAuditLogs({
+    String action = '',
+    String severity = '',
+    String search = '',
+    int page = 1,
+    int perPage = 50,
+  }) async {
+    final response = await _client.get<Map<String, dynamic>>(
+      '/admin/audit-logs',
+      queryParameters: {
+        'action': action,
+        'severity': severity,
+        'search': search,
+        'page': page,
+        'per_page': perPage,
+      },
+    );
+    return responseMap(response.data);
+  }
+
+  Future<Map<String, dynamic>> getDisputeDetail(String id) async {
+    final response = await _client.get<Map<String, dynamic>>('/admin/disputes/$id');
+    return responseMap(response.data);
+  }
+
+  Future<Map<String, dynamic>> getAnalyticsTimeSeries({String metric = 'users', int days = 30}) async {
+    final response = await _client.get<Map<String, dynamic>>(
+      '/admin/analytics/time-series',
+      queryParameters: {'metric': metric, 'days': days},
+    );
+    return responseMap(response.data);
+  }
+
+  Future<Map<String, dynamic>> listBroadcastHistory({int page = 1, int perPage = 20}) async {
+    final response = await _client.get<Map<String, dynamic>>(
+      '/admin/notifications/history',
+      queryParameters: {'page': page, 'per_page': perPage},
+    );
+    return responseMap(response.data);
+  }
+
+  Future<Map<String, dynamic>> listRolePermissions() async {
+    final response = await _client.get<Map<String, dynamic>>('/admin/roles');
+    return responseMap(response.data);
+  }
+
+  Future<void> updateRolePermissions(String role, Map<String, dynamic> permissions) async {
+    await _client.put<dynamic>('/admin/roles/$role', data: {'permissions': permissions});
+  }
+
+  Future<Map<String, dynamic>> getRatingsLeaderboard({int page = 1}) async {
+    final response = await _client.get<Map<String, dynamic>>(
+      '/admin/ratings/leaderboard',
+      queryParameters: {'page': page},
+    );
+    return responseMap(response.data);
+  }
+
+  Future<Map<String, dynamic>> getFeedbackLeaderboard({int page = 1}) async {
+    final response = await _client.get<Map<String, dynamic>>(
+      '/admin/feedback/leaderboard',
+      queryParameters: {'page': page},
+    );
+    return responseMap(response.data);
+  }
+
+  Future<String> exportAnalytics(String type) async {
+    final response = await _client.get<dynamic>(
+      '/admin/analytics/export',
+      queryParameters: {'type': type, 'format': 'csv'},
+    );
+    final data = response.data;
+    if (data is String) return data;
+    return data?.toString() ?? '';
   }
 
   // ── 10. Security Center ─────────────────────────────────────────────────────

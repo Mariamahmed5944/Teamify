@@ -6,12 +6,16 @@ class ApiException implements Exception {
   final int? statusCode;
   final String? code;
   final List<String> validationMessages;
+  final bool requires2fa;
+  final bool requires2faSetup;
 
   const ApiException(
     this.message, {
     this.statusCode,
     this.code,
     this.validationMessages = const [],
+    this.requires2fa = false,
+    this.requires2faSetup = false,
   });
 
   bool get isPendingApproval => code == 'Account Pending Approval';
@@ -29,20 +33,35 @@ class ApiException implements Exception {
         );
         if (text.trimLeft().startsWith('{')) {
           final decoded = jsonDecode(text);
-          if (decoded is Map<String, dynamic>) {
-            return ApiException.fromResponse(statusCode, decoded);
+          if (decoded is Map) {
+            return ApiException.fromResponse(
+              statusCode,
+              Map<String, dynamic>.from(decoded),
+            );
           }
         }
       } catch (_) {}
     }
-    if (data is Map<String, dynamic>) {
-      final code = data['error']?.toString();
-      final details = data['details'];
+    if (data is String && data.trimLeft().startsWith('{')) {
+      try {
+        final decoded = jsonDecode(data);
+        if (decoded is Map) {
+          return ApiException.fromResponse(
+            statusCode,
+            Map<String, dynamic>.from(decoded),
+          );
+        }
+      } catch (_) {}
+    }
+    if (data is Map) {
+      final map = Map<String, dynamic>.from(data);
+      final code = map['error']?.toString();
+      final details = map['details'];
       final validationMessages = details is List
           ? details.map((e) => e.toString()).toList()
-          : _flattenMessages(data['messages']);
-      final message = data['message']?.toString() ??
-          data['detail']?.toString() ??
+          : _flattenMessages(map['messages']);
+      final message = map['message']?.toString() ??
+          map['detail']?.toString() ??
           (validationMessages.isNotEmpty
               ? validationMessages.join('\n')
               : null) ??
@@ -54,6 +73,8 @@ class ApiException implements Exception {
         statusCode: statusCode,
         code: code,
         validationMessages: validationMessages,
+        requires2fa: map['requires_2fa'] == true,
+        requires2faSetup: map['requires_2fa_setup'] == true,
       );
     }
 

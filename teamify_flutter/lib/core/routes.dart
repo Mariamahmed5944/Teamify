@@ -108,6 +108,7 @@ class R {
   static const adminUserDetails = '/admin-user-details';
   static const editRolePermissions = '/admin-edit-role-permissions';
   
+  static const adminTwoFaSetup = '/admin-2fa-setup';
   static const adminDashboard = '/admin-dashboard';
   static const adminProjects = '/admin-projects';
   static const adminTasks = '/admin-tasks';
