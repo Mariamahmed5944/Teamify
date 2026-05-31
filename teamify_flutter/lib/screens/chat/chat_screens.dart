@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/audio/meeting_speech_recorder.dart';
 import '../../core/files/file_downloader.dart';
+import '../../core/files/file_actions.dart';
 import '../../core/network/api_result.dart';
 import '../../core/network/websocket_manager.dart';
 import '../../core/theme.dart';
@@ -339,7 +340,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
         ),
       ),
       bottomNavigationBar:
-          TBottomNav(current: 3, onTap: (i) => handleFreelancerNav(context, i)),
+          TBottomNav(current: 3, onTap: (i) => handleRoleNav(context, i)),
     );
   }
 }
@@ -1937,11 +1938,27 @@ class PinnedMessagesScreen extends StatelessWidget {
       body: const Center(
         child: Padding(
           padding: EdgeInsets.all(24),
-          child: Text(
-            'Pinned messages are not exposed by the API yet. '
-            'Backend support is required to list pins per room.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.textSecondary),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.push_pin_outlined,
+                  size: 48, color: AppColors.textHint),
+              SizedBox(height: 16),
+              Text(
+                'Coming Soon',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Pinned messages will appear here once backend support is available.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
+            ],
           ),
         ),
       ),
@@ -2127,6 +2144,7 @@ class FileSharingScreen extends StatefulWidget {
 
 class _FileSharingScreenState extends State<FileSharingScreen> {
   late Future<List<ApiFile>> _filesFuture;
+  bool _uploading = false;
 
   @override
   void initState() {
@@ -2140,6 +2158,65 @@ class _FileSharingScreenState extends State<FileSharingScreen> {
     });
   }
 
+  Future<void> _uploadFile() async {
+    if (_uploading) return;
+    final fileSvc = context.read<AppServices>().files;
+    final messenger = ScaffoldMessenger.of(context);
+    final result = await FilePicker.pickFiles(
+      type: FileType.any,
+      allowMultiple: false,
+      withData: true,
+    );
+    if (result == null || result.files.isEmpty) return;
+    final picked = result.files.single;
+    final bytes = picked.bytes;
+    final path = picked.path;
+    if (bytes == null && (path == null || path.isEmpty)) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Could not read file from device.')),
+      );
+      return;
+    }
+
+    setState(() => _uploading = true);
+    final upload = await fileSvc.uploadFile(
+          filePath: path ?? '',
+          filename: picked.name,
+          fileBytes: bytes,
+        );
+    if (!mounted) return;
+    setState(() => _uploading = false);
+
+    if (!upload.isSuccess) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(upload.error ?? 'Upload failed')),
+      );
+      return;
+    }
+    _reload();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text('Uploaded ${picked.name}'),
+        backgroundColor: AppColors.success,
+      ),
+    );
+  }
+
+  Future<void> _downloadFile(ApiFile file) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final bytes =
+          await context.read<AppServices>().files.downloadFile(file.id).unwrap();
+      final actions = FileActions();
+      final savedPath = await actions.saveBytes(file.name, bytes);
+      await actions.openPath(savedPath);
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text('Download failed: $e')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -2151,8 +2228,19 @@ class _FileSharingScreenState extends State<FileSharingScreen> {
           title: const Text('Shared Files',
               style: TextStyle(fontWeight: FontWeight.bold)),
           actions: [
-            IconButton(
-                icon: const Icon(Icons.upload_file_outlined), onPressed: () {})
+            _uploading
+                ? const Padding(
+                    padding: EdgeInsets.all(14),
+                    child: SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                : IconButton(
+                    icon: const Icon(Icons.upload_file_outlined),
+                    onPressed: _uploadFile,
+                  ),
           ]),
       body: FutureBuilder<List<ApiFile>>(
         future: _filesFuture,
@@ -2219,7 +2307,7 @@ class _FileSharingScreenState extends State<FileSharingScreen> {
                   IconButton(
                       icon: const Icon(Icons.download_outlined,
                           color: AppColors.primary),
-                      onPressed: () {}),
+                      onPressed: () => _downloadFile(f)),
                 ]),
               )).toList(),
             ),

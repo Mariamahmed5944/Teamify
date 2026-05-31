@@ -109,22 +109,22 @@ class NewUserHomeScreen extends StatelessWidget {
                               icon: Icons.person_add_alt_1_outlined,
                               title: 'Profile',
                               subtitle: 'Add bio & photo',
-                              onTap: () => Navigator.pushNamed(
-                                  context, R.completeProfile),
+                              onTap: () =>
+                                  Navigator.pushNamed(context, R.editProfile),
                             ),
                             _ActionCard(
                               icon: Icons.auto_awesome,
                               title: 'Match',
                               subtitle: 'Find partners',
                               onTap: () => Navigator.pushNamed(
-                                  context, R.teammateMatching),
+                                  context, R.teamRecommendation),
                             ),
                             _ActionCard(
                               icon: Icons.gpp_maybe_outlined,
                               title: 'Risk AI',
                               subtitle: 'Project health',
                               onTap: () =>
-                                  Navigator.pushNamed(context, R.riskPredictor),
+                                  Navigator.pushNamed(context, R.aiInsights),
                             ),
                           ],
                         );
@@ -168,7 +168,7 @@ class NewUserHomeScreen extends StatelessWidget {
       ),
       bottomNavigationBar: TBottomNav(
         current: 0,
-        onTap: (i) => handleFreelancerNav(context, i),
+        onTap: (i) => handleRoleNav(context, i),
       ),
     );
   }

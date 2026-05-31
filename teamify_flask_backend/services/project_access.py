@@ -50,3 +50,46 @@ def user_has_project_access(user_id: int, project_id: int) -> bool:
         ).first()
         is not None
     )
+
+
+def users_share_project(user_a: int, user_b: int) -> bool:
+    """True when both users belong to at least one common project."""
+    if user_a == user_b:
+        return True
+    a_ids = set(get_accessible_project_ids(user_a))
+    if not a_ids:
+        return False
+    b_ids = set(get_accessible_project_ids(user_b))
+    return bool(a_ids & b_ids)
+
+
+def can_view_user_stats(viewer_id: int, target_id: int, viewer_role: str | None = None) -> bool:
+    """Self, platform admin, or users who share a project may view stats."""
+    if viewer_id == target_id:
+        return True
+    if (viewer_role or "").lower() == "admin":
+        return True
+    return users_share_project(viewer_id, target_id)
+
+
+def search_user_dict(user) -> dict:
+    """Redacted user payload for directory/search (no email, phone, or security fields)."""
+    skills = user.skills if isinstance(user.skills, list) else []
+    if isinstance(user.skills, str) and user.skills:
+        skills = [s.strip() for s in user.skills.split(",") if s.strip()]
+    return {
+        "id": user.id,
+        "display_name": user.display_name,
+        "full_name": user.full_name,
+        "user_type": user.user_type,
+        "role": user.role,
+        "skills": skills,
+        "professional_field": user.professional_field,
+        "experience_level": user.experience_level,
+        "availability": user.availability,
+        "major": user.major,
+        "current_level": user.current_level,
+        "looking_for_team": user.looking_for_team,
+        "avatar_file_id": user.avatar_file_id,
+        "member_experience_years": user.member_experience_years,
+    }

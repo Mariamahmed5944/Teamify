@@ -10,11 +10,13 @@ DELETE /api/feedback/<id>                Delete your own feedback
 """
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import get_jwt_identity
-from middleware.auth import auth_required
+from middleware.auth import auth_required, get_project_role, _READ_ROLES
 from models import db
 from models.feedback import Feedback
 from models.user import User
 from models.project import Project
+from services.project_access import user_has_project_access, can_view_user_stats
+from utils.pagination import parse_pagination
 
 feedback_bp = Blueprint("feedback", __name__, url_prefix="/api/feedback")
 
@@ -125,6 +127,18 @@ def create_feedback():
     if not project:
         return jsonify({"error": "Project not found"}), 404
 
+    if not user_has_project_access(reviewer_id, int(project_id)):
+        return jsonify({
+            "error": "Forbidden",
+            "message": "You must be a member of this project to submit feedback",
+        }), 403
+
+    if not user_has_project_access(int(user_id), int(project_id)):
+        return jsonify({
+            "error": "Bad Request",
+            "message": "The reviewed user is not a member of this project",
+        }), 400
+
     # --- Optional scores ---
     quality_score,  err1 = _validate_score(data.get("quality_score"),  "quality_score")
     teamwork_score, err2 = _validate_score(data.get("teamwork_score"), "teamwork_score")
@@ -219,6 +233,17 @@ def get_user_feedback(user_id):
             error:
               type: string
     """
+    viewer_id = int(get_jwt_identity())
+    viewer = User.query.get(viewer_id)
+    if not viewer:
+        return jsonify({"error": "User not found"}), 404
+
+    if not can_view_user_stats(viewer_id, user_id, viewer.role):
+        return jsonify({
+            "error": "Forbidden",
+            "message": "You are not authorized to view this user's feedback",
+        }), 403
+
     user = User.query.get(user_id)
     if not user:
         return jsonify({"error": "User not found"}), 404
@@ -228,8 +253,9 @@ def get_user_feedback(user_id):
     if project_id:
         query = query.filter_by(project_id=project_id)
 
-    page     = max(1, request.args.get("page", 1, type=int))
-    per_page = min(request.args.get("per_page", 20, type=int), 100)
+    page, per_page, page_err = parse_pagination()
+    if page_err:
+        return page_err
     pagination = query.order_by(Feedback.created_at.desc()).paginate(
         page=page, per_page=per_page, error_out=False
     )
@@ -305,12 +331,20 @@ def get_project_feedback(project_id):
             error:
               type: string
     """
+    viewer_id = int(get_jwt_identity())
     project = Project.query.get(project_id)
     if not project:
         return jsonify({"error": "Project not found"}), 404
 
-    page     = max(1, request.args.get("page", 1, type=int))
-    per_page = min(request.args.get("per_page", 20, type=int), 100)
+    if not user_has_project_access(viewer_id, project_id):
+        return jsonify({
+            "error": "Forbidden",
+            "message": "You do not have access to this project's feedback",
+        }), 403
+
+    page, per_page, page_err = parse_pagination()
+    if page_err:
+        return page_err
     pagination = (
         Feedback.query.filter_by(project_id=project_id)
         .order_by(Feedback.created_at.desc())
@@ -360,9 +394,16 @@ def get_feedback(feedback_id):
             error:
               type: string
     """
+    viewer_id = int(get_jwt_identity())
     fb = Feedback.query.get(feedback_id)
     if not fb:
         return jsonify({"error": "Feedback not found"}), 404
+
+    if not user_has_project_access(viewer_id, fb.project_id):
+        return jsonify({
+            "error": "Forbidden",
+            "message": "You do not have access to this feedback",
+        }), 403
     return jsonify({"feedback": fb.to_dict()}), 200
 
 

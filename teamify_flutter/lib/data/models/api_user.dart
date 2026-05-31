@@ -29,6 +29,7 @@ class ApiUser {
   final double attendanceRate;
   final double memberOnTimeRate;
   final bool totpEnabled;
+  final String preferredLanguage;
 
   const ApiUser({
     required this.id,
@@ -58,6 +59,7 @@ class ApiUser {
     this.attendanceRate = 0,
     this.memberOnTimeRate = 0,
     this.totpEnabled = false,
+    this.preferredLanguage = 'en',
   });
 
   /// Best label for lists (full name, else @display_name).
@@ -193,6 +195,7 @@ class ApiUser {
         json['member_on_time_rate'] ?? json['memberOnTimeRate'],
       ),
       totpEnabled: asBool(json['totp_enabled'] ?? json['totpEnabled']),
+      preferredLanguage: asString(json['preferred_language'], 'en'),
     );
   }
 

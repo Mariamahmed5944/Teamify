@@ -12,7 +12,7 @@ import '../../widgets/widgets.dart';
 import '../mentor/mentor_skill_ui.dart';
 import '../../services/ai_service.dart';
 
-Future<List<UserModel>> _fetchTeammateRecommendations(
+Future<List<Map<String, dynamic>>> _fetchTeammateRecommendationMaps(
     BuildContext context) async {
   final services = context.read<AppServices>();
   final user = context.read<SessionController>().currentUser;
@@ -29,8 +29,19 @@ Future<List<UserModel>> _fetchTeammateRecommendations(
   if (raw is List && raw.isNotEmpty) {
     return raw
         .whereType<Map>()
-        .map((item) => api.ApiUser.fromJson(Map<String, dynamic>.from(item))
-            .toDisplayModel())
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+  }
+  return const [];
+}
+
+Future<List<UserModel>> _fetchTeammateRecommendations(
+    BuildContext context) async {
+  final services = context.read<AppServices>();
+  final maps = await _fetchTeammateRecommendationMaps(context);
+  if (maps.isNotEmpty) {
+    return maps
+        .map((item) => api.ApiUser.fromJson(item).toDisplayModel())
         .toList();
   }
   return services.search.users('').unwrap().then(
@@ -181,7 +192,7 @@ class AIHubScreen extends StatelessWidget {
         ),
       ),
       bottomNavigationBar:
-          TBottomNav(current: 2, onTap: (i) => handleFreelancerNav(context, i)),
+          TBottomNav(current: 2, onTap: (i) => handleRoleNav(context, i)),
     );
   }
 }
@@ -362,17 +373,70 @@ class _AITaskAllocationScreenState extends State<AITaskAllocationScreen> {
   bool _loading = true;
   String? _error;
   Map<String, dynamic>? _data;
+  List<Map<String, dynamic>> _tasks = [];
+  String? _selectedTaskId;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _init());
   }
 
-  Future<void> _load() async {
+  Future<void> _init() async {
+    try {
+      final services = context.read<AppServices>();
+      final projects = await services.projects.listProjects().unwrap();
+      final tasks = <Map<String, dynamic>>[];
+      for (final project in projects) {
+        final projectTasks =
+            await services.tasks.listTasks(projectId: project.id).unwrap();
+        for (final task in projectTasks) {
+          tasks.add({
+            'id': task.id,
+            'title': task.title,
+            'project_name': project.name,
+          });
+        }
+      }
+      if (!mounted) return;
+      setState(() {
+        _tasks = tasks;
+        _selectedTaskId = tasks.isNotEmpty ? tasks.first['id']?.toString() : null;
+      });
+      if (_selectedTaskId != null) {
+        await _load(_taskTextForId(_selectedTaskId!));
+      } else {
+        setState(() {
+          _loading = false;
+          _error = 'No tasks found in your projects.';
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+      });
+    }
+  }
+
+  String _taskTextForId(String id) {
+    final task = _tasks.firstWhere(
+      (t) => t['id']?.toString() == id,
+      orElse: () => const {},
+    );
+    return task['title']?.toString() ?? '';
+  }
+
+  Future<void> _load(String taskText) async {
+    if (taskText.trim().isEmpty) return;
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
       final svc = context.read<AppServices>();
-      final result = await svc.ai.classifyTask('Optimize database query for high throughput').unwrap();
+      final result = await svc.ai.classifyTask(taskText).unwrap();
       if (!mounted) return;
       setState(() {
         _data = result;
@@ -397,11 +461,42 @@ class _AITaskAllocationScreenState extends State<AITaskAllocationScreen> {
               onPressed: () => Navigator.pop(context)),
           title: const Text('AI Task Allocation',
               style: TextStyle(fontWeight: FontWeight.bold))),
-      body: _loading
+      body: _loading && _data == null
           ? const Center(child: CircularProgressIndicator())
-          : _error != null
+          : _error != null && _data == null
               ? Center(child: Text(_error!, style: const TextStyle(color: AppColors.error)))
               : ListView(padding: const EdgeInsets.all(16), children: [
+                  if (_tasks.isNotEmpty) ...[
+                    DropdownButtonFormField<String>(
+                      key: ValueKey(_selectedTaskId),
+                      initialValue: _selectedTaskId,
+                      decoration: const InputDecoration(
+                        labelText: 'Select a task',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: _tasks
+                          .map((t) => DropdownMenuItem<String>(
+                                value: t['id']?.toString(),
+                                child: Text(
+                                  '${t['project_name']}: ${t['title']}',
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ))
+                          .toList(),
+                      onChanged: (id) {
+                        if (id == null) return;
+                        setState(() => _selectedTaskId = id);
+                        _load(_taskTextForId(id));
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  if (_loading)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 24),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  else if (_data != null) ...[
                   const AIBanner(
                       title: 'AI Allocation Engine',
                       subtitle: 'Matching tasks to the best team members'),
@@ -460,6 +555,7 @@ class _AITaskAllocationScreenState extends State<AITaskAllocationScreen> {
                       label: 'View Full Result',
                       onTap: () =>
                           Navigator.pushNamed(context, R.aiSuggestedResult)),
+                  ],
                 ]),
     );
   }
@@ -536,7 +632,19 @@ class AISuggestedResultScreen extends StatelessWidget {
           const SizedBox(height: 8),
           TButton(
               label: 'View Explanation',
-              onTap: () => Navigator.pushNamed(context, R.aiExplanation)),
+              onTap: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                final navigator = Navigator.of(context);
+                final maps = await _fetchTeammateRecommendationMaps(context);
+                if (!context.mounted || maps.isEmpty) {
+                  messenger.showSnackBar(
+                    const SnackBar(
+                        content: Text('No recommendation data available.')),
+                  );
+                  return;
+                }
+                navigator.pushNamed(R.aiExplanation, arguments: maps.first);
+              }),
         ]),
       ),
     );
@@ -546,8 +654,53 @@ class AISuggestedResultScreen extends StatelessWidget {
 // ── AI Explanation ────────────────────────────────────────────────────────────
 class AIExplanationScreen extends StatelessWidget {
   const AIExplanationScreen({super.key});
+
+  List<Map<String, dynamic>> _factorsFromRecommendation(
+      Map<String, dynamic>? rec) {
+    if (rec == null || rec.isEmpty) return const [];
+    final match = ((rec['match_percent'] as num?)?.toDouble() ??
+            (rec['similarity_score'] as num?)?.toDouble() ??
+            0) /
+        (rec.containsKey('match_percent') ? 100 : 1);
+    final skills = (rec['skills'] as List?)?.cast<String>() ?? const [];
+    final experience = rec['experience_level']?.toString() ?? '';
+    return [
+      {
+        'label': 'Skills Match',
+        'value': match.clamp(0.0, 1.0),
+        'desc': skills.isEmpty
+            ? 'Skills profile compared against your requirements'
+            : 'Strong overlap: ${skills.take(4).join(', ')}',
+      },
+      {
+        'label': 'Experience',
+        'value': (match * 0.9).clamp(0.0, 1.0),
+        'desc': experience.isNotEmpty
+            ? 'Experience level: $experience'
+            : 'Experience profile aligns with team needs',
+      },
+      {
+        'label': 'Compatibility',
+        'value': match.clamp(0.0, 1.0),
+        'desc': 'Overall ML similarity score from teammate recommendation model',
+      },
+      {
+        'label': 'Availability',
+        'value': (match * 0.85).clamp(0.0, 1.0),
+        'desc': 'Workload and capacity considered in the recommendation',
+      },
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
+    final rec =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final name = rec?['full_name']?.toString().trim().isNotEmpty == true
+        ? rec!['full_name'].toString()
+        : rec?['display_name']?.toString() ?? 'Recommended teammate';
+    final factors = _factorsFromRecommendation(rec);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -557,8 +710,8 @@ class AIExplanationScreen extends StatelessWidget {
           title: const Text('AI Explanation',
               style: TextStyle(fontWeight: FontWeight.bold))),
       body: ListView(padding: const EdgeInsets.all(16), children: [
-        const AIBanner(
-            title: 'Why Alice Smith?',
+        AIBanner(
+            title: 'Why $name?',
             subtitle: 'AI reasoning for this recommendation'),
         const SizedBox(height: 16),
         TCard(
@@ -570,29 +723,7 @@ class AIExplanationScreen extends StatelessWidget {
                   color: AppColors.textPrimary,
                   fontSize: 16)),
           const SizedBox(height: 12),
-          ...<Map<String, dynamic>>[
-            {
-              'label': 'Skills Match',
-              'value': 0.96,
-              'desc':
-                  'Flutter, Dart, Firebase perfectly match task requirements'
-            },
-            {
-              'label': 'Workload',
-              'value': 0.85,
-              'desc': 'Current workload is balanced with capacity for new tasks'
-            },
-            {
-              'label': 'Performance',
-              'value': 0.94,
-              'desc': 'Consistently delivers high-quality work on time'
-            },
-            {
-              'label': 'Availability',
-              'value': 0.90,
-              'desc': 'Available 40+ hours this week'
-            },
-          ].map((f) => Padding(
+          ...factors.map((f) => Padding(
               padding: const EdgeInsets.only(bottom: 14),
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -603,7 +734,8 @@ class AIExplanationScreen extends StatelessWidget {
                               fontWeight: FontWeight.w600,
                               color: AppColors.textPrimary)),
                       const Spacer(),
-                      Text('${((f['value'] as double) * 100).toInt()}%',
+                      Text(
+                          '${(((f['value'] as double) * 100).toInt())}%',
                           style: const TextStyle(
                               color: AppColors.primary,
                               fontWeight: FontWeight.bold))

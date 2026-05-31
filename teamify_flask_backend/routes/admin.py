@@ -11,6 +11,7 @@ from flask_jwt_extended import get_jwt_identity, jwt_required
 from flask_bcrypt import Bcrypt
 
 from middleware.auth import admin_required
+from utils.pagination import parse_pagination
 from models import db
 from models.user import User
 from models.project import Project
@@ -33,15 +34,13 @@ bcrypt = Bcrypt()
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
 def _page_args(default=20, max_pp=200):
-    try:
-        page = max(1, int(request.args.get("page", 1)))
-    except (TypeError, ValueError):
-        page = 1
-    try:
-        per_page = int(request.args.get("per_page", default))
-    except (TypeError, ValueError):
-        per_page = default
-    return page, max(1, min(per_page, max_pp))
+    page, per_page, page_err = parse_pagination(
+        default_per_page=default,
+        max_per_page=max_pp,
+    )
+    if page_err:
+        return None, None, page_err
+    return page, per_page, None
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -67,7 +66,9 @@ def list_users():
     search = request.args.get("search", "").strip()
     filter_status = request.args.get("status", "").strip()  # active, locked, pending
     filter_type = request.args.get("user_type", "").strip()  # freelancer, student
-    page, per_page = _page_args()
+    page, per_page, page_err = _page_args()
+    if page_err:
+        return page_err
     
     result = admin_service.list_admin_users(
         search=search,
@@ -236,7 +237,9 @@ def list_projects():
     """Retrieve all projects with risk levels, overdue count, and filters."""
     search = request.args.get("search", "").strip()
     filter_status = request.args.get("status", "").strip()  # active, completed, delayed, high_risk
-    page, per_page = _page_args()
+    page, per_page, page_err = _page_args()
+    if page_err:
+        return page_err
 
     result = admin_service.list_admin_projects(
         search=search,
@@ -311,7 +314,9 @@ def list_tasks():
     assigned_to = request.args.get("assigned_to", type=int)
     priority = request.args.get("priority", "").strip()
     status = request.args.get("status", "").strip()
-    page, per_page = _page_args()
+    page, per_page, page_err = _page_args()
+    if page_err:
+        return page_err
 
     result = admin_service.list_admin_tasks(
         search=search,
@@ -404,7 +409,9 @@ def get_ai_metrics():
 @admin_required
 def list_disputes():
     """Retrieve all conflicts raised on the platform."""
-    page, per_page = _page_args()
+    page, per_page, page_err = _page_args()
+    if page_err:
+        return page_err
     status = request.args.get("status", "").strip()
     category = request.args.get("category", "").strip()
 
@@ -524,7 +531,9 @@ def list_files():
     """Retrieve all uploaded files, sorted and searchable."""
     search = request.args.get("search", "").strip()
     owner_id = request.args.get("owner_id", type=int)
-    page, per_page = _page_args()
+    page, per_page, page_err = _page_args()
+    if page_err:
+        return page_err
 
     q = FileMetadata.query
     if owner_id:
@@ -583,7 +592,9 @@ def force_delete_file(file_id):
 @admin_required
 def list_logs():
     """Retrieve full audit/activity logs."""
-    page, per_page = _page_args()
+    page, per_page, page_err = _page_args()
+    if page_err:
+        return page_err
     q = Log.query
 
     # Apply filters
@@ -748,7 +759,9 @@ def update_settings():
 @admin_bp.route("/users/pending", methods=["GET"])
 @admin_required
 def list_pending_users():
-    page, per_page = _page_args(20)
+    page, per_page, page_err = _page_args(20)
+    if page_err:
+        return page_err
     q = User.query.filter_by(account_status="pending")
     user_type = request.args.get("user_type")
     if user_type:
@@ -861,7 +874,9 @@ def analytics_overview():
 @admin_required
 def list_alerts():
     """Paginated security alert list."""
-    page, per_page = _page_args(50)
+    page, per_page, page_err = _page_args(50)
+    if page_err:
+        return page_err
     resolved = request.args.get("resolved")
     alert_type = request.args.get("type", "").strip()
 
@@ -948,7 +963,9 @@ def reports_summary():
 @admin_required
 def list_login_logs():
     """Paginated LoginLog (login audit) list."""
-    page, per_page = _page_args(50)
+    page, per_page, page_err = _page_args(50)
+    if page_err:
+        return page_err
     status  = request.args.get("status", "").strip()
     user_id = request.args.get("user_id", type=int)
     ip      = request.args.get("ip", "").strip()
@@ -988,7 +1005,9 @@ def list_login_logs():
 @admin_required
 def list_activity():
     """System action log (Log model) — same data as /logs, kept for compatibility."""
-    page, per_page = _page_args(50)
+    page, per_page, page_err = _page_args(50)
+    if page_err:
+        return page_err
     action  = request.args.get("action", "").strip()
     entity  = request.args.get("entity", "").strip()
     user_id = request.args.get("user_id", type=int)

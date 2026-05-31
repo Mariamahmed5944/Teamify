@@ -5,6 +5,7 @@ from flask_jwt_extended import get_jwt_identity
 from middleware.auth import auth_required, admin_required
 from models import db
 from models.dispute import Dispute
+from utils.pagination import parse_pagination
 
 disputes_bp = Blueprint("disputes", __name__, url_prefix="/api/disputes")
 
@@ -98,8 +99,9 @@ def list_all_disputes():
       200:
         description: Paginated disputes
     """
-    page     = max(1, int(request.args.get("page", 1)))
-    per_page = min(int(request.args.get("per_page", 20)), 100)
+    page, per_page, page_err = parse_pagination()
+    if page_err:
+        return page_err
     q = Dispute.query
     status = request.args.get("status")
     if status and status in Dispute.VALID_STATUSES:

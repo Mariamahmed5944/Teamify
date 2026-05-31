@@ -31,6 +31,7 @@ class User(db.Model):
     reason_for_joining = db.Column(db.String(50), nullable=True)   # guest: Reviewing project, Viewer, etc.
     phone = db.Column(db.String(30), nullable=True)
     bio = db.Column(db.Text, nullable=True)
+    preferred_language = db.Column(db.String(10), nullable=True)
     avatar_file_id = db.Column(
         db.Integer,
         db.ForeignKey("file_metadata.id", ondelete="SET NULL"),
@@ -170,6 +171,7 @@ class User(db.Model):
             "reason_for_joining": self.reason_for_joining,
             "phone": self.phone,
             "bio": self.bio,
+            "preferred_language": self.preferred_language,
             "avatar_file_id": self.avatar_file_id,
             "member_on_time_rate": self.member_on_time_rate,
             "member_avg_delay_days": self.member_avg_delay_days,

@@ -117,330 +117,6 @@ class _AdminBottomNav extends StatelessWidget {
   }
 }
 
-// ── Admin Home ────────────────────────────────────────────────────────────────
-class AdminHomeScreen extends StatefulWidget {
-  const AdminHomeScreen({super.key});
-
-  @override
-  State<AdminHomeScreen> createState() => _AdminHomeScreenState();
-}
-
-class _AdminHomeScreenState extends State<AdminHomeScreen> {
-  Future<_AdminHomeData>? _future;
-
-  Future<_AdminHomeData> _load(BuildContext context) async {
-    final services = context.read<AppServices>();
-    final admin = services.admin;
-    final summary = await admin.getReportSummary().unwrap();
-    final alerts = await admin.listAlerts().unwrap();
-    Map<String, dynamic> health = const {};
-    try {
-      health = await services.home.checkHealth().unwrap();
-    } catch (_) {
-      health = const {'status': 'error'};
-    }
-    final openAlerts =
-        alerts.where((a) => a.status.toLowerCase() != 'resolved').length;
-    final usersMap = summary['users'] as Map?;
-    final usersTotal = usersMap?['total']?.toString() ?? '0';
-    final freelancers = usersMap?['freelancers']?.toString() ?? '0';
-    final students = usersMap?['students']?.toString() ?? '0';
-    final serverOk =
-        health['status']?.toString() == 'ok' &&
-        health['database']?.toString() == 'ok';
-    return _AdminHomeData(
-      activeUsers: usersTotal,
-      openAlerts: '$openAlerts',
-      reportsCount:
-          (summary['projects'] as Map?)?['total']?.toString() ?? '0',
-      freelancersCount: freelancers,
-      studentsCount: students,
-      serverHealthy: serverOk,
-    );
-  }
-
-  void _refresh() {
-    setState(() {
-      _future = _load(context);
-    });
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) setState(() { _future = _load(context); });
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.fromLTRB(24, 60, 24, 32),
-            decoration: const BoxDecoration(
-              color: AppColors.primaryDark,
-              borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(32),
-                  bottomRight: Radius.circular(32)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Admin Center',
-                            style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white)),
-                      ],
-                    ),
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.1),
-                          shape: BoxShape.circle),
-                      child: const Icon(Icons.security,
-                          color: Colors.white, size: 24),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                if (_future == null)
-                  const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(16),
-                      child: CircularProgressIndicator(color: Colors.white),
-                    ),
-                  )
-                else
-                  FutureBuilder<_AdminHomeData>(
-                    future: _future,
-                    builder: (context, snap) {
-                      if (snap.hasError) {
-                        return Text('Could not load stats: ${snap.error}',
-                            style: const TextStyle(color: Colors.white70));
-                      }
-                      if (!snap.hasData) {
-                        return const Center(
-                          child: CircularProgressIndicator(color: Colors.white),
-                        );
-                      }
-                      final d = snap.data!;
-                      return Row(
-                        children: [
-                          _adminStat('Registered users', d.activeUsers,
-                              Icons.people_outline),
-                          const SizedBox(width: 12),
-                          _adminStat('Open alerts', d.openAlerts,
-                              Icons.warning_amber_outlined,
-                              isAlert: true),
-                        ],
-                      );
-                    },
-                  ),
-              ],
-            ),
-          ),
-
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: () async {
-                _refresh();
-                await _future;
-              },
-              child: ListView(
-                padding: const EdgeInsets.all(24),
-                children: [
-                  TSectionHeader(
-                      title: 'Platform Analytics',
-                      action: 'Full Report',
-                      onAction: () => Navigator.pushNamed(context, R.analyst)),
-                  const SizedBox(height: 16),
-                  FutureBuilder<_AdminHomeData>(
-                    future: _future,
-                    builder: (context, snap) {
-                      final d = snap.data;
-                      final serverLabel = d == null
-                          ? '…'
-                          : (d.serverHealthy ? 'Live' : 'Offline');
-                      final serverColor = d == null
-                          ? AppColors.textSecondary
-                          : (d.serverHealthy
-                              ? AppColors.success
-                              : AppColors.error);
-                      return Row(
-                        children: [
-                          Expanded(
-                            child: _analyticsCard('Server', serverLabel,
-                                Icons.language, serverColor),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _analyticsCard(
-                                'Projects (total)',
-                                d?.reportsCount ?? '…',
-                                Icons.description_outlined,
-                                AppColors.primary),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 24),
-                  const TSectionHeader(title: 'Management Hub'),
-                  const SizedBox(height: 16),
-                  FutureBuilder<_AdminHomeData>(
-                    future: _future,
-                    builder: (context, snap) {
-                      final d = snap.data;
-                      return GridView.count(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        crossAxisCount: 2,
-                        mainAxisSpacing: 16,
-                        crossAxisSpacing: 16,
-                        childAspectRatio: 1.35,
-                        children: [
-                          _hubCard(context, 'Users', Icons.group_outlined,
-                              R.adminUsers,
-                              subtitle: d != null
-                                  ? '${d.activeUsers} registered'
-                                  : null),
-                          _hubCard(context, 'Roles', Icons.shield_outlined,
-                              R.adminRoles,
-                              subtitle: d != null
-                                  ? '${d.freelancersCount} freelancers · ${d.studentsCount} students'
-                                  : null),
-                          _hubCard(context, 'Logs', Icons.list_alt_outlined,
-                              R.loginLogs,
-                              subtitle: d != null
-                                  ? '${d.openAlerts} open alerts'
-                                  : null),
-                          _hubCard(context, 'Settings', Icons.settings_outlined,
-                              R.settings,
-                              subtitle: 'Platform preferences'),
-                        ],
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 32),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-      bottomNavigationBar: _AdminBottomNav(current: 0, ctx: context),
-    );
-  }
-
-  Widget _adminStat(String label, String val, IconData icon,
-          {bool isAlert = false}) =>
-      Expanded(
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(16)),
-          child: Row(
-            children: [
-              Icon(icon,
-                  color: isAlert ? Colors.orangeAccent : Colors.white70,
-                  size: 20),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(label,
-                      style:
-                          const TextStyle(color: Colors.white70, fontSize: 11)),
-                  Text(val,
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18)),
-                ],
-              ),
-            ],
-          ),
-        ),
-      );
-
-  Widget _analyticsCard(String title, String val, IconData icon, Color color) =>
-      TCard(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(height: 12),
-            Text(val,
-                style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary)),
-            Text(title,
-                style: const TextStyle(
-                    fontSize: 12, color: AppColors.textSecondary)),
-          ],
-        ),
-      );
-
-  Widget _hubCard(BuildContext context, String title, IconData icon,
-          String route, {String? subtitle}) =>
-      TCard(
-        onTap: () => Navigator.pushNamed(context, route),
-        padding: const EdgeInsets.all(16),
-        child: SizedBox(
-          width: double.infinity,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: AppColors.primary, size: 28),
-              const SizedBox(height: 10),
-              Text(title,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 14)),
-              if (subtitle != null) ...[
-                const SizedBox(height: 4),
-                Text(subtitle,
-                    style: const TextStyle(
-                        fontSize: 11, color: AppColors.textSecondary)),
-              ],
-            ],
-          ),
-        ),
-      );
-}
-
-class _AdminHomeData {
-  final String activeUsers;
-  final String openAlerts;
-  final String reportsCount;
-  final String freelancersCount;
-  final String studentsCount;
-  final bool serverHealthy;
-
-  const _AdminHomeData({
-    required this.activeUsers,
-    required this.openAlerts,
-    required this.reportsCount,
-    required this.freelancersCount,
-    required this.studentsCount,
-    required this.serverHealthy,
-  });
-}
-
 // ── Admin Roles ───────────────────────────────────────────────────────────────
 class AdminRolesScreen extends StatefulWidget {
   const AdminRolesScreen({super.key});
@@ -3844,18 +3520,36 @@ class SecurityMentorScreen extends StatelessWidget {
 }
 
 // ── Force Logout ──────────────────────────────────────────────────────────────
-class ForceLogoutScreen extends StatelessWidget {
+class ForceLogoutScreen extends StatefulWidget {
   const ForceLogoutScreen({super.key});
 
-  Future<void> _revokeUser(BuildContext context) async {
-    final user = await showAdminUserPicker(context, title: 'Force logout user');
-    if (user == null || !context.mounted) return;
+  @override
+  State<ForceLogoutScreen> createState() => _ForceLogoutScreenState();
+}
+
+class _ForceLogoutScreenState extends State<ForceLogoutScreen> {
+  Future<Map<String, dynamic>>? _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = context.read<AppServices>().admin.getSecuritySummary().unwrap();
+  }
+
+  Future<void> _revokeUser(BuildContext context, int userId) async {
     try {
-      await context.read<AppServices>().admin.revokeSessions(user.id).unwrap();
+      await context.read<AppServices>().admin.revokeSessions('$userId').unwrap();
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Sessions revoked for ${user.primaryName}'), backgroundColor: AppColors.success),
+          SnackBar(
+            content: Text('Sessions revoked for user $userId'),
+            backgroundColor: AppColors.success,
+          ),
         );
+        setState(() {
+          _future =
+              context.read<AppServices>().admin.getSecuritySummary().unwrap();
+        });
       }
     } catch (e) {
       if (context.mounted) {
@@ -3866,31 +3560,21 @@ class ForceLogoutScreen extends StatelessWidget {
     }
   }
 
+  Future<void> _revokeUserPicker(BuildContext context) async {
+    final user = await showAdminUserPicker(context, title: 'Force logout user');
+    if (user == null || !context.mounted) return;
+    await _revokeUser(context, int.tryParse(user.id) ?? 0);
+  }
+
+  String _formatTimestamp(String? raw) {
+    if (raw == null || raw.isEmpty) return 'Unknown time';
+    final dt = DateTime.tryParse(raw);
+    if (dt == null) return raw;
+    return dt.toLocal().toString().substring(0, 16);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final devices = [
-      {
-        'icon': Icons.phone_android_outlined,
-        'name': 'iPhone 14 Pro',
-        'loc': 'New York, US',
-        'time': 'Active now',
-        'suspicious': true
-      },
-      {
-        'icon': Icons.desktop_windows_outlined,
-        'name': 'MacBook Pro',
-        'loc': 'San Francisco, US',
-        'time': '2 hours ago',
-        'suspicious': false
-      },
-      {
-        'icon': Icons.desktop_windows_outlined,
-        'name': 'Chrome Browser',
-        'loc': 'Los Angeles, US',
-        'time': '1 day ago',
-        'suspicious': false
-      },
-    ];
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -3905,73 +3589,119 @@ class ForceLogoutScreen extends StatelessWidget {
                   padding: EdgeInsets.only(left: 16, bottom: 6),
                   child: Align(
                       alignment: Alignment.centerLeft,
-                      child: Text('Manage active sessions on your account',
+                      child: Text('Recent login sessions from the admin security API',
                           style: TextStyle(
                               fontSize: 12,
                               color: AppColors.textSecondary)))))),
       body: Column(children: [
         Expanded(
-            child: ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: devices.length,
-          itemBuilder: (_, i) {
-            final d = devices[i];
-            return Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                      color: (d['suspicious'] as bool)
-                          ? AppColors.error.withValues(alpha: 0.3)
-                          : AppColors.border)),
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(children: [
-                      Icon(d['icon'] as IconData,
-                          color: (d['suspicious'] as bool)
-                              ? AppColors.error
-                              : AppColors.primary,
-                          size: 24),
-                      const SizedBox(width: 10),
-                      Expanded(
-                          child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                            Text(d['name'] as String,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.textPrimary)),
-                            Text(d['loc'] as String,
-                                style: const TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.textSecondary)),
-                            Text(d['time'] as String,
-                                style: const TextStyle(
-                                    fontSize: 11,
-                                    color: AppColors.textSecondary)),
-                          ])),
-                    ]),
-                    if (d['suspicious'] as bool) ...[
-                      const SizedBox(height: 6),
-                      Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                              color: AppColors.error.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(20)),
-                          child: const Text('Suspicious',
-                              style: TextStyle(
-                                  fontSize: 11,
-                                  color: AppColors.error,
-                                  fontWeight: FontWeight.w600))),
-                    ],
-                  ]),
-            );
-          },
-        )),
+          child: FutureBuilder<Map<String, dynamic>>(
+            future: _future,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting &&
+                  !snapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return Center(
+                  child: Text('Failed to load sessions: ${snapshot.error}'),
+                );
+              }
+              final logins = (snapshot.data?['logins'] as List?)
+                      ?.whereType<Map>()
+                      .map((e) => Map<String, dynamic>.from(e))
+                      .toList() ??
+                  const [];
+              if (logins.isEmpty) {
+                return const Center(
+                  child: Text('No recent login sessions recorded.',
+                      style: TextStyle(color: AppColors.textSecondary)),
+                );
+              }
+              return ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: logins.length,
+                itemBuilder: (_, i) {
+                  final entry = logins[i];
+                  final status = entry['status']?.toString() ?? '';
+                  final suspicious = status.toLowerCase() == 'fail';
+                  final userId = entry['user_id'];
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                            color: suspicious
+                                ? AppColors.error.withValues(alpha: 0.3)
+                                : AppColors.border)),
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(children: [
+                            Icon(
+                                suspicious
+                                    ? Icons.warning_amber_outlined
+                                    : Icons.devices,
+                                color: suspicious
+                                    ? AppColors.error
+                                    : AppColors.primary,
+                                size: 24),
+                            const SizedBox(width: 10),
+                            Expanded(
+                                child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                  Text(
+                                      entry['user_name']?.toString() ??
+                                          'User $userId',
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.textPrimary)),
+                                  Text(
+                                      entry['device_info']?.toString() ??
+                                          'Unknown device',
+                                      style: const TextStyle(
+                                          fontSize: 12,
+                                          color: AppColors.textSecondary)),
+                                  Text(
+                                      '${entry['ip_address'] ?? '—'} · ${_formatTimestamp(entry['timestamp']?.toString())}',
+                                      style: const TextStyle(
+                                          fontSize: 11,
+                                          color: AppColors.textSecondary)),
+                                ])),
+                            if (userId != null)
+                              TextButton(
+                                onPressed: () => _revokeUser(
+                                    context, int.tryParse('$userId') ?? 0),
+                                child: const Text('Revoke'),
+                              ),
+                          ]),
+                          if (suspicious)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                      color: AppColors.error
+                                          .withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(20)),
+                                  child: const Text('Failed login',
+                                      style: TextStyle(
+                                          fontSize: 11,
+                                          color: AppColors.error,
+                                          fontWeight: FontWeight.w600))),
+                            ),
+                        ]),
+                  );
+                },
+              );
+            },
+          ),
+        ),
         Padding(
             padding: const EdgeInsets.all(16),
             child: Column(children: [
@@ -3987,7 +3717,7 @@ class ForceLogoutScreen extends StatelessWidget {
               const SizedBox(height: 8),
               TButton(
                   label: 'Admin: Revoke User Sessions',
-                  onTap: () => _revokeUser(context)),
+                  onTap: () => _revokeUserPicker(context)),
             ])),
       ]),
       bottomNavigationBar: _AdminBottomNav(current: 2, ctx: context),

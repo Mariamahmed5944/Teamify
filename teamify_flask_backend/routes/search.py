@@ -4,7 +4,8 @@ from middleware.auth import auth_required
 from models import db
 from models.user import User
 from models.project import Project
-from services.project_access import accessible_projects_query
+from services.project_access import accessible_projects_query, search_user_dict
+from utils.pagination import parse_pagination
 from sqlalchemy import or_, func
 
 search_bp = Blueprint("search", __name__, url_prefix="/api/search")
@@ -80,11 +81,17 @@ def search_users():
     user_type = request.args.get("user_type", "").strip().lower()
     availability = request.args.get("availability", "").strip()
     looking_for_team = request.args.get("looking_for_team", "").strip().lower()
-    page = max(1, int(request.args.get("page", 1)))
-    
-    per_page = min(int(request.args.get("per_page", 20)), 100)
+    page, per_page, page_err = parse_pagination()
+    if page_err:
+        return page_err
 
-    query = User.query
+    query = User.query.filter(User.role.notin_(["admin", "guest"]))
+    query = query.filter(
+        or_(
+            User.account_status == "approved",
+            User.account_status.is_(None),
+        )
+    )
 
     if q:
         pattern = f"%{q}%"
@@ -118,7 +125,7 @@ def search_users():
     )
 
     return jsonify({
-        "users": [u.to_dict() for u in pagination.items],
+        "users": [search_user_dict(u) for u in pagination.items],
         "total": pagination.total,
         "page": pagination.page,
         "per_page": pagination.per_page,
@@ -182,8 +189,9 @@ def search_projects():
     user_id = int(get_jwt_identity())
     q = request.args.get("q", "").strip()
     status = request.args.get("status", "").strip().lower()
-    page = max(1, int(request.args.get("page", 1)))
-    per_page = min(int(request.args.get("per_page", 20)), 100)
+    page, per_page, page_err = parse_pagination()
+    if page_err:
+        return page_err
 
     from models.project import Project as _RealProject
     query = accessible_projects_query(user_id)

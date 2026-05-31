@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/theme.dart';
 import '../core/routes.dart';
+import '../core/session/session_controller.dart';
 import '../services/app_services.dart';
 import '../core/network/api_result.dart';
 
@@ -435,10 +436,14 @@ class AIBanner extends StatelessWidget {
 }
 
 // ── NavHelper ─────────────────────────────────────────────────────────────────
-void handleFreelancerNav(BuildContext ctx, int i) {
+void handleFreelancerNav(BuildContext ctx, int i, {bool? isStudent}) {
+  final student = isStudent ??
+      (Provider.of<SessionController>(ctx, listen: false).currentUser?.isStudent ??
+          false);
   switch (i) {
     case 0:
-      Navigator.pushReplacementNamed(ctx, R.freelancerHome);
+      Navigator.pushReplacementNamed(
+          ctx, student ? R.studentHome : R.freelancerHome);
       break;
     case 1:
       Navigator.pushNamed(ctx, R.search);
@@ -450,9 +455,15 @@ void handleFreelancerNav(BuildContext ctx, int i) {
       Navigator.pushNamed(ctx, R.chatList);
       break;
     case 4:
-      Navigator.pushNamed(ctx, R.freelancerProfile);
+      Navigator.pushReplacementNamed(
+          ctx, student ? R.studentProfile : R.freelancerProfile);
       break;
   }
+}
+
+/// Role-aware bottom navigation (student vs freelancer home/profile).
+void handleRoleNav(BuildContext ctx, int i) {
+  handleFreelancerNav(ctx, i);
 }
 
 // ── Repository Loader ─────────────────────────────────────────────────────────

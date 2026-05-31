@@ -12,6 +12,7 @@ from models.chat import ChatRoom, ChatRoomMember, Message
 from models.meeting_session import MeetingSession
 from models.project import Project
 from models.project_member import ProjectMember
+from services.project_access import users_share_project
 from models.user import User
 from services.chat_message_service import create_chat_message, delete_chat_message
 from services.chat_room_service import (
@@ -261,15 +262,23 @@ def create_room():
     if project_id is not None:
         sync_project_members_to_room(room.id, project_id)
 
-    # Add extra members (accept member_ids or members from clients)
+    # Add extra members (must share a project with the creator for non-project rooms)
     extra_ids = data.get("member_ids") or data.get("members") or []
     for mid in extra_ids:
         try:
             mid = int(mid)
         except (ValueError, TypeError):
             continue
-        if User.query.filter_by(id=mid).first():
-            add_room_member(room.id, mid)
+        if mid == user_id:
+            continue
+        if not User.query.filter_by(id=mid).first():
+            continue
+        if not users_share_project(user_id, mid):
+            return jsonify({
+                "error": "Forbidden",
+                "message": f"User {mid} must share a project with you to be added to a chat room",
+            }), 403
+        add_room_member(room.id, mid)
 
     db.session.commit()
     return jsonify({"message": "Room created", "room": room.to_dict()}), 201
@@ -424,6 +433,8 @@ def send_message(room_id):
     msg, err = create_chat_message(room_id, user_id, data)
     if err:
         return err
+    if msg is None:
+        return jsonify({"error": "Failed to create message"}), 500
 
     _broadcast_message(msg)
 

@@ -215,7 +215,7 @@ class _FreelancerHomeScreenState extends State<FreelancerHomeScreen> {
         ),
       ),
       bottomNavigationBar:
-          TBottomNav(current: 0, onTap: (i) => handleFreelancerNav(context, i)),
+          TBottomNav(current: 0, onTap: (i) => handleRoleNav(context, i)),
     );
   }
 
@@ -1278,7 +1278,7 @@ class _SearchScreenState extends State<SearchScreen> {
         ],
       ),
       bottomNavigationBar:
-          TBottomNav(current: 1, onTap: (i) => handleFreelancerNav(context, i)),
+          TBottomNav(current: 1, onTap: (i) => handleRoleNav(context, i)),
     );
   }
 
@@ -1731,7 +1731,7 @@ class StudentHomeScreen extends StatelessWidget {
         ),
       ),
       bottomNavigationBar:
-          TBottomNav(current: 0, onTap: (i) => handleFreelancerNav(context, i)),
+          TBottomNav(current: 0, onTap: (i) => handleRoleNav(context, i)),
     );
   }
 

@@ -11,10 +11,12 @@ class ApiClient {
   final TokenStorage tokenStorage;
 
   bool _isRefreshing = false;
+  void Function()? onAuthFailure;
 
   ApiClient({
     Dio? dio,
     TokenStorage? tokenStorage,
+    this.onAuthFailure,
   })  : dio = dio ??
             Dio(
               BaseOptions(
@@ -168,7 +170,11 @@ class ApiClient {
           return;
         } catch (_) {
           await tokenStorage.clear();
+          onAuthFailure?.call();
         }
+      } else {
+        await tokenStorage.clear();
+        onAuthFailure?.call();
       }
     }
 

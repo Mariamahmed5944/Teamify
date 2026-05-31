@@ -85,9 +85,19 @@ def api_predict_delay(task_id):
     from models.user import User
     from models import db
 
+    user_id = int(get_jwt_identity())
     task = db.session.get(Task, task_id)
     if not task:
         return jsonify({"error": "Task not found"}), 404
+
+    from middleware.auth import get_project_role, _READ_ROLES
+
+    role = get_project_role(user_id, task.project_id)
+    if role not in _READ_ROLES:
+        return jsonify({
+            "error": "Forbidden",
+            "message": "You do not have access to this task",
+        }), 403
 
     from services.ai_service import predict_delay as predict_delay_service
 
@@ -316,6 +326,20 @@ def api_mentor_report(user_id):
       200:
         description: Mentor report
     """
+    from flask_jwt_extended import get_jwt_identity
+    from models.user import User
+
+    current_user_id = int(get_jwt_identity())
+    current_user = db.session.get(User, current_user_id)
+    if not current_user:
+        return jsonify({"error": "User not found"}), 404
+
+    if current_user.role != "admin" and current_user_id != user_id:
+        return jsonify({
+            "error": "Forbidden",
+            "detail": "You are not authorized to view this user's mentor report",
+        }), 403
+
     result = generate_mentor_report(user_id)
     return jsonify(result), 200
 
@@ -343,6 +367,17 @@ def api_predict_rating(user_id):
     """
     from models.user import User
     from services.ai_mentor_service import build_user_ml_stats
+
+    current_user_id = int(get_jwt_identity())
+    current_user = db.session.get(User, current_user_id)
+    if not current_user:
+        return jsonify({"error": "User not found"}), 404
+
+    if current_user.role != "admin" and current_user_id != user_id:
+        return jsonify({
+            "error": "Forbidden",
+            "detail": "You are not authorized to view this user's rating prediction",
+        }), 403
 
     user = db.session.get(User, user_id)
     if not user:
@@ -387,9 +422,12 @@ def api_recommend_teammates():
         description: Recommended teammates
     """
     data = request.get_json(silent=True) or {}
-    user_stats = data.get("user_stats", {})
     top_n = int(data.get("top_n", 5))
     current_id = int(get_jwt_identity())
+
+    from services.ai_mentor_service import build_user_ml_stats
+
+    user_stats = build_user_ml_stats(current_id)
 
     teammates = recommend_teammates(user_stats, top_n=top_n + 3)
     teammates = [t for t in teammates if int(t.get("user_id", 0)) != current_id][:top_n]

@@ -1233,7 +1233,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen>
         ],
       ),
       bottomNavigationBar:
-          TBottomNav(current: 0, onTap: (i) => handleFreelancerNav(context, i)),
+          TBottomNav(current: 0, onTap: (i) => handleRoleNav(context, i)),
     );
   }
 }
@@ -3480,7 +3480,7 @@ class _ProjectsListScreenState extends State<ProjectsListScreen> {
         ),
       ]),
       bottomNavigationBar:
-          TBottomNav(current: 0, onTap: (i) => handleFreelancerNav(context, i)),
+          TBottomNav(current: 0, onTap: (i) => handleRoleNav(context, i)),
     );
   }
 

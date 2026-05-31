@@ -8,6 +8,7 @@ from models.log import Log
 from models.user import User as _User
 from services.chat_room_service import ensure_project_chat_room
 from services.project_access import accessible_projects_query
+from utils.pagination import parse_pagination
 from sqlalchemy import or_
 from datetime import date as date_type
 
@@ -88,8 +89,9 @@ def get_projects():
               type: string
     """
     user_id = get_current_user_id()
-    page     = max(1, int(request.args.get("page", 1)))
-    per_page = min(int(request.args.get("per_page", 20)), 100)
+    page, per_page, page_err = parse_pagination()
+    if page_err:
+        return page_err
     search   = request.args.get("search", "").strip()
     status_filter = request.args.get("status", "").strip().lower()
 

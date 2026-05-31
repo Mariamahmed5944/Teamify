@@ -13,6 +13,7 @@ import '../../models/models.dart';
 import '../../widgets/widgets.dart';
 import '../../data/models/api_user.dart';
 import '../../data/models/api_helpers.dart';
+import '../../data/models/api_project.dart';
 
 // ── Profile stats parsing (GET /api/users/<id>/stats) ─────────────────────────
 class ProfileDisplayStats {
@@ -249,6 +250,19 @@ class _ProfileBase extends StatelessWidget {
             const SizedBox(height: 8),
             _menuTile(context, Icons.folder_copy_outlined, 'My Projects',
                 onTap: () => Navigator.pushNamed(context, R.projectsList)),
+            if (!isAdmin) ...[
+              const SizedBox(height: 8),
+              _menuTile(context, Icons.history, 'Activity',
+                  onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const MyActivityScreen(),
+                        ),
+                      )),
+              const SizedBox(height: 8),
+              _menuTile(context, Icons.gavel_outlined, 'File a Dispute',
+                  onTap: () => showFileDisputeSheet(context)),
+            ],
             const SizedBox(height: 8),
             _menuTile(context, Icons.logout, 'Log Out', onTap: () async {
               await context.read<AppServices>().auth.logout();
@@ -262,7 +276,7 @@ class _ProfileBase extends StatelessWidget {
         ),
       ),
       bottomNavigationBar:
-          TBottomNav(current: 4, onTap: (i) => handleFreelancerNav(context, i)),
+          TBottomNav(current: 4, onTap: (i) => handleRoleNav(context, i)),
     );
   }
 
@@ -1218,176 +1232,132 @@ class _PerformanceScreenState extends State<PerformanceScreen>
           controller: _tab,
           children: const [_CoursesTab(), _PerfTab(), _FeedbackTab()]),
       bottomNavigationBar:
-          TBottomNav(current: 4, onTap: (i) => handleFreelancerNav(context, i)),
+          TBottomNav(current: 4, onTap: (i) => handleRoleNav(context, i)),
     );
   }
 }
 
 class _CoursesTab extends StatelessWidget {
   const _CoursesTab();
+
+  Future<List<Map<String, dynamic>>> _loadCourses(BuildContext context) async {
+    final userId = context.read<SessionController>().currentUser?.id ?? '';
+    if (userId.isEmpty) return const [];
+    final result =
+        await context.read<AppServices>().ai.mentorCourses(userId).unwrap();
+    final raw = result['courses'] ??
+        result['recommended_courses'] ??
+        result['items'] ??
+        result['data'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return ListView(padding: const EdgeInsets.all(16), children: [
-      const Text('Courses',
-          style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary)),
-      const Text('AI-recommended for you',
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-      const SizedBox(height: 12),
-      Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-              color: const Color(0xFFEEF4FF),
-              borderRadius: BorderRadius.circular(14)),
-          child: Row(children: [
-            Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(10)),
-                child: const Icon(Icons.star_outline,
-                    color: Colors.white, size: 20)),
-            const SizedBox(width: 12),
-            const Expanded(
-                child: Text(
-                    'These courses are personalized based on your career goals and current skill level',
-                    style: TextStyle(
-                        fontSize: 13, color: AppColors.textSecondary))),
-          ])),
-      const SizedBox(height: 20),
-      const Text('Continue Learning',
-          style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary)),
-      const SizedBox(height: 10),
-      TCard(
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          const Expanded(
-              child: Text('System Design Fundamentals',
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
-                      fontSize: 15))),
+    return RepositoryLoader<List<Map<String, dynamic>>>(
+      load: () => _loadCourses(context),
+      isEmpty: (courses) => courses.isEmpty,
+      emptyMessage: 'No AI course recommendations yet. Complete more projects to unlock suggestions.',
+      builder: (context, courses) => ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Text('Courses',
+              style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary)),
+          const Text('AI-recommended for you',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+          const SizedBox(height: 12),
           Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                  color: Colors.purple.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(20)),
-              child: const Text('Advanced',
-                  style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.purple,
-                      fontWeight: FontWeight.w600))),
-        ]),
-        const Text('Tech Academy · 24 lessons',
-            style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-        const SizedBox(height: 8),
-        const TBar(value: 0.42, color: AppColors.primary, height: 6),
-        const SizedBox(height: 6),
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          const Text('Lesson 10 of 24',
-              style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-          GestureDetector(
-              onTap: () {},
-              child: const Text('Continue →',
-                  style: TextStyle(
-                      fontSize: 12,
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w600))),
-        ]),
-      ])),
-      const SizedBox(height: 16),
-      const Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Text('Recommended for You',
-            style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary)),
-        Icon(Icons.auto_awesome, color: AppColors.primary, size: 18),
-      ]),
-      const SizedBox(height: 10),
-      ...[
-        {
-          'title': 'Advanced React Patterns',
-          'level': 'Intermediate',
-          'platform': 'Frontend Masters',
-          'duration': '8 hours',
-          'rating': '4.8',
-          'reviews': '1,243',
-          'levelColor': AppColors.accent
-        },
-        {
-          'title': 'Database Optimization',
-          'level': 'Advanced',
-          'platform': 'SQL Academy',
-          'duration': '12 hours',
-          'rating': '4.9',
-          'reviews': '856',
-          'levelColor': Colors.purple
-        },
-        {
-          'title': 'API Design Best Practices',
-          'level': 'Intermediate',
-          'platform': 'Web Development Pro',
-          'duration': '6 hours',
-          'rating': '4.7',
-          'reviews': '2,104',
-          'levelColor': AppColors.accent
-        },
-      ].map((c) => TCard(
-          margin: const EdgeInsets.only(bottom: 10),
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              Expanded(
-                  child: Text(c['title'] as String,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary))),
-              Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                      color: (c['levelColor'] as Color).withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(20)),
-                  child: Text(c['level'] as String,
-                      style: TextStyle(
-                          fontSize: 11,
-                          color: c['levelColor'] as Color,
-                          fontWeight: FontWeight.w600))),
-            ]),
-            Text('${c['platform']} · ${c['duration']}',
-                style: const TextStyle(
-                    fontSize: 12, color: AppColors.textSecondary)),
-            const SizedBox(height: 8),
-            Row(children: [
-              const Icon(Icons.star, color: Colors.amber, size: 14),
-              const SizedBox(width: 4),
-              Text('${c['rating']} (${c['reviews']})',
-                  style: const TextStyle(
-                      fontSize: 12, color: AppColors.textSecondary)),
-              const Spacer(),
-              GestureDetector(
-                  onTap: () {},
-                  child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                          color: AppColors.primaryDark,
-                          borderRadius: BorderRadius.circular(20)),
-                      child: const Text('Enroll',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600)))),
-            ]),
-          ]))),
-    ]);
+                  color: const Color(0xFFEEF4FF),
+                  borderRadius: BorderRadius.circular(14)),
+              child: Row(children: [
+                Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                        color: AppColors.primary,
+                        borderRadius: BorderRadius.circular(10)),
+                    child: const Icon(Icons.star_outline,
+                        color: Colors.white, size: 20)),
+                const SizedBox(width: 12),
+                const Expanded(
+                    child: Text(
+                        'These courses are personalized based on your career goals and current skill level',
+                        style: TextStyle(
+                            fontSize: 13, color: AppColors.textSecondary))),
+              ])),
+          const SizedBox(height: 20),
+          const Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            Text('Recommended for You',
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary)),
+            Icon(Icons.auto_awesome, color: AppColors.primary, size: 18),
+          ]),
+          const SizedBox(height: 10),
+          ...courses.map((c) {
+            final title = c['title']?.toString() ??
+                c['name']?.toString() ??
+                'Course';
+            final level = c['level']?.toString() ?? 'General';
+            final platform =
+                c['platform']?.toString() ?? c['provider']?.toString() ?? 'Online';
+            final duration = c['duration']?.toString() ?? '';
+            final rating = c['rating']?.toString() ?? '';
+            return TCard(
+                margin: const EdgeInsets.only(bottom: 10),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(children: [
+                        Expanded(
+                            child: Text(title,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.textPrimary))),
+                        Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(20)),
+                            child: Text(level,
+                                style: const TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.w600))),
+                      ]),
+                      Text(
+                          duration.isNotEmpty
+                              ? '$platform · $duration'
+                              : platform,
+                          style: const TextStyle(
+                              fontSize: 12, color: AppColors.textSecondary)),
+                      if (rating.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Row(children: [
+                          const Icon(Icons.star,
+                              color: Colors.amber, size: 14),
+                          const SizedBox(width: 4),
+                          Text(rating,
+                              style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary)),
+                        ]),
+                      ],
+                    ]));
+          }),
+        ],
+      ),
+    );
   }
 }
 
@@ -1573,8 +1543,38 @@ class _FeedbackTabState extends State<_FeedbackTab> {
   bool _aiAssisting = false;
   bool _submitting = false;
   int _listVersion = 0;
+  String? _selectedProjectId;
+  List<ApiProject> _projects = [];
+  bool _loadingProjects = true;
   String _aiSuggestion =
       'Consider mentioning specific achievements or areas for improvement to make your feedback more actionable.';
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadProjects());
+  }
+
+  Future<void> _loadProjects() async {
+    try {
+      final projects =
+          await context.read<AppServices>().projects.listProjects().unwrap();
+      if (!mounted) return;
+      setState(() {
+        _projects = projects;
+        _selectedProjectId = projects.isNotEmpty ? projects.first.id : null;
+        _loadingProjects = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _loadingProjects = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   Future<void> _runAiAssist() async {
     if (_stars == 0) {
@@ -1631,6 +1631,41 @@ class _FeedbackTabState extends State<_FeedbackTab> {
           const Text('Share your thoughts',
               style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
           const SizedBox(height: 16),
+          if (_loadingProjects)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 12),
+              child: LinearProgressIndicator(minHeight: 2),
+            )
+          else if (_projects.isEmpty)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 12),
+              child: Text(
+                'Join a project before submitting feedback.',
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+              ),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: DropdownButtonFormField<String>(
+                key: ValueKey(_selectedProjectId),
+                initialValue: _selectedProjectId,
+                decoration: const InputDecoration(
+                  labelText: 'Project',
+                  border: OutlineInputBorder(),
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                ),
+                items: _projects
+                    .map((p) => DropdownMenuItem<String>(
+                          value: p.id,
+                          child: Text(p.name,
+                              overflow: TextOverflow.ellipsis),
+                        ))
+                    .toList(),
+                onChanged: (v) => setState(() => _selectedProjectId = v),
+              ),
+            ),
           TCard(
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1698,6 +1733,16 @@ class _FeedbackTabState extends State<_FeedbackTab> {
                         ? null
                         : () async {
                             if (_stars == 0) return;
+                            final projectId = _selectedProjectId;
+                            if (projectId == null || projectId.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                      'Select a project before submitting feedback.'),
+                                ),
+                              );
+                              return;
+                            }
                             final feedback =
                                 context.read<AppServices>().feedback;
                             final messenger =
@@ -1707,7 +1752,7 @@ class _FeedbackTabState extends State<_FeedbackTab> {
                               await feedback
                                   .submitFeedback(
                                     targetUserId: user.id,
-                                    projectId: '1',
+                                    projectId: projectId,
                                     rating: _stars,
                                     comment: _ctrl.text.trim(),
                                   )
@@ -1816,6 +1861,183 @@ class _FeedbackTabState extends State<_FeedbackTab> {
   }
 }
 
+// ── Activity & Disputes ───────────────────────────────────────────────────────
+Future<void> showFileDisputeSheet(BuildContext context) async {
+  final subjectCtrl = TextEditingController();
+  final descCtrl = TextEditingController();
+  final accusedCtrl = TextEditingController();
+  var submitting = false;
+
+  await showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (sheetCtx) {
+      return StatefulBuilder(
+        builder: (context, setSheetState) {
+          return Padding(
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 20,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text('File a Dispute',
+                    style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary)),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: accusedCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Accused user ID',
+                    hintText: 'Enter the user ID you are reporting',
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: subjectCtrl,
+                  decoration: const InputDecoration(labelText: 'Subject'),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: descCtrl,
+                  maxLines: 4,
+                  decoration:
+                      const InputDecoration(labelText: 'Description'),
+                ),
+                const SizedBox(height: 16),
+                TButton(
+                  label: submitting ? 'Submitting…' : 'Submit Dispute',
+                  onTap: submitting
+                      ? null
+                      : () async {
+                          final accusedId =
+                              int.tryParse(accusedCtrl.text.trim());
+                          final subject = subjectCtrl.text.trim();
+                          final description = descCtrl.text.trim();
+                          if (accusedId == null ||
+                              subject.isEmpty ||
+                              description.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                    'User ID, subject, and description are required.'),
+                              ),
+                            );
+                            return;
+                          }
+                          setSheetState(() => submitting = true);
+                          final result = await context
+                              .read<AppServices>()
+                              .disputes
+                              .fileDispute({
+                            'accused_id': accusedId,
+                            'subject': subject,
+                            'description': description,
+                          });
+                          if (!context.mounted) return;
+                          setSheetState(() => submitting = false);
+                          result.when(
+                            success: (_) {
+                              Navigator.pop(sheetCtx);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Dispute submitted'),
+                                  backgroundColor: AppColors.success,
+                                ),
+                              );
+                            },
+                            failure: (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(e)),
+                              );
+                            },
+                          );
+                        },
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    },
+  );
+
+  subjectCtrl.dispose();
+  descCtrl.dispose();
+  accusedCtrl.dispose();
+}
+
+class MyActivityScreen extends StatelessWidget {
+  const MyActivityScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, size: 18),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text('My Activity',
+            style: TextStyle(fontWeight: FontWeight.bold)),
+      ),
+      body: RepositoryLoader<List<Map<String, dynamic>>>(
+        load: () =>
+            context.read<AppServices>().logs.getMyActivity().unwrap(),
+        isEmpty: (items) => items.isEmpty,
+        emptyMessage: 'No recent activity yet.',
+        builder: (context, items) => ListView.separated(
+          padding: const EdgeInsets.all(16),
+          itemCount: items.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 8),
+          itemBuilder: (_, i) {
+            final item = items[i];
+            final action =
+                item['action']?.toString() ?? item['type']?.toString() ?? 'Event';
+            final details = item['details']?.toString() ??
+                item['description']?.toString() ??
+                '';
+            final when = item['timestamp']?.toString() ??
+                item['created_at']?.toString() ??
+                '';
+            return TCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(action,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary)),
+                  if (details.isNotEmpty)
+                    Text(details,
+                        style: const TextStyle(
+                            fontSize: 12, color: AppColors.textSecondary)),
+                  if (when.isNotEmpty)
+                    Text(when,
+                        style: const TextStyle(
+                            fontSize: 11, color: AppColors.textHint)),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
 // ── Language Switch ───────────────────────────────────────────────────────────
 class LanguageSwitchScreen extends StatefulWidget {
   const LanguageSwitchScreen({super.key});
@@ -1824,7 +2046,32 @@ class LanguageSwitchScreen extends StatefulWidget {
 }
 
 class _LanguageSwitchScreenState extends State<LanguageSwitchScreen> {
+  static const _langCodes = {
+    'English': 'en',
+    'Arabic': 'ar',
+    'French': 'fr',
+    'Spanish': 'es',
+    'German': 'de',
+  };
+  static const _codeToName = {
+    'en': 'English',
+    'ar': 'Arabic',
+    'fr': 'French',
+    'es': 'Spanish',
+    'de': 'German',
+  };
+
   String _selected = 'English';
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final code =
+        context.read<SessionController>().currentUser?.preferredLanguage ?? 'en';
+    _selected = _codeToName[code] ?? 'English';
+  }
+
   final List<Map<String, dynamic>> _langs = [
     {'name': 'English', 'flag': '🇺🇸', 'native': 'English'},
     {'name': 'Arabic', 'flag': '🇪🇬', 'native': 'العربية'},
@@ -1882,7 +2129,40 @@ class _LanguageSwitchScreenState extends State<LanguageSwitchScreen> {
         Padding(
             padding: const EdgeInsets.all(16),
             child: TButton(
-                label: 'Apply Language', onTap: () => Navigator.pop(context))),
+                label: _saving ? 'Saving…' : 'Apply Language',
+                onTap: _saving
+                    ? null
+                    : () async {
+                        final code = _langCodes[_selected] ?? 'en';
+                        setState(() => _saving = true);
+                        final result = await context
+                            .read<AppServices>()
+                            .users
+                            .updateProfile({'preferred_language': code});
+                        if (!mounted) return;
+                        setState(() => _saving = false);
+                        result.when(
+                          success: (user) {
+                            if (user != null) {
+                              context
+                                  .read<SessionController>()
+                                  .setCurrentUser(user);
+                            }
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Language set to $_selected'),
+                                backgroundColor: AppColors.success,
+                              ),
+                            );
+                          },
+                          failure: (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(e)),
+                            );
+                          },
+                        );
+                      })),
       ]),
     );
   }

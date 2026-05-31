@@ -10,7 +10,6 @@ import 'core/session/session_controller.dart';
 import 'core/session/app_lifecycle_manager.dart';
 import 'core/session/disposable_registry.dart';
 import 'core/offline/offline_manager.dart';
-import 'core/network/api_client.dart';
 import 'data/repositories/app_repositories.dart';
 import 'data/models/api_user.dart';
 import 'services/app_services.dart';
@@ -40,14 +39,16 @@ void main() async {
   await stashOAuthRedirectIfPresent(cache);
 
   final repositories = AppRepositories();
+  final apiClient = repositories.apiClient;
 
   final session = SessionController(repositories.auth);
+  apiClient.onAuthFailure = session.forceUnauthenticated;
 
   // ── Offline Manager ──────────────────────────────────────────────────
   // Created BEFORE AppServices so every service shares the same queue.
   final offline = OfflineManager(
     cache: cache,
-    apiClient: ApiClient(tokenStorage: repositories.tokenStorage),
+    apiClient: apiClient,
   );
   offline.init();
   globalDisposableRegistry.register(offline);
@@ -241,27 +242,27 @@ class TeamifyApp extends StatelessWidget {
             ),
           );
         },
-        R.adminRoles: (_) => protected(const AdminRolesScreen()),
+        R.adminRoles: (_) => adminOnly(const AdminRolesScreen()),
         R.editRolePermissions: (_) =>
-            protected(const EditRolePermissionsScreen()),
-        R.securityChecklist: (_) => protected(const SecurityChecklistScreen()),
+            adminOnly(const EditRolePermissionsScreen()),
+        R.securityChecklist: (_) => adminOnly(const SecurityChecklistScreen()),
         R.loginLogs: (_) => adminOnly(const LoginLogsScreen()),
         R.securityAlerts: (_) => adminOnly(const SecurityAlertsScreen()),
-        R.alertDetails: (_) => protected(const AlertDetailsScreen()),
-        R.securityMonitor: (_) => protected(const SecurityMonitorScreen()),
-        R.rateLimiting: (_) => protected(const RateLimitingScreen()),
-        R.encryptionStatus: (_) => protected(const EncryptionStatusScreen()),
-        R.twoFAStatus: (_) => protected(const TwoFAEnableScreen()),
-        R.twoFAVerify: (_) => protected(const TwoFAVerifyScreen()),
-        R.twoFASuccess: (_) => protected(const TwoFASuccessScreen()),
-        R.analyst: (_) => protected(const AnalystScreen()),
+        R.alertDetails: (_) => adminOnly(const AlertDetailsScreen()),
+        R.securityMonitor: (_) => adminOnly(const SecurityMonitorScreen()),
+        R.rateLimiting: (_) => adminOnly(const RateLimitingScreen()),
+        R.encryptionStatus: (_) => adminOnly(const EncryptionStatusScreen()),
+        R.twoFAStatus: (_) => adminOnly(const TwoFAEnableScreen()),
+        R.twoFAVerify: (_) => adminOnly(const TwoFAVerifyScreen()),
+        R.twoFASuccess: (_) => adminOnly(const TwoFASuccessScreen()),
+        R.analyst: (_) => adminOnly(const AnalystScreen()),
         R.securityFiles: (_) => adminOnly(const SecurityFilesScreen()),
         R.securityCenter: (_) => adminOnly(const SecurityCenterScreen()),
         R.securityOverview: (_) => adminOnly(const SecurityOverviewScreen()),
-        R.forceLogout: (_) => protected(const ForceLogoutScreen()),
-        R.logoutAllDevices: (_) => protected(const LogoutAllDevicesScreen()),
+        R.forceLogout: (_) => adminOnly(const ForceLogoutScreen()),
+        R.logoutAllDevices: (_) => adminOnly(const LogoutAllDevicesScreen()),
         R.reviewActivity: (_) => adminOnly(const ReviewActivityScreen()),
-        R.askAI: (_) => protected(const AskAIScreen()),
+        R.askAI: (_) => adminOnly(const AskAIScreen()),
         R.teamsList: (_) => protected(const TeamsListScreen()),
         R.membersList: (_) => protected(const MembersListScreen()),
       },

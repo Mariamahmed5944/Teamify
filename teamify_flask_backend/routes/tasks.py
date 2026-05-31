@@ -17,6 +17,7 @@ from models.task import Task
 from models.project import Project
 from models.project_member import ProjectMember
 from models.log import Log
+from utils.pagination import parse_pagination
 
 tasks_bp = Blueprint("tasks", __name__, url_prefix="/api/tasks")
 
@@ -191,8 +192,9 @@ def get_tasks():
     """
     user_id = get_current_user_id()
     project_id_str = request.args.get("project_id")
-    page     = max(1, int(request.args.get("page", 1)))
-    per_page = min(int(request.args.get("per_page", 20)), 100)
+    page, per_page, page_err = parse_pagination()
+    if page_err:
+        return page_err
     status_filter   = request.args.get("status", "").strip().lower()
     priority_filter = request.args.get("priority", "").strip().lower()
     assigned_filter = request.args.get("assigned_to", "").strip()
@@ -701,7 +703,12 @@ def update_task(task_id):
     data = _request_json()
 
     if "title" in data:
-        task.title = data["title"].strip()
+        title = data["title"].strip()
+        if not title:
+            return jsonify({"error": "title cannot be empty"}), 400
+        if len(title) > 200:
+            return jsonify({"error": "title exceeds 200 characters"}), 400
+        task.title = title
     if "description" in data:
         task.description = data["description"]
     if "status" in data:

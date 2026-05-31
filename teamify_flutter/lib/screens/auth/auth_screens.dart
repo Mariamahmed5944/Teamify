@@ -1881,25 +1881,12 @@ class VerifyEmailScreen extends StatefulWidget {
 }
 
 class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
-  int _countdown = 0;
-
-  void _resendCode() {
-    if (_countdown > 0) return;
-    setState(() => _countdown = 60);
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-      content: Text('Code resent! Check your email.'),
-      backgroundColor: AppColors.primary,
-    ));
-    Future.doWhile(() async {
-      await Future.delayed(const Duration(seconds: 1));
-      if (!mounted) return false;
-      setState(() => _countdown--);
-      return _countdown > 0;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final email = args?['email']?.toString() ?? '';
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -1914,76 +1901,34 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
               fit: BoxFit.contain,
             ),
             const SizedBox(height: 28),
-            const Text('Verify your email',
+            const Text('Email verification',
                 style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: AppColors.textPrimary)),
             const SizedBox(height: 8),
-            const Text('A 6-digit code was sent to example*****@gmail.com',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
-            const SizedBox(height: 32),
-            Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(
-                  6,
-                  (index) => Container(
-                    width: 44,
-                    height: 52,
-                    margin: const EdgeInsets.only(right: 8),
-                    decoration: BoxDecoration(
-                        border: Border.all(color: AppColors.border),
-                        borderRadius: BorderRadius.circular(10)),
-                    child: TextField(
-                      autofocus: index == 0,
-                      onChanged: (v) {
-                        if (v.length == 1 && index < 5) {
-                          FocusScope.of(context).nextFocus();
-                        }
-                      },
-                      textAlign: TextAlign.center,
-                      keyboardType: TextInputType.number,
-                      maxLength: 1,
-                      style: const TextStyle(
-                          fontSize: 20, fontWeight: FontWeight.bold),
-                      decoration: const InputDecoration(
-                          border: InputBorder.none, counterText: ''),
-                    ),
-                  ),
-                )),
-            const SizedBox(height: 20),
-            GestureDetector(
-              onTap: _countdown == 0 ? _resendCode : null,
-              child: RichText(
-                  text: TextSpan(
-                text: "Didn't receive the code? ",
-                style: const TextStyle(
-                    color: AppColors.textSecondary, fontSize: 14),
-                children: [
-                  TextSpan(
-                    text:
-                        _countdown > 0 ? 'Resend in ${_countdown}s' : 'Resend',
-                    style: TextStyle(
-                      color: _countdown > 0
-                          ? AppColors.textHint
-                          : AppColors.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  )
-                ],
-              )),
+            Text(
+              email.isNotEmpty
+                  ? 'If you signed up with $email, check your inbox for a verification link or continue with the OTP step during signup.'
+                  : 'Teamify verifies your email during signup using a one-time code. '
+                      'If you already completed signup, you can log in directly.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                  color: AppColors.textSecondary, fontSize: 14, height: 1.4),
             ),
             const Spacer(),
             TButton(
-                label: 'Verify',
-                onTap: () {
-                  final role =
-                      ModalRoute.of(context)?.settings.arguments as String? ??
-                          'Freelancer';
-                  Navigator.pushNamed(context, R.otpVerification,
-                      arguments: {'role': role, 'flow': 'signup'});
-                }),
+                label: 'Continue to Login',
+                onTap: () => Navigator.pushNamedAndRemoveUntil(
+                      context,
+                      R.login,
+                      (_) => false,
+                    )),
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Back'),
+            ),
           ]),
         ),
       ),

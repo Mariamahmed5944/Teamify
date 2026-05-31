@@ -1,7 +1,7 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'cache_manager.dart';
 import '../network/api_result.dart';
+import '../observability/app_logger.dart';
 
 /// Reusable Stale-While-Revalidate (SWR) cache helper.
 class SwrHelper {
@@ -97,7 +97,11 @@ class SwrHelper {
       await cache.putMap(boxName, key, toJson(fresh));
       onRefreshed?.call(fresh);
     } catch (e) {
-      debugPrint('[SWR] Background refresh failed for $boxName:$key');
+      AppLogger.info('swr.revalidate.failed', data: {
+        'box': boxName,
+        'key': key,
+        'error': e.toString(),
+      });
     }
   }
 
@@ -113,7 +117,11 @@ class SwrHelper {
       await cache.putList(boxName, key, fresh.map(toJson).toList());
       onRefreshed?.call(fresh);
     } catch (e) {
-      debugPrint('[SWR] Background refresh failed for $boxName:$key');
+      AppLogger.info('swr.revalidate.failed', data: {
+        'box': boxName,
+        'key': key,
+        'error': e.toString(),
+      });
     }
   }
 }

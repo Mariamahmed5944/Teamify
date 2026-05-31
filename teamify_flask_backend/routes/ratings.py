@@ -14,6 +14,8 @@ from models import db
 from models.rating import Rating
 from models.user import User
 from models.project import Project
+from services.project_access import user_has_project_access, users_share_project
+from utils.pagination import parse_pagination
 
 ratings_bp = Blueprint("ratings", __name__, url_prefix="/api/ratings")
 
@@ -112,13 +114,26 @@ def create_rating():
     if int(ratee_id) == rater_id:
         return jsonify({"error": "You cannot rate yourself"}), 400
 
-    # --- Validate project (if provided) ---
-    if project_id:
-        project = Project.query.get(int(project_id))
-        if not project:
-            return jsonify({"error": "Project not found"}), 404
-    else:
-        project_id = None
+    # --- Validate project (required for context) ---
+    if not project_id:
+        return jsonify({"error": "project_id is required"}), 400
+    project = Project.query.get(int(project_id))
+    if not project:
+        return jsonify({"error": "Project not found"}), 404
+
+    if not user_has_project_access(rater_id, int(project_id)):
+        return jsonify({
+            "error": "Forbidden",
+            "message": "You must be a member of this project to submit a rating",
+        }), 403
+
+    if not user_has_project_access(int(ratee_id), int(project_id)):
+        return jsonify({
+            "error": "Bad Request",
+            "message": "The rated user is not a member of this project",
+        }), 400
+
+    project_id = int(project_id)
 
     # --- Validate score ---
     score, err = _validate_score(score_raw)
@@ -216,8 +231,9 @@ def get_user_ratings(ratee_id):
     if project_id:
         query = query.filter_by(project_id=project_id)
 
-    page     = max(1, request.args.get("page", 1, type=int))
-    per_page = min(request.args.get("per_page", 20, type=int), 100)
+    page, per_page, page_err = parse_pagination()
+    if page_err:
+        return page_err
     pagination = query.order_by(Rating.created_at.desc()).paginate(
         page=page, per_page=per_page, error_out=False
     )

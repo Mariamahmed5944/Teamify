@@ -458,6 +458,9 @@ class _MeetingScreenState extends State<MeetingScreen> {
 
     _wsManager = _ws();
     final wsManager = _wsManager;
+    if (wsManager != null && !wsManager.isConnected) {
+      await wsManager.connect();
+    }
     if (wsManager != null && wsManager.isConnected) {
       wsManager.joinRoom(rid);
       wsManager.joinMeeting(rid);
@@ -469,10 +472,6 @@ class _MeetingScreenState extends State<MeetingScreen> {
             _refreshLiveNotes();
           }
         }
-      });
-    } else {
-      _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-        _refreshLiveNotes();
       });
     }
     _refreshLiveNotes();

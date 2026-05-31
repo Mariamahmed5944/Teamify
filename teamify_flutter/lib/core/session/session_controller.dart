@@ -136,6 +136,18 @@ class SessionController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Called when the API client clears tokens after a failed refresh.
+  void forceUnauthenticated() {
+    if (status == SessionStatus.unauthenticated && currentUser == null) {
+      return;
+    }
+    currentUser = null;
+    admin2faLoginPending = false;
+    admin2faSetupRequired = false;
+    status = SessionStatus.unauthenticated;
+    notifyListeners();
+  }
+
   /// Apply tokens + user returned by Google/GitHub OAuth endpoints.
   Future<void> completeOAuthLogin(AuthResult result) async {
     currentUser = result.user;

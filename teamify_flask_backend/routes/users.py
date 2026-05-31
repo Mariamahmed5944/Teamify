@@ -4,6 +4,7 @@ from middleware.auth import auth_required, admin_required
 from models import db
 from models.user import User
 from sqlalchemy import or_
+from utils.pagination import parse_pagination
 import re
 
 users_bp = Blueprint("users", __name__, url_prefix="/api/users")
@@ -178,13 +179,16 @@ def update_profile():
     if "email" in data:
         new_email = (data["email"] or "").strip().lower()
         if new_email and new_email != user.email:
-            taken = User.query.filter(
-                User.email == new_email,
-                User.id != user.id,
-            ).first()
-            if taken:
-                return jsonify({"error": "Conflict", "message": "Email already in use"}), 409
-            user.email = new_email
+            if not EMAIL_RE.match(new_email):
+                errors.append("email format is invalid")
+            else:
+                taken = User.query.filter(
+                    User.email == new_email,
+                    User.id != user.id,
+                ).first()
+                if taken:
+                    return jsonify({"error": "Conflict", "message": "Email already in use"}), 409
+                user.email = new_email
 
     if "phone" in data:
         phone = (data["phone"] or "").strip()
@@ -245,7 +249,20 @@ def update_profile():
         user.skills = normalized or None
 
     if "looking_for_team" in data:
-        user.looking_for_team = data["looking_for_team"]
+        raw = data["looking_for_team"]
+        if isinstance(raw, bool):
+            user.looking_for_team = raw
+        elif isinstance(raw, str):
+            user.looking_for_team = raw.strip().lower() in ("true", "1", "yes")
+        else:
+            user.looking_for_team = bool(raw)
+
+    if "preferred_language" in data:
+        lang = (data["preferred_language"] or "").strip().lower()
+        if lang and lang not in {"en", "ar", "fr", "es", "de"}:
+            errors.append("preferred_language must be one of: en, ar, fr, es, de")
+        else:
+            user.preferred_language = lang or None
 
     if errors:
         return jsonify({"error": "Validation failed", "messages": errors}), 400
@@ -290,8 +307,9 @@ def admin_dashboard():
       403:
         description: Forbidden — admin access required
     """
-    page = max(1, int(request.args.get("page", 1)))
-    per_page = min(int(request.args.get("per_page", 20)), 50)
+    page, per_page, page_err = parse_pagination(default_per_page=20, max_per_page=50)
+    if page_err:
+        return page_err
     pagination = User.query.order_by(User.created_at.desc()).paginate(
         page=page, per_page=per_page, error_out=False
     )
@@ -414,6 +432,19 @@ def get_user_stats(user_id):
             message:
               type: string
     """
+    viewer_id = int(get_jwt_identity())
+    viewer = User.query.get(viewer_id)
+    if not viewer:
+        return jsonify({"error": "Not Found", "message": "User not found"}), 404
+
+    from services.project_access import can_view_user_stats
+
+    if not can_view_user_stats(viewer_id, user_id, viewer.role):
+        return jsonify({
+            "error": "Forbidden",
+            "message": "You are not authorized to view this user's stats",
+        }), 403
+
     user = User.query.get(user_id)
     if not user:
         return jsonify({"error": "Not Found", "message": "User not found"}), 404
