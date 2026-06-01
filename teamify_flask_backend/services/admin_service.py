@@ -1,7 +1,7 @@
 import logging
 import re
 from datetime import datetime, timezone, timedelta
-from sqlalchemy import func, or_, text
+from sqlalchemy import func, or_, and_, text
 from models import db
 from models.user import User
 from models.project import Project
@@ -15,7 +15,7 @@ from models.dispute import Dispute
 from models.file_metadata import FileMetadata
 from models.chat import ChatRoom, ChatRoomMember, Message
 from models.meeting_session import MeetingSession
-from models.system_setting import SystemSetting
+from services import system_settings_service as sys_settings
 
 logger = logging.getLogger(__name__)
 
@@ -29,11 +29,11 @@ def get_admin_dashboard_stats():
     
     open_tasks = Task.query.filter(Task.status != "done").count()
     
-    from models.log import Log
+    from models.audit_log import AuditLog
     today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-    ai_requests_today = Log.query.filter(
-        Log.action.ilike("%AI%"),
-        Log.created_at >= today_start
+    ai_requests_today = AuditLog.query.filter(
+        AuditLog.action == "AI_REQUEST",
+        AuditLog.created_at >= today_start,
     ).count()
     
     freelancers = User.query.filter_by(user_type="freelancer").count()
@@ -119,9 +119,6 @@ def list_admin_users(*args, **kwargs):
 
 
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
-_PASSWORD_RE = re.compile(r"^(?=.*[A-Z])(?=.*\d).{8,}$")
-
-
 def _unique_display_name(base: str) -> str:
     """Pick a unique display_name from an email local-part or name slug."""
     slug = re.sub(r"[^a-zA-Z0-9_]", "", base.lower())[:40] or "user"
@@ -149,10 +146,9 @@ def create_admin_user(full_name, email, password, role_label, password_hasher):
         errors.append("full_name is required")
     if not email or not _EMAIL_RE.match(email):
         errors.append("valid email is required")
-    if not _PASSWORD_RE.match(password):
-        errors.append(
-            "password must be at least 8 characters with one uppercase letter and one digit"
-        )
+    ok, pw_msg = sys_settings.validate_password(password)
+    if not ok:
+        errors.append(pw_msg)
     if errors:
         return None, "; ".join(errors)
 
@@ -358,28 +354,101 @@ def list_admin_tasks(*args, **kwargs):
     }
 
 def get_ai_monitoring_metrics():
-    from models.log import Log
-    
-    ai_logs = Log.query.filter(Log.action.ilike("%AI%")).order_by(Log.created_at.desc()).limit(20).all()
-    total_ai_requests = Log.query.filter(Log.action.ilike("%AI%")).count()
-    
+    import json
+    from collections import Counter
+    from models.audit_log import AuditLog
+
+    today_start = datetime.now(timezone.utc).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+
+    def _details(log: AuditLog) -> dict:
+        try:
+            return json.loads(log.details or "{}")
+        except (TypeError, json.JSONDecodeError):
+            return {}
+
+    today_logs = (
+        AuditLog.query.filter(
+            AuditLog.action == "AI_REQUEST",
+            AuditLog.created_at >= today_start,
+        )
+        .order_by(AuditLog.created_at.desc())
+        .all()
+    )
+    recent_logs = today_logs[:20]
+
+    failed_calls = sum(
+        1 for log in today_logs
+        if _details(log).get("status") != "success"
+        or (_details(log).get("status_code") or 200) >= 400
+    )
+    latencies_ms = [
+        int(_details(log).get("latency_ms") or 0)
+        for log in today_logs
+        if _details(log).get("latency_ms") is not None
+    ]
+    avg_latency_s = round(
+        (sum(latencies_ms) / len(latencies_ms) / 1000.0) if latencies_ms else 0.0,
+        2,
+    )
+    token_usage = sum(int(_details(log).get("token_usage") or 0) for log in today_logs)
+
+    endpoint_counts = Counter(
+        _details(log).get("endpoint") or "unknown" for log in today_logs
+    )
+    most_used_endpoint = endpoint_counts.most_common(1)[0][0] if endpoint_counts else None
+
+    def _feature_label(endpoint: str | None) -> str:
+        if not endpoint or endpoint == "unknown":
+            return "None"
+        labels = {
+            "predict-delay": "Delay Predictor",
+            "classify-task": "Task Classifier",
+            "summarize-chat": "Chat Summarizer",
+            "transcribe": "Speech Transcription",
+            "mentor-report": "Mentor Report",
+            "mentor/analyse": "Mentor Analysis",
+            "recommend-teammates": "Teammate Matching",
+            "detect-anomaly": "Anomaly Detection",
+            "suggest-priority": "Priority Suggester",
+            "suggest-deadline": "Deadline Suggester",
+            "cv/build": "CV Builder",
+            "feedback-assist": "Feedback Assistant",
+        }
+        for key, label in labels.items():
+            if key in endpoint:
+                return label
+        slug = endpoint.rstrip("/").rsplit("/", 1)[-1]
+        return slug.replace("-", " ").title() if slug else "None"
+
+    def _user_name(uid):
+        if not uid:
+            return "System"
+        u = db.session.get(User, uid)
+        return (u.full_name or u.display_name or u.email) if u else "Deleted user"
+
     return {
         "metrics": {
-            "total_requests": total_ai_requests,
-            "average_latency_ms": 240,
-            "success_rate_percent": 99.8,
-            "tokens_consumed_today": 124500
+            "total_ai_requests": len(today_logs),
+            "failed_ai_calls": failed_calls,
+            "average_response_time": avg_latency_s,
+            "token_usage": token_usage,
+            "most_used_feature": _feature_label(most_used_endpoint),
         },
         "recent_requests": [
             {
                 "id": log.id,
-                "user_name": log.user.display_name if log.user else "System",
-                "feature": log.action,
-                "status": "success",
+                "endpoint": _details(log).get("endpoint") or "unknown",
+                "feature": _feature_label(_details(log).get("endpoint")),
+                "user_name": _user_name(log.user_id),
+                "status": _details(log).get("status") or "success",
+                "duration": round((_details(log).get("latency_ms") or 0) / 1000.0, 2),
+                "token_usage": _details(log).get("token_usage") or 0,
                 "timestamp": log.created_at.isoformat() if log.created_at else None,
-                "latency_ms": 210
-            } for log in ai_logs
-        ]
+            }
+            for log in recent_logs
+        ],
     }
 
 def send_system_announcement(target, title, body, specific_user_id=None):
@@ -411,98 +480,101 @@ def send_system_announcement(target, title, body, specific_user_id=None):
 
 def get_security_center_data():
     from datetime import timedelta
+    from services.security_session_service import count_active_sessions, is_automation_agent
 
-    failed_logins = LoginLog.query.filter_by(status="fail").count()
-    locked_users = User.query.filter(User.locked_until != None).count()
-    suspicious_alerts_count = Alert.query.filter_by(resolved=False).count()
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
-    active_sessions = (
-        db.session.query(LoginLog.user_id)
-        .filter(LoginLog.status == "success", LoginLog.timestamp >= cutoff)
-        .distinct()
+    now = datetime.now(timezone.utc)
+    day_ago = now - timedelta(hours=24)
+    hour_ago = now - timedelta(hours=1)
+
+    failed_logins_24h = (
+        LoginLog.query.filter(LoginLog.status == "fail", LoginLog.timestamp >= day_ago)
         .count()
     )
-    
+    locked_users = User.query.filter(
+        or_(
+            User.account_status == "locked",
+            and_(User.locked_until.isnot(None), User.locked_until > now),
+        )
+    ).count()
+    suspicious_alerts_count = Alert.query.filter_by(resolved=False).count()
+    active_sessions = count_active_sessions()
+
     alerts = Alert.query.filter_by(resolved=False).order_by(Alert.timestamp.desc()).limit(10).all()
-    logins = LoginLog.query.order_by(LoginLog.timestamp.desc()).limit(10).all()
+    raw_logins = LoginLog.query.order_by(LoginLog.timestamp.desc()).limit(50).all()
 
     def _user_name(uid):
         if not uid:
-            return "System/Unknown"
-        u = User.query.get(uid)
-        return (u.full_name or u.display_name or u.email) if u else "System/Unknown"
+            return "Unknown user"
+        u = db.session.get(User, uid)
+        return (u.full_name or u.display_name or u.email) if u else "Deleted user"
+
+    def _alert_payload(alert: Alert) -> dict:
+        user_id = None
+        ip_match = re.search(r"\d{1,3}(?:\.\d{1,3}){3}", alert.description or "")
+        if ip_match:
+            recent_fail = (
+                LoginLog.query.filter(
+                    LoginLog.status == "fail",
+                    LoginLog.ip_address == ip_match.group(0),
+                    LoginLog.user_id.isnot(None),
+                )
+                .order_by(LoginLog.timestamp.desc())
+                .first()
+            )
+            if recent_fail:
+                user_id = recent_fail.user_id
+        return {
+            "id": alert.id,
+            "type": alert.type,
+            "description": alert.description,
+            "details": alert.description,
+            "user_id": user_id,
+            "timestamp": alert.timestamp.isoformat() if alert.timestamp else None,
+        }
+
+    human_logins = []
+    for log in raw_logins:
+        if is_automation_agent(log.device_info):
+            continue
+        human_logins.append(log)
+        if len(human_logins) >= 15:
+            break
 
     return {
         "metrics": {
-            "failed_logins": failed_logins,
+            "failed_logins": failed_logins_24h,
+            "failed_logins_window": "24h",
             "locked_users": locked_users,
             "active_sessions": active_sessions,
-            "suspicious_activity_alerts": suspicious_alerts_count
+            "recent_logins_1h": (
+                LoginLog.query.filter(
+                    LoginLog.status == "success",
+                    LoginLog.timestamp >= hour_ago,
+                )
+                .filter(~LoginLog.device_info.ilike("%python-requests%"))
+                .count()
+            ),
+            "suspicious_activity_alerts": suspicious_alerts_count,
         },
-        "alerts": [
-            {
-                "id": a.id,
-                "type": a.type,
-                "description": a.description,
-                "resolved_by": a.resolved_by,
-                "timestamp": a.timestamp.isoformat() if a.timestamp else None
-            } for a in alerts
-        ],
+        "alerts": [_alert_payload(a) for a in alerts],
         "logins": [
             {
                 "id": l.id,
                 "status": l.status,
                 "user_name": _user_name(l.user_id),
                 "ip_address": l.ip_address,
-                "device_info": l.device_info,
+                "device_info": l.device_info or "Unknown device",
                 "user_id": l.user_id,
-                "timestamp": l.timestamp.isoformat() if l.timestamp else None
-            } for l in logins
-        ]
+                "timestamp": l.timestamp.isoformat() if l.timestamp else None,
+                "is_automation": is_automation_agent(l.device_info),
+            }
+            for l in human_logins
+        ],
     }
 
 def get_system_settings():
-    defaults = {
-        "registrations_enabled": "true",
-        "maintenance_mode": "false",
-        "ai_mentorship_enabled": "true",
-        "mfa_required": "false",
-        "session_timeout_minutes": "60",
-        "max_login_attempts": "5",
-        "rate_limiting_enabled": "true",
-        "api_requests_per_minute": "100",
-        "login_attempts_per_hour": "5",
-        "encryption_at_rest": "true",
-        "encryption_in_transit": "true",
-    }
-    settings = {}
-    for key, def_val in defaults.items():
-        val = SystemSetting.get(key)
-        if val is None:
-            SystemSetting.set(key, def_val)
-            settings[key] = def_val
-        else:
-            settings[key] = val
-            
-    return {
-        "registrations_enabled": settings["registrations_enabled"].lower() == "true",
-        "maintenance_mode": settings["maintenance_mode"].lower() == "true",
-        "ai_mentorship_enabled": settings["ai_mentorship_enabled"].lower() == "true",
-        "mfa_required": settings["mfa_required"].lower() == "true",
-        "session_timeout_minutes": int(settings["session_timeout_minutes"]),
-        "max_login_attempts": int(settings["max_login_attempts"]),
-        "rate_limiting_enabled": settings["rate_limiting_enabled"].lower() == "true",
-        "api_requests_per_minute": int(settings["api_requests_per_minute"]),
-        "login_attempts_per_hour": int(settings["login_attempts_per_hour"]),
-        "encryption_at_rest": settings["encryption_at_rest"].lower() == "true",
-        "encryption_in_transit": settings["encryption_in_transit"].lower() == "true",
-    }
+    return sys_settings.get_system_settings()
+
 
 def update_system_settings(data):
-    for key, val in data.items():
-        if isinstance(val, bool):
-            str_val = "true" if val else "false"
-        else:
-            str_val = str(val)
-        SystemSetting.set(key, str_val)
-    return get_system_settings()
+    return sys_settings.update_system_settings(data)

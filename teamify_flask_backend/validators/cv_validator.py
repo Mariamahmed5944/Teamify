@@ -63,6 +63,13 @@ ALLOWED_SKILLS = {
     "Reliability & Consistency", "Teamwork & Synergy",
     "REST APIs", "HTML/CSS", "Unit Testing", "Code Review",
     "Product Thinking", "Stakeholder Communication", "Architecture", "OKRs",
+    # Profile / domain labels (from Teamify CV builder & user profiles)
+    "Backend Development", "Frontend Development", "Mobile App Development",
+    "Full Stack Development", "AI Tools", "DevOps Engineering",
+    "Cloud Engineering", "Software Engineering", "Web Development",
+    "Team Leadership", "Cross-functional Collaboration", "Time Management",
+    "Efficient Execution", "Professional Integrity",
+    "High Initiative & Engagement",
 }
 
 # Case-insensitive lookup set for validation
@@ -97,7 +104,50 @@ _SKILL_ALIASES: dict[str, str] = {
     "spring": "Spring Boot",
     "tailwind": "TailwindCSS",
     "tailwind css": "TailwindCSS",
+    "backend": "Backend Development",
+    "backend development": "Backend Development",
+    "backend dev": "Backend Development",
+    "frontend": "Frontend Development",
+    "frontend development": "Frontend Development",
+    "mobile": "Mobile App Development",
+    "mobile development": "Mobile App Development",
+    "mobile app development": "Mobile App Development",
+    "full stack": "Full Stack Development",
+    "fullstack": "Full Stack Development",
+    "full-stack": "Full Stack Development",
+    "full stack development": "Full Stack Development",
+    "ai tools": "AI Tools",
+    "devops": "DevOps Engineering",
+    "software engineering": "Software Engineering",
+    "web development": "Web Development",
 }
+
+_SAFE_SKILL_RE = re.compile(r"^[\w][\w\s&+#./\-]{1,79}$", re.UNICODE)
+
+
+def _normalize_skills_payload(skills: list) -> list:
+    """Drop or canonicalize skill rows so PATCH/POST never fails on junk names."""
+    if not isinstance(skills, list):
+        return []
+    cleaned: list[dict] = []
+    seen: set[str] = set()
+    for item in skills:
+        if not isinstance(item, dict):
+            continue
+        raw = item.get("name")
+        if not isinstance(raw, str):
+            continue
+        canon = _canonical_skill_name(raw)
+        if not canon:
+            continue
+        key = canon.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        row = dict(item)
+        row["name"] = canon
+        cleaned.append(row)
+    return cleaned
 
 
 def _canonical_skill_name(value: str) -> str | None:
@@ -112,6 +162,8 @@ def _canonical_skill_name(value: str) -> str | None:
         for skill in ALLOWED_SKILLS:
             if skill.lower() == key:
                 return skill
+    if _SAFE_SKILL_RE.match(cleaned):
+        return cleaned
     return None
 
 
@@ -232,6 +284,13 @@ class CVCreateSchema(Schema):
     education       = fields.List(fields.Nested(EducationSchema), load_default=list)
     certifications  = fields.List(fields.Nested(CertificationSchema), load_default=list)
     is_public       = fields.Bool(load_default=False)
+
+    @pre_load
+    def normalize_skills(self, data, **kwargs):
+        if isinstance(data, dict) and "skills" in data:
+            data = dict(data)
+            data["skills"] = _normalize_skills_payload(data.get("skills") or [])
+        return data
 
     @validates("skills")
     def validate_skills_count(self, value):

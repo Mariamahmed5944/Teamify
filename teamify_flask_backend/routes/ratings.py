@@ -161,6 +161,8 @@ def create_rating():
     )
     db.session.add(rating)
     db.session.commit()
+    from services.ai_mentor_service import invalidate_mentor_cache
+    invalidate_mentor_cache(int(ratee_id))
     return jsonify({"message": "Rating submitted", "rating": rating.to_dict()}), 201
 
 
@@ -388,6 +390,8 @@ def update_rating(rating_id):
         rating.comment = (data["comment"] or "").strip() or None
 
     db.session.commit()
+    from services.ai_mentor_service import invalidate_mentor_cache
+    invalidate_mentor_cache(int(rating.ratee_id))
     return jsonify({"message": "Rating updated", "rating": rating.to_dict()}), 200
 
 
@@ -442,4 +446,6 @@ def delete_rating(rating_id):
 
     db.session.delete(rating)
     db.session.commit()
+    from services.ai_mentor_service import invalidate_mentor_cache
+    invalidate_mentor_cache(int(rating.ratee_id))
     return jsonify({"message": "Rating deleted"}), 200

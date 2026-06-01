@@ -395,7 +395,10 @@ class AIService with ServiceErrorHandler {
   // ── Task AI features ──────────────────────────────────────────────────
 
   Future<ApiResult<Map<String, dynamic>>> classifyTask(String text) =>
-      _dedup.deduplicate('classify_task', () => guard(() => _ai.classifyTask(text)));
+      _dedup.deduplicate(
+        'classify_task_${text.hashCode}',
+        () => guard(() => _ai.classifyTask(text)),
+      );
 
   /// POST /api/ai/feedback-assist — draft peer-feedback comment + tip.
   Future<ApiResult<Map<String, String>>> generateFeedbackAssist({
@@ -597,6 +600,20 @@ class MentorInsights {
     }
     return performanceOverall;
   }
+
+  List<Map<String, dynamic>> get recentFeedback {
+    final raw = performanceHistory['recent_feedback'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+  }
+
+  bool get hasPeerPerformanceData =>
+      feedbackCount > 0 ||
+      ratingCount > 0 ||
+      performanceHistory['source']?.toString() == 'peer_feedback';
 }
 
 class MentorChatReply {

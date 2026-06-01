@@ -381,10 +381,11 @@ class AdminRepository {
     return responseMap(response.data);
   }
 
-  Future<void> updateSettings(Map<String, dynamic> settings) async {
-    await _client.put<dynamic>(
+  Future<Map<String, dynamic>> updateSettings(Map<String, dynamic> settings) async {
+    final response = await _client.put<Map<String, dynamic>>(
       '/admin/settings',
       data: settings,
     );
+    return responseMap(response.data);
   }
 }

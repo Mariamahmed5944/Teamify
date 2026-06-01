@@ -4,8 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/audio/meeting_browser_speech.dart';
-import '../../core/audio/meeting_speech_recorder.dart';
+import '../../core/audio/meeting_mic_keepalive.dart';
+import '../../core/audio/meeting_speech_merge.dart';
+import '../../core/audio/meeting_speech_pipeline.dart';
 import '../../core/network/api_result.dart';
 import '../../core/network/websocket_manager.dart';
 import '../../core/files/file_downloader.dart';
@@ -13,10 +14,10 @@ import '../../core/routes.dart';
 import '../../core/session/session_controller.dart';
 import '../../core/theme.dart';
 import '../../services/app_services.dart';
-import '../../widgets/widgets.dart';
 import '../project/project_screens.dart' show AddTaskRouteArgs;
 import 'meeting_summary_export.dart';
 import 'meeting_transcript_utils.dart';
+import 'meeting_ui.dart';
 
 class _MeetingParticipant {
   final String userId;
@@ -61,13 +62,18 @@ class _MeetingScreenState extends State<MeetingScreen> {
   bool _stoppingSession = false;
   bool _disposed = false;
   List<Map<String, dynamic>> _sessionTranscript = [];
-  final MeetingSpeechRecorder _speechRecorder = MeetingSpeechRecorder();
-  MeetingBrowserSpeech? _browserSpeech;
-  bool _useBrowserSpeech = false;
+  final MeetingSpeechPipeline _speechPipeline = MeetingSpeechPipeline();
   bool _speechActive = false;
   bool _speechUnavailable = false;
-  bool _transcribingChunk = false;
-  String? _livePartialSpeech;
+  int _backgroundInsightJobs = 0;
+  final LiveSpeechBuffer _liveSpeech = LiveSpeechBuffer();
+  String? _speechDiagnosticStatus;
+  DateTime? _speechDiagnosticAt;
+  bool _finalizingSpeech = false;
+  bool _participantsExpanded = true;
+  bool _finalizingMeeting = false;
+  bool _endingMeeting = false;
+  Timer? _speechWatchdog;
 
   DateTime? _startedAt;
   Timer? _elapsedTimer;
@@ -87,13 +93,12 @@ class _MeetingScreenState extends State<MeetingScreen> {
     _disposed = true;
     _elapsedTimer?.cancel();
     _pollTimer?.cancel();
+    _speechWatchdog?.cancel();
     _wsSub?.cancel();
-    // Capture and null-out before stopping to avoid double-stop
-    final bs = _browserSpeech;
-    _browserSpeech = null;
-    bs?.stop(null).ignore();
-    _speechRecorder.stop();
-    _speechRecorder.dispose();
+    _speechPipeline.dispose();
+    if (kIsWeb) {
+      MeetingMicKeepAlive.release();
+    }
     if (_isLive && _roomId != null) {
       _wsManager?.leaveMeeting(_roomId!);
     }
@@ -423,6 +428,12 @@ class _MeetingScreenState extends State<MeetingScreen> {
       setState(() {
         _startingMeeting = false;
         _isLive = true;
+        _participantsExpanded = false;
+        _liveSpeech.committed = '';
+        _liveSpeech.clearPartial();
+        _speechDiagnosticStatus = null;
+        _muted = false;
+        _speechUnavailable = false;
         _sessionId = session['id']?.toString();
         _sessionSaved = false;
         _sessionTranscript = [];
@@ -454,7 +465,15 @@ class _MeetingScreenState extends State<MeetingScreen> {
     _wsSub?.cancel();
     _pollTimer?.cancel();
 
-    await _startSpeechCapture();
+    _startSpeechWatchdog();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted || _disposed || !_isLive) return;
+      await _startSpeechCapture();
+      if (mounted && !_disposed && _isLive && !_speechPipeline.isLiveActive) {
+        await Future.delayed(const Duration(milliseconds: 600));
+        if (mounted && _isLive) await _startSpeechCapture();
+      }
+    });
 
     _wsManager = _ws();
     final wsManager = _wsManager;
@@ -484,11 +503,15 @@ class _MeetingScreenState extends State<MeetingScreen> {
     return ids.toList();
   }
 
-  Future<bool> _persistSession({bool silent = false}) async {
+  Future<Map<String, dynamic>?> _persistSession({
+    bool silent = false,
+    bool force = false,
+  }) async {
     final rid = _roomId;
     final sid = _sessionId;
-    if (rid == null || sid == null || _sessionSaved || _stoppingSession) {
-      return _sessionSaved;
+    if (rid == null || sid == null) return null;
+    if (!force && (_sessionSaved || _stoppingSession)) {
+      return null;
     }
 
     if (!silent && mounted) {
@@ -499,12 +522,14 @@ class _MeetingScreenState extends State<MeetingScreen> {
     final transcript = _transcriptSnapshot();
     final chat = context.read<AppServices>().chat;
     try {
-      await chat.stopMeetingSession(
+      final session = await chat
+          .stopMeetingSession(
             rid,
             sid,
             transcript: transcript,
             participantIds: participantIds,
-          ).unwrap();
+          )
+          .unwrap();
       _sessionSaved = true;
       if (!silent && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -513,14 +538,14 @@ class _MeetingScreenState extends State<MeetingScreen> {
           ),
         );
       }
-      return true;
+      return session;
     } catch (e) {
       if (!silent && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to save transcript: $e')),
         );
       }
-      return false;
+      return null;
     } finally {
       if (!silent && mounted) {
         setState(() => _stoppingSession = false);
@@ -528,92 +553,72 @@ class _MeetingScreenState extends State<MeetingScreen> {
     }
   }
 
+  void _startSpeechWatchdog() {
+    _speechWatchdog?.cancel();
+    _speechWatchdog = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (!_isLive || _muted || _disposed || _speechUnavailable) return;
+      if (!_speechPipeline.isLiveActive) {
+        _startSpeechCapture();
+      }
+    });
+  }
+
+  void _stopSpeechWatchdog() {
+    _speechWatchdog?.cancel();
+    _speechWatchdog = null;
+  }
+
+  Future<String?> _transcribeBytes(Uint8List bytes, String filename) async {
+    final result = await context.read<AppServices>().ai.transcribe(
+          bytes,
+          filename: filename,
+        );
+    if (!result.isSuccess) return null;
+    return result.data?.text.trim();
+  }
+
   Future<void> _startSpeechCapture() async {
-    final micOk = await _speechRecorder.ensurePermission();
-    if (!micOk) {
-      if (mounted && !_disposed) {
-        setState(() {
-          _speechUnavailable = true;
-          _speechActive = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'الميكروفون مرفوض. اسمح بالمايك من أيقونة القفل في المتصفح، '
-              'ثم اضغط Enable microphone.',
-            ),
-            duration: Duration(seconds: 6),
-          ),
-        );
-      }
-      return;
-    }
-
-    // Web: record real audio chunks (same as chat voice). Browser STT conflicts with mic.
-    if (kIsWeb) {
-      _browserSpeech?.stop(null).ignore();
-      _browserSpeech = null;
-      _useBrowserSpeech = false;
-      _speechRecorder.start(
-        interval: const Duration(seconds: 7),
-        chunkDuration: const Duration(seconds: 5),
-        shouldCapture: () => _isLive && !_muted && !_disposed,
-        onChunk: _onSpeechChunk,
-      );
-      if (mounted && !_disposed) {
-        setState(() {
-          _speechActive = true;
-          _speechUnavailable = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'جاري التسجيل… تكلم الآن (يُحوَّل الصوت لنص كل بضع ثوانٍ).',
-            ),
-            duration: Duration(seconds: 3),
-          ),
-        );
-      }
-      return;
-    }
-
-    // Desktop / mobile: try live browser-style captions on web; else Whisper chunks.
-    final browser = MeetingBrowserSpeech();
-    final ok = await browser.initialize(
+    final started = await _speechPipeline.start(
+      onLiveText: _handleLiveSpeech,
+      transcribeFallback: _transcribeBytes,
       onError: _onSpeechEngineError,
       onStatus: _onSpeechEngineStatus,
+      onWhisperRefine: _handleWhisperRefinement,
+      onBackgroundJobsChanged: (count) {
+        if (mounted && !_disposed) {
+          setState(() => _backgroundInsightJobs = count);
+        }
+      },
+      shouldRun: () =>
+          (_isLive || _finalizingSpeech) && !_muted && !_disposed,
     );
-    if (ok) {
-      _browserSpeech = browser;
-      _useBrowserSpeech = true;
-      final listening = await browser.startListening(_onBrowserSpeechResult);
-      if (listening && mounted && !_disposed) {
-        setState(() {
-          _speechActive = true;
-          _speechUnavailable = false;
-        });
-        return;
-      }
-      await browser.stop(null);
-      _browserSpeech = null;
-      _useBrowserSpeech = false;
-    }
 
-    _speechRecorder.start(
-      shouldCapture: () => _isLive && !_muted && !_disposed,
-      onChunk: _onSpeechChunk,
-    );
-    if (mounted && !_disposed) {
+    if (!mounted || _disposed) return;
+
+    if (started) {
       setState(() {
         _speechActive = true;
         _speechUnavailable = false;
       });
+      return;
     }
+
+    setState(() {
+      _speechUnavailable = true;
+      _speechActive = false;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Microphone or speech recognition unavailable. Allow mic in the browser, then tap Enable microphone.',
+        ),
+        duration: Duration(seconds: 6),
+      ),
+    );
   }
 
   void _onSpeechEngineError(String message) {
-    if (!_useBrowserSpeech) return;
-    debugPrint('Meeting speech engine error: $message');
+    debugPrint('Meeting speech error: $message');
     final denied = message.contains('not-allowed') ||
         message.contains('not_allowed') ||
         message.contains('audio-capture') ||
@@ -629,206 +634,332 @@ class _MeetingScreenState extends State<MeetingScreen> {
           duration: Duration(seconds: 5),
         ),
       );
+      return;
+    }
+    if (_isLive && !_muted && !_disposed) {
+      Future.delayed(const Duration(milliseconds: 400), _ensureSpeechCaptureRunning);
     }
   }
 
   void _onSpeechEngineStatus(String status) {
-    if (!_useBrowserSpeech) return;
-    if (status == 'listening' && mounted && !_disposed && _speechUnavailable) {
-      setState(() {
+    if (!mounted || _disposed) return;
+    setState(() {
+      _speechDiagnosticStatus = status;
+      _speechDiagnosticAt = DateTime.now();
+      if (status == 'listening' || status == 'speech_detected') {
         _speechUnavailable = false;
         _speechActive = true;
-      });
+      }
+    });
+  }
+
+  String? _speechDiagnosticLabel() {
+    final s = _speechDiagnosticStatus;
+    if (s == null) return null;
+    if (_speechDiagnosticAt != null &&
+        DateTime.now().difference(_speechDiagnosticAt!) >
+            const Duration(seconds: 12)) {
+      return null;
     }
+    return switch (s) {
+      'listening' => 'Listening',
+      'speech_detected' => 'Speech detected',
+      'restarting' => 'Restarting recognition',
+      'finalizing_phrase' => 'Finalizing phrase',
+      'whisper_refining' => 'Whisper refining',
+      'ended' => 'Recognition paused — restarting',
+      'error' => 'Recognition error',
+      _ => null,
+    };
   }
 
   Future<void> _retryMicrophone() async {
     if (!_isLive || _disposed) return;
-    _stopSpeechCapture();
+    await _stopSpeechCapture();
     await _startSpeechCapture();
   }
 
-  void _stopSpeechCapture() {
-    final bs = _browserSpeech;
-    _browserSpeech = null;
-    _useBrowserSpeech = false;
-    bs?.stop(null).ignore();
-    _speechRecorder.stop();
+  Future<void> _stopSpeechCapture() async {
+    await _speechPipeline.shutdown();
+    if (kIsWeb) {
+      MeetingMicKeepAlive.release();
+    }
     if (mounted && !_disposed) {
       setState(() {
         _speechActive = false;
-        _livePartialSpeech = null;
+        _liveSpeech.clearPartial();
+        _speechDiagnosticStatus = null;
+        _backgroundInsightJobs = 0;
       });
     }
   }
 
+  void _finalizeLocalTranscript() {
+    final text = _streamingSpeechText().trim();
+    if (text.isEmpty) return;
+    _liveSpeech.committed = text;
+    _liveSpeech.clearPartial();
+    _upsertSpeechTranscript(text);
+    _syncStreamingLiveNote();
+  }
+
   Future<void> _flushSpeechCapture() async {
-    if (!_isLive || _muted) return;
-    if (_useBrowserSpeech && _browserSpeech != null) {
-      await _browserSpeech!.stop(_onBrowserSpeechResult);
-      return;
-    }
-    await _speechRecorder.flush(
-      _onSpeechChunk,
-      shouldCapture: () => _isLive && !_muted,
-    );
+    if ((!_isLive && !_finalizingSpeech) || _muted) return;
+    await _speechPipeline.commitPartial(_handleLiveSpeech);
   }
 
-  void _onBrowserSpeechResult(String text, bool isFinal) {
-    if (!_isLive || _muted || !mounted || _disposed || text.trim().isEmpty) return;
-    if (!isFinal) {
-      setState(() => _livePartialSpeech = text.trim());
+  String _streamingSpeechText() => _liveSpeech.displayText;
+
+  void _handleWhisperRefinement(String text) {
+    if ((!_isLive && !_finalizingSpeech) ||
+        _muted ||
+        !mounted ||
+        _disposed ||
+        text.trim().isEmpty) {
       return;
     }
-    _appendSpeechLine(text.trim());
-    if (mounted && !_disposed) setState(() => _livePartialSpeech = null);
+    setState(() {
+      _liveSpeech.applyWhisperRefinement(text);
+      _syncStreamingLiveNote();
+    });
+    _upsertSpeechTranscript(_liveSpeech.committed);
   }
 
-  void _appendSpeechLine(String text) {
+  void _handleLiveSpeech(String text, bool isFinal) {
+    if ((!_isLive && !_finalizingSpeech) ||
+        _muted ||
+        !mounted ||
+        _disposed ||
+        text.trim().isEmpty) {
+      return;
+    }
+
+    setState(() {
+      if (isFinal) {
+        _liveSpeech.applyFinal(text);
+      } else {
+        _liveSpeech.applyPartial(text);
+      }
+      _syncStreamingLiveNote();
+    });
+
+    if (isFinal) {
+      _upsertSpeechTranscript(_liveSpeech.committed);
+    }
+  }
+
+  void _syncStreamingLiveNote() {
     if (!mounted || _disposed) return;
+    final user = context.read<SessionController>().currentUser;
+    final name = (user?.fullName.isNotEmpty == true)
+        ? user!.fullName
+        : (user?.displayName ?? 'You');
+    final committed = _liveSpeech.committed.trim();
+    if (committed.isEmpty) return; // in-progress text → partialSpeech bubble below
+
+    final speechPrefix = '[Speech] $name: ';
+    final notes = [..._liveNoteLines];
+    var speechIdx = -1;
+    for (var i = notes.length - 1; i >= 0; i--) {
+      if (notes[i].startsWith(speechPrefix)) {
+        speechIdx = i;
+        break;
+      }
+    }
+    final line = '$speechPrefix$committed';
+    if (speechIdx >= 0) {
+      notes[speechIdx] = line;
+    } else {
+      notes.add(line);
+    }
+    _liveNoteLines =
+        notes.length > 24 ? notes.sublist(notes.length - 24) : notes;
+  }
+
+  void _upsertSpeechTranscript(String fullText) {
+    if (fullText.trim().isEmpty) return;
     final user = context.read<SessionController>().currentUser;
     final name = (user?.fullName.isNotEmpty == true)
         ? user!.fullName
         : (user?.displayName ?? 'You');
     final myId = user?.id ?? '';
 
-    final speechEntries = _sessionTranscript
-        .where((e) => e['source']?.toString() == 'speech')
-        .toList();
-    if (speechEntries.any((e) => e['content']?.toString() == text)) return;
-    if (speechEntries.isNotEmpty) {
-      final last = speechEntries.last['content']?.toString() ?? '';
-      if (text == last || (text.startsWith(last) && last.length > 8)) {
-        _sessionTranscript = [
-          ..._sessionTranscript.where((e) => e != speechEntries.last),
-          {
-            ...speechEntries.last,
-            'content': text,
-            'created_at': DateTime.now().toUtc().toIso8601String(),
-          },
-        ];
-        if (mounted && !_disposed) {
-          setState(() {
-            final notes = [..._liveNoteLines];
-            if (notes.isNotEmpty) notes.removeLast();
-            notes.add('[Speech] $name: $text');
-            _liveNoteLines =
-                notes.length > 12 ? notes.sublist(notes.length - 12) : notes;
-          });
-        }
-        return;
-      }
-    }
+    final idx = _sessionTranscript.indexWhere(
+      (e) =>
+          e['source']?.toString() == 'speech' &&
+          e['sender_id']?.toString() == myId,
+    );
 
-    final line = '$name: $text';
     final entry = {
-      'id': 'speech-${DateTime.now().millisecondsSinceEpoch}',
+      'id': idx >= 0
+          ? _sessionTranscript[idx]['id']
+          : 'speech-live-${_sessionId ?? '0'}',
       'source': 'speech',
       'sender_id': myId,
       'sender_name': name,
-      'content': text,
+      'content': fullText,
       'created_at': DateTime.now().toUtc().toIso8601String(),
     };
 
-    setState(() {
+    if (idx >= 0) {
+      _sessionTranscript = [
+        ..._sessionTranscript.sublist(0, idx),
+        entry,
+        ..._sessionTranscript.sublist(idx + 1),
+      ];
+    } else {
       _sessionTranscript = [..._sessionTranscript, entry];
-      final notes = [..._liveNoteLines, '[Speech] $line'];
-      _liveNoteLines =
-          notes.length > 12 ? notes.sublist(notes.length - 12) : notes;
-    });
+    }
   }
 
-  Future<void> _onSpeechChunk(Uint8List bytes, String filename) async {
-    if (!_isLive || _muted || !mounted || _disposed) return;
-    if (bytes.isEmpty) return;
+  /// Save transcript to the server but keep the meeting live and recording.
+  Future<void> _saveTranscriptCheckpoint() async {
+    if (_stoppingSession || !_isLive) return;
 
-    if (mounted && !_disposed) {
-      setState(() => _transcribingChunk = true);
-    }
+    setState(() => _stoppingSession = true);
+    await _flushSpeechCapture();
+    await _refreshLiveNotes();
 
-    final result = await context.read<AppServices>().ai.transcribe(
-          bytes,
-          filename: filename,
-        );
-
-    if (!mounted || _disposed) return;
-    setState(() => _transcribingChunk = false);
-
-    if (!result.isSuccess) {
-      final offline = result.error?.contains('502') == true ||
-          result.error?.toLowerCase().contains('stt') == true;
-      if (mounted && !_disposed) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              offline
-                  ? 'الصوت يُسجَّل لكن خدمة التحويل لنص غير شغّالة. شغّل Whisper على المنفذ 8000.'
-                  : 'فشل تحويل الصوت: ${result.error}',
-            ),
-            duration: const Duration(seconds: 4),
-          ),
-        );
-      }
+    final rid = _roomId;
+    final sid = _sessionId;
+    if (rid == null || sid == null) {
+      if (mounted) setState(() => _stoppingSession = false);
       return;
     }
 
-    final text = result.data!.text.trim();
-    if (text.isEmpty) return;
-    _appendSpeechLine(text);
+    final chat = context.read<AppServices>().chat;
+    try {
+      await chat.saveMeetingCheckpoint(
+        rid,
+        sid,
+        transcript: _transcriptSnapshot(),
+        participantIds: _participantIdsForSession(),
+      ).unwrap();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Transcript saved — meeting still live. Recording continues.',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save transcript: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _stoppingSession = false);
+    }
+
+    await _ensureSpeechCaptureRunning();
   }
 
-  Future<void> _stopRecording() async {
-    if (_stoppingSession) return;
-    _elapsedTimer?.cancel();
-    _pollTimer?.cancel();
-    _wsSub?.cancel();
-    await _flushSpeechCapture();
-    _stopSpeechCapture();
-    if (_roomId != null) {
-      _emitLeaveMeeting(_roomId!);
+  Future<void> _ensureSpeechCaptureRunning() async {
+    if (!_isLive || _muted || _disposed) return;
+    if (_speechPipeline.isLiveActive) return;
+    await _startSpeechCapture();
+  }
+
+  Future<void> _toggleMute() async {
+    if (!_isLive || _disposed) return;
+    final next = !_muted;
+    setState(() => _muted = next);
+    if (next) {
+      await _speechPipeline.commitPartial(_handleLiveSpeech);
+      await _speechPipeline.shutdown();
+      if (mounted) setState(() => _speechActive = false);
+    } else {
+      await _ensureSpeechCaptureRunning();
     }
-    await _refreshLiveNotes();
-    await _persistSession();
-    if (!mounted || _disposed) return;
-    setState(() {
-      _isLive = false;
-      _speechActive = false;
-      _presenceActiveIds = {};
-      for (final p in _participants) {
-        p.isActive = false;
-      }
-    });
+  }
+
+  Future<void> _toggleRecord() async {
+    if (!_isLive || _disposed) return;
+    if (_speechUnavailable) {
+      await _retryMicrophone();
+      return;
+    }
+    if (_speechActive && !_muted) return;
+    setState(() => _muted = false);
+    await _startSpeechCapture();
   }
 
   Future<void> _endMeeting() async {
-    // Mark as ended immediately so dispose() does not try to leave again
+    if (_endingMeeting) return;
+    _endingMeeting = true;
+
+    if (mounted) {
+      setState(() => _finalizingMeeting = true);
+    }
+
     final wasLive = _isLive;
-    _isLive = false;
-    _elapsedTimer?.cancel();
-    _pollTimer?.cancel();
-    _wsSub?.cancel();
-    await _flushSpeechCapture();
-    _stopSpeechCapture();
-    if (wasLive && _roomId != null) {
-      _emitLeaveMeeting(_roomId!);
-    }
-    if (_sessionId != null && !_sessionSaved) {
-      await _refreshLiveNotes();
-      await _persistSession(silent: true);
-    } else if (_sessionId != null && _sessionSaved) {
-      await _refreshLiveNotes();
-    }
-    if (!mounted || _disposed) return;
     final rid = _roomId;
     final sessionId = _sessionId;
-    final transcript = _transcriptSnapshot();
+    Map<String, dynamic>? endedSession;
+
+    try {
+      _stopSpeechWatchdog();
+      _finalizingSpeech = true;
+
+      await _speechPipeline.commitPartial(_handleLiveSpeech);
+      _finalizeLocalTranscript();
+      await _speechPipeline.drainBackground();
+
+      _isLive = false;
+      _finalizingSpeech = false;
+
+      await _speechPipeline.shutdown();
+      if (kIsWeb) {
+        MeetingMicKeepAlive.release();
+      }
+
+      if (mounted && !_disposed) {
+        setState(() {
+          _speechActive = false;
+          _liveSpeech.clearPartial();
+          _backgroundInsightJobs = 0;
+        });
+      }
+
+      _elapsedTimer?.cancel();
+      _pollTimer?.cancel();
+      _wsSub?.cancel();
+
+      if (wasLive && rid != null) {
+        _emitLeaveMeeting(rid);
+      }
+
+      if (sessionId != null && sessionId.isNotEmpty) {
+        endedSession = await _persistSession(silent: true, force: true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to finalize meeting: $e')),
+        );
+      }
+    } finally {
+      _endingMeeting = false;
+      if (mounted) {
+        setState(() => _finalizingMeeting = false);
+      }
+    }
+
+    if (!mounted || _disposed) return;
+
     if (rid == null) {
       Navigator.pop(context);
       return;
     }
+
+    final transcript = _transcriptSnapshot();
     final elapsedSecs = _startedAt != null
         ? DateTime.now().difference(_startedAt!).inSeconds
         : null;
+
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
@@ -840,6 +971,7 @@ class _MeetingScreenState extends State<MeetingScreen> {
           inlineTranscript: transcript,
           sessionStartedAt: _startedAt,
           sessionDurationSeconds: elapsedSecs,
+          initialSession: endedSession,
         ),
       ),
     );
@@ -861,17 +993,125 @@ class _MeetingScreenState extends State<MeetingScreen> {
 
   int get _activeCount => _participants.where((p) => p.isActive).length;
 
+  bool get _isRecordingUi => _speechActive && !_muted && !_speechUnavailable;
+
+  String _meetingInfoSubtitle() {
+    final count = _isLive ? _activeCount : _participants.length;
+    final label = count == 1 ? 'participant' : 'participants';
+    if (_isLive) {
+      return '$count $label • $_elapsedLabel';
+    }
+    return '$count $label';
+  }
+
+  MeetingTranscriptPhase _transcriptPhase() {
+    if (_finalizingMeeting) return MeetingTranscriptPhase.processing;
+    if (_stoppingSession) return MeetingTranscriptPhase.saving;
+    if (_isRecordingUi) return MeetingTranscriptPhase.recording;
+    if (_backgroundInsightJobs > 0) return MeetingTranscriptPhase.processing;
+    return MeetingTranscriptPhase.idle;
+  }
+
+  String _transcriptDetail() {
+    if (_finalizingMeeting) {
+      return 'Finalizing meeting…';
+    }
+    if (_sessionId == null) return 'Starting session…';
+    final sid = 'Session #$_sessionId';
+    if (_stoppingSession) return '$sid · saving transcript';
+    if (_isRecordingUi) {
+      final diag = _speechDiagnosticLabel();
+      if (diag != null) {
+        return '$sid · $diag';
+      }
+      if (_backgroundInsightJobs > 0) {
+        return '$sid · live transcription · Whisper refine in background';
+      }
+      return '$sid · live transcription active';
+    }
+    if (_backgroundInsightJobs > 0) {
+      return '$sid · processing meeting insights…';
+    }
+    if (_speechUnavailable) return '$sid · chat only — enable microphone';
+    return '$sid · ready to capture';
+  }
+
+  ParticipantPresence _presenceFor(_MeetingParticipant p) {
+    if (p.isActive) return ParticipantPresence.inMeeting;
+    return ParticipantPresence.notJoined;
+  }
+
+  List<Widget> _participantTiles() {
+    return _participants
+        .map(
+          (p) => MeetingParticipantTile(
+            name: p.name,
+            email: p.email,
+            initials: p.initials,
+            presence: _presenceFor(p),
+          ),
+        )
+        .toList();
+  }
+
+  Widget _finalizingOverlay() {
+    return Container(
+      color: Colors.black.withValues(alpha: 0.45),
+      alignment: Alignment.center,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 32),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(MeetingUi.radiusMd),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(
+              width: 36,
+              height: 36,
+              child: CircularProgressIndicator(strokeWidth: 3),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _finalizingMeeting
+                  ? '⚡ Finalizing meeting…'
+                  : 'Processing…',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Saving transcript and generating summary',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios,
                 size: 18, color: AppColors.textPrimary),
-            onPressed: _isLive ? null : () => Navigator.pop(context)),
+            onPressed: (_isLive || _finalizingMeeting)
+                ? null
+                : () => Navigator.pop(context)),
         title: const Text('Meeting',
             style: TextStyle(
                 color: AppColors.textPrimary,
@@ -879,258 +1119,90 @@ class _MeetingScreenState extends State<MeetingScreen> {
                 fontSize: 18)),
         centerTitle: true,
       ),
-      body: _loading
+      body: Stack(
+        children: [
+          _loading
           ? const Center(child: CircularProgressIndicator())
           : _loadError != null
               ? _errorBody()
               : Padding(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       if (_chatRooms.isNotEmpty) ...[
-                        DropdownButtonFormField<String>(
-                          // ignore: deprecated_member_use
-                          value: _roomId,
-                          decoration: InputDecoration(
-                            labelText: 'Chat room',
-                            border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12)),
-                          ),
-                          items: _chatRooms
-                              .map((r) => DropdownMenuItem(
-                                    value: r['id']?.toString(),
-                                    child: Text(
-                                      r['name']?.toString() ??
-                                          'Room ${r['id']}',
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ))
-                              .toList(),
-                          onChanged: _isLive
-                              ? null
-                              : (id) {
-                                  if (id != null) _loadRoom(id);
-                                },
+                        MeetingRoomPicker(
+                          roomId: _roomId,
+                          rooms: _chatRooms,
+                          enabled: !_isLive,
+                          onChanged: (id) {
+                            if (id != null) _loadRoom(id);
+                          },
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
                       ],
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                              color: AppColors.primary.withValues(alpha: 0.3)),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                    color: AppColors.primary
-                                        .withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(12)),
-                                child: const Icon(Icons.videocam_outlined,
-                                    color: AppColors.primary)),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(_roomName,
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 15)),
-                                  Text(
-                                    _isLive
-                                        ? 'Live · $_activeCount in meeting now'
-                                        : _projectId != null
-                                            ? 'Project team · chat history'
-                                            : 'Linked to chat room',
-                                    style: const TextStyle(
-                                        color: AppColors.textSecondary,
-                                        fontSize: 13),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
+                      MeetingInfoHeader(
+                        title: _roomName,
+                        subtitle: _meetingInfoSubtitle(),
+                        isLive: _isLive,
                       ),
-                      const SizedBox(height: 24),
-                      Row(
-                        children: [
-                          const Icon(Icons.people_outline,
-                              size: 20, color: AppColors.textSecondary),
-                          const SizedBox(width: 8),
-                          const Text('Participants',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 15)),
-                          const Spacer(),
-                          Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                  color:
-                                      AppColors.primary.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(8)),
-                              child: Text(
-                                  _isLive
-                                      ? '$_activeCount active'
-                                      : '${_participants.length} members',
-                                  style: const TextStyle(
-                                      color: AppColors.primary,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold))),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
                       if (_isLive) ...[
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                              color: const Color(0xFFFEF2F2),
-                              borderRadius: BorderRadius.circular(12)),
-                          child: Row(
-                            children: [
-                              Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: const BoxDecoration(
-                                      color: Color(0xFFDC2626),
-                                      shape: BoxShape.circle)),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                  child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                    const Text('Speech + chat transcript',
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 13,
-                                            color: AppColors.textPrimary)),
-                                    Text(
-                                        _sessionId != null
-                                            ? _speechActive
-                                                ? _transcribingChunk
-                                                    ? 'Session #$_sessionId · converting speech…'
-                                                    : kIsWeb
-                                                        ? 'Session #$_sessionId · recording audio + chat'
-                                                        : _useBrowserSpeech
-                                                            ? 'Session #$_sessionId · live speech + chat'
-                                                            : 'Session #$_sessionId · recording + chat'
-                                                : _speechUnavailable
-                                                    ? 'Session #$_sessionId · chat only (mic off)'
-                                                    : 'Session #$_sessionId · tap Enable microphone'
-                                            : 'Starting session…',
-                                        style: const TextStyle(
-                                            fontSize: 11,
-                                            color: AppColors.textSecondary)),
-                                  ])),
-                              const Icon(Icons.access_time,
-                                  size: 16, color: AppColors.textSecondary),
-                              const SizedBox(width: 4),
-                              Text(_elapsedLabel,
-                                  style: const TextStyle(
-                                      fontSize: 13,
-                                      color: AppColors.textPrimary)),
-                            ],
-                          ),
+                        MeetingTranscriptStatusCard(
+                          phase: _transcriptPhase(),
+                          detail: _transcriptDetail(),
+                          durationLabel: _elapsedLabel,
+                          diagnosticLabel: _speechDiagnosticLabel(),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
                       ],
+                      MeetingParticipantsPanel(
+                        expanded: _participantsExpanded,
+                        onToggle: () => setState(
+                          () => _participantsExpanded = !_participantsExpanded,
+                        ),
+                        participantCount: _participants.length,
+                        activeCount: _activeCount,
+                        isLive: _isLive,
+                        children: _participants.isEmpty
+                            ? [
+                                const Padding(
+                                  padding: EdgeInsets.all(8),
+                                  child: Text(
+                                    'No members in this room yet.',
+                                    style: TextStyle(
+                                      color: AppColors.textSecondary,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                              ]
+                            : _participantTiles(),
+                      ),
+                      const SizedBox(height: 12),
                       Expanded(
                         child: _isLive
-                            ? _liveMeetingScrollBody()
+                            ? _liveMeetingBody()
                             : _idleMeetingScrollBody(),
                       ),
                       if (_isLive)
                         SafeArea(
                           top: false,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: OutlinedButton.icon(
-                                      onPressed: () async {
-                                        final next = !_muted;
-                                        setState(() => _muted = next);
-                                        if (next) {
-                                          await _browserSpeech?.stop(null);
-                                        } else if (_isLive &&
-                                            _useBrowserSpeech) {
-                                          await _browserSpeech?.startListening(
-                                            _onBrowserSpeechResult,
-                                          );
-                                        }
-                                      },
-                                      icon: Icon(
-                                        _muted ? Icons.mic_off : Icons.mic_none,
-                                      ),
-                                      label: Text(_muted ? 'Unmute' : 'Mute'),
-                                      style: OutlinedButton.styleFrom(
-                                        minimumSize: const Size(0, 48),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: OutlinedButton.icon(
-                                      onPressed: _isLive && !_stoppingSession
-                                          ? _stopRecording
-                                          : null,
-                                      icon: const Icon(
-                                        Icons.stop_circle_outlined,
-                                        color: Color(0xFFDC2626),
-                                      ),
-                                      label: Text(
-                                        _stoppingSession
-                                            ? 'Saving…'
-                                            : 'Stop & Save',
-                                        style: const TextStyle(
-                                          color: Color(0xFFDC2626),
-                                        ),
-                                      ),
-                                      style: OutlinedButton.styleFrom(
-                                        minimumSize: const Size(0, 48),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              ElevatedButton(
-                                onPressed: _endMeeting,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFFEF4444),
-                                  minimumSize: const Size(double.infinity, 50),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                                child: const Text(
-                                  'End Meeting',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                              ),
-                            ],
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: MeetingLiveControls(
+                              muted: _muted,
+                              isRecording: _isRecordingUi,
+                              speechUnavailable: _speechUnavailable,
+                              saving: _stoppingSession,
+                              onMute: _toggleMute,
+                              onRecord: _stoppingSession ? null : _toggleRecord,
+                              onSave: _stoppingSession
+                                  ? null
+                                  : _saveTranscriptCheckpoint,
+                              onEndMeeting:
+                                  _finalizingMeeting ? () {} : _endMeeting,
+                            ),
                           ),
                         )
                       else
@@ -1138,271 +1210,144 @@ class _MeetingScreenState extends State<MeetingScreen> {
                           top: false,
                           child: Padding(
                             padding: const EdgeInsets.only(top: 8),
-                            child: ElevatedButton(
-                              onPressed: _roomId == null || _startingMeeting
-                                  ? null
-                                  : _startMeeting,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary,
-                                minimumSize: const Size(double.infinity, 48),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                              child: _startingMeeting
-                                  ? const SizedBox(
-                                      height: 22,
-                                      width: 22,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  : const Text(
-                                      'Start Meeting',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
-                                      ),
+                            child: SizedBox(
+                              width: double.infinity,
+                              height: 50,
+                              child: FilledButton(
+                                onPressed: _roomId == null || _startingMeeting
+                                    ? null
+                                    : _startMeeting,
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(
+                                      MeetingUi.radiusMd,
                                     ),
+                                  ),
+                                ),
+                                child: _startingMeeting
+                                    ? const SizedBox(
+                                        height: 22,
+                                        width: 22,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : const Text(
+                                        'Start Meeting',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 15,
+                                        ),
+                                      ),
+                              ),
                             ),
                           ),
                         ),
                     ],
                   ),
                 ),
+          if (_finalizingMeeting) _finalizingOverlay(),
+        ],
+      ),
     );
   }
 
-  /// Before meeting starts: scrollable participants + recent chat preview.
+  /// Before meeting starts: recent chat preview.
   Widget _idleMeetingScrollBody() {
     final hasRecentChat = _liveNoteLines.isNotEmpty;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Flexible(
-          flex: hasRecentChat ? 2 : 1,
-          child: _participants.isEmpty
-              ? const Center(
-                  child: Text(
-                    'No members in this room yet.',
-                    style: TextStyle(color: AppColors.textSecondary),
-                  ),
-                )
-              : ListView.builder(
-                  itemCount: _participants.length,
-                  itemBuilder: (_, i) {
-                    final p = _participants[i];
-                    return _participantRow(
-                      p.name,
-                      p.email,
-                      p.isActive ? 'In meeting' : 'Not joined',
-                      p.isActive,
-                      p.initials,
-                    );
-                  },
-                ),
-        ),
-        if (hasRecentChat) ...[
-          const SizedBox(height: 8),
-          const Text(
-            'Recent chat',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            flex: 3,
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-              ),
-              child: ListView(
-                children: _liveNoteLines
-                    .map(
-                      (line) => Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
-                        child: Text(
-                          line,
-                          maxLines: 4,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ),
-                    )
-                    .toList(),
-              ),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-
-  /// Scrollable middle area while live: compact participants + live notes.
-  Widget _liveMeetingScrollBody() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ConstrainedBox(
-          constraints: const BoxConstraints(maxHeight: 140),
-          child: _participants.isEmpty
-              ? const Center(
-                  child: Text(
-                    'No members in this room yet.',
-                    style: TextStyle(color: AppColors.textSecondary),
-                  ),
-                )
-              : ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: _participants.length,
-                  itemBuilder: (_, i) {
-                    final p = _participants[i];
-                    return _participantRow(
-                      p.name,
-                      p.email,
-                      p.isActive ? 'In meeting' : 'Not joined',
-                      p.isActive,
-                      p.initials,
-                    );
-                  },
-                ),
-        ),
-        const SizedBox(height: 12),
-        const Text(
-          'Live Notes',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-        ),
-        const SizedBox(height: 8),
-        Expanded(child: _buildLiveNotesPanel()),
-      ],
-    );
-  }
-
-  Widget _buildLiveNotesPanel() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (_speechUnavailable) ...[
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(10),
-            margin: const EdgeInsets.only(bottom: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFF7ED),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFFDBA74)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Row(
-                  children: [
-                    Icon(Icons.mic_off, size: 18, color: Color(0xFFEA580C)),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Microphone not allowed',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                          color: Color(0xFF9A3412),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: _retryMicrophone,
-                    icon: const Icon(Icons.mic, size: 18),
-                    label: const Text('Enable microphone'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFFEA580C),
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-        Expanded(
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: _liveNotesContent(),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _liveNotesContent() {
-    if (_liveNoteLines.isEmpty &&
-        (_livePartialSpeech == null || _livePartialSpeech!.isEmpty)) {
-      return Align(
-        alignment: Alignment.topLeft,
+    if (!hasRecentChat) {
+      return Center(
         child: Text(
-          _transcribingChunk
-              ? 'Converting last audio to text…'
-              : _speechActive
-                  ? kIsWeb
-                      ? 'Recording… speak now. Text appears every few seconds.'
-                      : 'Listening… speak clearly or send chat messages.'
-                  : _speechUnavailable
-                      ? 'Allow microphone, then tap Enable microphone.'
-                      : 'Waiting for microphone…',
-          style: const TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 12,
-          ),
+          _projectId != null
+              ? 'Start the meeting to capture speech and chat.'
+              : 'Start the meeting when your team is ready.',
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
         ),
       );
     }
 
-    return ListView(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ..._liveNoteLines.map(
-          (line) => Padding(
-            padding: const EdgeInsets.only(bottom: 6),
-            child: Text(
-              line,
-              maxLines: 6,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 12,
-              ),
+        const Text(
+          'Recent chat',
+          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: Container(
+            decoration: MeetingUi.cardDecoration(),
+            child: ListView(
+              padding: const EdgeInsets.all(12),
+              children: _liveNoteLines
+                  .map(
+                    (line) => MeetingSpeechBubble(
+                      line: MeetingNoteLine.parse(line) ??
+                          MeetingNoteLine(speaker: 'Chat', text: line),
+                    ),
+                  )
+                  .toList(),
             ),
           ),
         ),
-        if (_livePartialSpeech != null && _livePartialSpeech!.isNotEmpty)
-          Text(
-            '[Listening] $_livePartialSpeech…',
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: AppColors.primary,
-              fontSize: 12,
-              fontStyle: FontStyle.italic,
-            ),
-          ),
       ],
+    );
+  }
+
+  Widget _liveMeetingBody() {
+    return MeetingLiveNotesCard(
+      lines: _liveNoteLines,
+      partialSpeech: _liveSpeech.utterancePartial.isEmpty
+          ? null
+          : _liveSpeech.utterancePartial,
+      emptyHint: _isRecordingUi
+          ? 'Live transcription active — speak naturally. Words appear here as you talk.'
+              : _speechUnavailable
+                  ? 'Allow microphone access to capture speech.'
+                  : 'Waiting for microphone…',
+      micBanner: _speechUnavailable
+          ? Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF7ED),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFFDBA74)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.mic_off_rounded,
+                          size: 18, color: Color(0xFFEA580C)),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Microphone access needed',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _retryMicrophone,
+                      icon: const Icon(Icons.mic_rounded, size: 18),
+                      label: const Text('Enable microphone'),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : null,
     );
   }
 
@@ -1432,46 +1377,6 @@ class _MeetingScreenState extends State<MeetingScreen> {
       ),
     );
   }
-
-  Widget _participantRow(String name, String email, String status,
-      bool isActive, String initials) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFE2E8F0))),
-        child: Row(
-          children: [
-            TAvatar(initials: initials, radius: 18),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(name,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 13)),
-                  if (email.isNotEmpty)
-                    Text(email,
-                        style: const TextStyle(
-                            fontSize: 11, color: AppColors.textSecondary)),
-                  Text(status,
-                      style: TextStyle(
-                          fontSize: 11,
-                          color: isActive
-                              ? const Color(0xFF16A34A)
-                              : AppColors.textSecondary)),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 // ── Meeting Summary Screen ───────────────────────────────────────────────────
@@ -1483,6 +1388,7 @@ class MeetingSummaryScreen extends StatefulWidget {
   final List<Map<String, dynamic>> inlineTranscript;
   final DateTime? sessionStartedAt;
   final int? sessionDurationSeconds;
+  final Map<String, dynamic>? initialSession;
 
   const MeetingSummaryScreen({
     super.key,
@@ -1493,6 +1399,7 @@ class MeetingSummaryScreen extends StatefulWidget {
     this.inlineTranscript = const [],
     this.sessionStartedAt,
     this.sessionDurationSeconds,
+    this.initialSession,
   });
 
   @override
@@ -1503,6 +1410,7 @@ class _MeetingSummaryScreenState extends State<MeetingSummaryScreen> {
   bool _loading = true;
   String? _error;
   String _summaryText = '';
+  List<String> _summaryBullets = [];
   List<String> _keyPoints = [];
   List<String> _decisions = [];
   List<Map<String, String>> _actions = [];
@@ -1528,6 +1436,39 @@ class _MeetingSummaryScreenState extends State<MeetingSummaryScreen> {
 
       List<Map<String, dynamic>> msgs =
           normalizeMeetingTranscript(widget.inlineTranscript);
+
+      final initial = widget.initialSession;
+      if (initial != null) {
+        final rawTranscript = initial['transcript'];
+        if (msgs.isEmpty && rawTranscript is List) {
+          msgs = normalizeMeetingTranscript(
+            rawTranscript
+                .whereType<Map>()
+                .map((e) => Map<String, dynamic>.from(e))
+                .toList(),
+          );
+        }
+        final aiSummary = initial['ai_summary'];
+        if (aiSummary is Map && aiSummary.isNotEmpty) {
+          storedSummary = Map<String, dynamic>.from(aiSummary);
+        } else {
+          final summaryText = initial['summary']?.toString().trim();
+          if (summaryText != null && summaryText.isNotEmpty) {
+            storedSummary = {
+              'summary': summaryText,
+              'key_points': initial['key_points'],
+              'action_items': initial['action_items'],
+              'speech_transcript': initial['speech_transcript'],
+            };
+          }
+        }
+        final secs = initial['duration_seconds'];
+        if (secs is int && secs > 0) {
+          sessionSecs = secs;
+        }
+        sessionEnded =
+            DateTime.tryParse(initial['ended_at']?.toString() ?? '');
+      }
 
       Map<String, dynamic>? roomPayload;
       try {
@@ -1734,6 +1675,10 @@ class _MeetingSummaryScreenState extends State<MeetingSummaryScreen> {
       _keyPoints = cleanKeyPoints(_extractLocalKeyPoints(normalized));
     }
 
+    _summaryBullets = _keyPoints.isNotEmpty
+        ? List<String>.from(_keyPoints)
+        : _summaryToBullets(_summaryText);
+
     _decisions = cleanKeyPoints(summary['decisions']);
     if (_decisions.isEmpty) {
       _decisions = List<String>.from(_keyPoints);
@@ -1752,6 +1697,28 @@ class _MeetingSummaryScreenState extends State<MeetingSummaryScreen> {
     if (_actions.isEmpty) {
       _actions = localMeetingActions(normalized);
     }
+    _actions = _actions
+        .where((a) => !_looksLikeSpeechDump(a['text'] ?? ''))
+        .toList();
+  }
+
+  List<String> _summaryToBullets(String text) {
+    return text
+        .split(RegExp(r'(?<=[.!?])\s+'))
+        .map((s) => s.trim())
+        .where((s) => s.length > 12)
+        .take(6)
+        .toList();
+  }
+
+  bool _looksLikeSpeechDump(String text) {
+    final t = text.trim();
+    if (t.length < 120) return false;
+    final actionCue = RegExp(
+      r'\b(will|should|must|need to|todo|task|assign|follow up|deadline)\b',
+      caseSensitive: false,
+    );
+    return !actionCue.hasMatch(t);
   }
 
   Map<String, dynamic> _buildLocalSummaryPayload(
@@ -1889,20 +1856,28 @@ class _MeetingSummaryScreenState extends State<MeetingSummaryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final participantsLabel = _participantsCount > 0
+        ? '$_participantsCount ${_participantsCount == 1 ? 'participant' : 'participants'}'
+        : 'Participants';
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.background,
         elevation: 0,
         leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios,
-                size: 18, color: AppColors.textPrimary),
-            onPressed: () => Navigator.pop(context)),
-        title: const Text('Meeting Summary',
-            style: TextStyle(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.bold,
-                fontSize: 18)),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded,
+              size: 20, color: AppColors.textPrimary),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          'Meeting Summary',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w700,
+            fontSize: 18,
+          ),
+        ),
         centerTitle: true,
       ),
       body: _loading
@@ -1914,9 +1889,11 @@ class _MeetingSummaryScreenState extends State<MeetingSummaryScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(_error!,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(color: AppColors.error)),
+                        Text(
+                          _error!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: AppColors.error),
+                        ),
                         const SizedBox(height: 16),
                         TextButton(
                           onPressed: () {
@@ -1932,176 +1909,76 @@ class _MeetingSummaryScreenState extends State<MeetingSummaryScreen> {
                     ),
                   ),
                 )
-              : Column(
+              : ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
                   children: [
-                    Expanded(
-                      child: ListView(
-                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-                        children: [
-                          if (widget.roomName.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    widget.roomName,
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.textSecondary,
-                                    ),
-                                  ),
-                                  if (_participantsCount > 0 ||
-                                      _durationLabel != null)
-                                    Text(
-                                      '${_participantsCount > 0 ? '$_participantsCount participants' : ''}'
-                                      '${_participantsCount > 0 && _durationLabel != null ? ' · ' : ''}'
-                                      '${_durationLabel ?? ''}',
-                                      style: const TextStyle(
-                                        color: AppColors.textSecondary,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          _sectionHeader(
-                            Icons.check_box_outlined,
-                            'Decisions Made',
-                          ),
-                          if (_decisions.isEmpty)
-                            const Padding(
-                              padding: EdgeInsets.only(bottom: 16),
-                              child: Text(
-                                'No decisions captured for this meeting.',
-                                style: TextStyle(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            )
-                          else
-                            ..._decisions.map(_decisionRow),
-                          const SizedBox(height: 8),
-                          _sectionHeader(
-                            Icons.assignment_outlined,
-                            'Action Items',
-                          ),
-                          if (_actions.isEmpty)
-                            const Padding(
-                              padding: EdgeInsets.only(bottom: 8),
-                              child: Text(
-                                'No action items returned.',
-                                style: TextStyle(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            )
-                          else
-                            ..._actions.map(
-                              (a) => _actionCard(
-                                a['text']!,
-                                a['owner']!,
-                                a['due']!,
-                                const Color(0xFFF59E0B),
-                              ),
-                            ),
-                        ],
-                      ),
+                    SummaryOverviewCard(
+                      title: widget.roomName.isNotEmpty
+                          ? widget.roomName
+                          : 'Meeting',
+                      participantsLabel: participantsLabel,
+                      durationLabel: _durationLabel,
                     ),
-                    _summaryFooter(),
+                    const SummarySectionHeader(
+                      icon: Icons.auto_awesome_rounded,
+                      title: 'AI Summary',
+                    ),
+                    if (_summaryBullets.isEmpty)
+                      const SummaryEmptyCard(
+                        icon: Icons.summarize_outlined,
+                        message: 'No summary points were generated.',
+                      )
+                    else
+                      ..._summaryBullets
+                          .map((t) => SummaryBulletCard(text: t)),
+                    const SizedBox(height: 8),
+                    const SummarySectionHeader(
+                      icon: Icons.gavel_rounded,
+                      title: 'Decisions Made',
+                    ),
+                    if (_decisions.isEmpty)
+                      const SummaryEmptyCard(
+                        icon: Icons.rule_folder_outlined,
+                        message: 'No decisions identified',
+                      )
+                    else
+                      ..._decisions.map(_decisionCard),
+                    const SizedBox(height: 8),
+                    const SummarySectionHeader(
+                      icon: Icons.checklist_rounded,
+                      title: 'Action Items',
+                    ),
+                    if (_actions.isEmpty)
+                      const SummaryEmptyCard(
+                        icon: Icons.task_alt_outlined,
+                        message: 'No action items identified',
+                      )
+                    else
+                      ..._actions.map(
+                        (a) => SummaryActionChecklistCard(
+                          text: a['text']!,
+                          owner: a['owner']!,
+                          due: a['due']!,
+                        ),
+                      ),
+                    const SizedBox(height: 20),
+                    SummaryActionsRow(
+                      exportBusy: _exportBusy,
+                      canCreateTasks: _canCreateTasks,
+                      onExport: _exportPdf,
+                      onShare: _shareSummary,
+                      onCreateTasks: _createTasks,
+                    ),
                   ],
                 ),
     );
   }
 
-  Widget _summaryFooter() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(
-          top: BorderSide(color: Colors.black.withValues(alpha: 0.06)),
-        ),
-      ),
-      child: Column(
-        children: [
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: _exportBusy ? null : _exportPdf,
-              icon: _exportBusy
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Icon(Icons.download_outlined, size: 20),
-              label: const Text(
-                'Export as PDF',
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
-              ),
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _exportBusy ? null : _shareSummary,
-                  icon: const Icon(Icons.share_outlined, size: 18),
-                  label: const Text('Share'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    side: const BorderSide(color: AppColors.primary),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ),
-              if (_canCreateTasks) ...[
-                const SizedBox(width: 10),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _createTasks,
-                    icon: const Icon(Icons.check_box_outlined, size: 18),
-                    label: const Text('Create Tasks'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.primary,
-                      side: const BorderSide(color: AppColors.primary),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _decisionRow(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 12),
+  Widget _decisionCard(String text) => Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: MeetingUi.cardDecoration(),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -2113,7 +1990,7 @@ class _MeetingSummaryScreenState extends State<MeetingSummaryScreen> {
                 color: AppColors.success,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.check, size: 14, color: Colors.white),
+              child: const Icon(Icons.check_rounded, size: 14, color: Colors.white),
             ),
             Expanded(
               child: Text(
@@ -2128,37 +2005,4 @@ class _MeetingSummaryScreenState extends State<MeetingSummaryScreen> {
           ],
         ),
       );
-
-  Widget _sectionHeader(IconData icon, String title) => Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: Row(children: [
-        Icon(icon, size: 20, color: AppColors.textPrimary),
-        const SizedBox(width: 8),
-        Text(title,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))
-      ]));
-
-  Widget _actionCard(String t, String owner, String date, Color c) => Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFE2E8F0))),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(t,
-            style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
-                color: Color(0xFF1E40AF))),
-        const SizedBox(height: 8),
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text(owner,
-              style: const TextStyle(
-                  fontSize: 11, color: AppColors.textSecondary)),
-          Text(date,
-              style: TextStyle(
-                  fontSize: 11, fontWeight: FontWeight.bold, color: c))
-        ])
-      ]));
 }

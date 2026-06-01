@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import logging
 import os
+import time
 from collections import defaultdict
 from datetime import date, datetime, timezone
 from typing import Any, Optional
@@ -34,28 +35,16 @@ _RATING_MODEL_PATH = os.path.abspath(
     )
 )
 
-_rating_cache: Any = None
-_rating_error: Optional[str] = None
+_REPORT_CACHE: dict[int, tuple[float, dict]] = {}
+_REPORT_TTL_SECONDS = 600
 
 
-def _load_rating_model():
-    global _rating_cache, _rating_error
-    if _rating_cache is not None:
-        return _rating_cache
-    if _rating_error:
-        return None
-    try:
-        import joblib
-        _rating_cache = joblib.load(_RATING_MODEL_PATH)
-        logger.info("Profile rating model loaded from %s", _RATING_MODEL_PATH)
-        return _rating_cache
-    except FileNotFoundError:
-        _rating_error = f"teamify_model.pkl not found at {_RATING_MODEL_PATH}"
-        logger.warning(_rating_error)
-    except Exception as exc:
-        _rating_error = f"Failed to load teamify_model.pkl: {exc}"
-        logger.error(_rating_error, exc_info=True)
-    return None
+def invalidate_mentor_cache(user_id: int | None = None) -> None:
+    """Drop cached mentor report(s) after profile-affecting writes."""
+    if user_id is None:
+        _REPORT_CACHE.clear()
+        return
+    _REPORT_CACHE.pop(int(user_id), None)
 
 
 # ── Career scoring constants (mirror ai_mentor_csv.py) ────────────────────────
@@ -396,9 +385,35 @@ def _analyse_feedback(feedback_rows) -> dict:
 
 # ── Layer 3: Report generation ─────────────────────────────────────────────────
 
-def _generate_report(user, scores, weaknesses, strengths, nlp, gaps) -> str:
+def _generate_report(user, scores, weaknesses, strengths, nlp, gaps, tasks=None) -> str:
     api_key = os.getenv("ANTHROPIC_API_KEY", "")
     name = user.display_name or (user.full_name or "").split()[0] or "User"
+    tasks = tasks or []
+
+    task_lines = []
+    for t in tasks[:5]:
+        title = getattr(t, "title", "Task")
+        status = getattr(t, "status", "unknown")
+        task_lines.append(f"- {title} ({status})")
+    task_history = "\n".join(task_lines) if task_lines else "No recent tasks on record."
+
+    project_domains: set[str] = set()
+    try:
+        from models.project import Project
+
+        for t in tasks[:8]:
+            pid = getattr(t, "project_id", None)
+            if not pid:
+                continue
+            proj = Project.query.get(pid)
+            category = getattr(proj, "category", None) if proj else None
+            if category:
+                project_domains.add(str(category))
+    except Exception:
+        pass
+    domains_text = ", ".join(sorted(project_domains)) if project_domains else "Not specified"
+
+    on_time_pct = round((user.member_on_time_rate or 0.75) * 100, 1)
 
     if api_key:
         try:
@@ -406,25 +421,50 @@ def _generate_report(user, scores, weaknesses, strengths, nlp, gaps) -> str:
             client = anthropic.Anthropic(api_key=api_key)
             system = (
                 "You are an expert AI career mentor for tech freelancers. "
-                "Given structured career data, write a concise report with: "
-                "## Career Summary (2-3 sentences), ## Strengths (bullet list), "
-                "## Areas to Improve (bullet list with one fix each), "
-                "## Your Next Step (one specific action). "
-                "Use the user's first name. Mention at least 2 scores. Under 250 words."
+                "Given structured career data, write a concise report as JSON with keys: "
+                "career_summary, strengths, areas_to_improve, next_step. "
+                "Each list field should contain short strings. "
+                "Use the user's first name. Mention at least 2 scores. Under 250 words total."
             )
             prompt = (
                 f"Name: {name} | Level: {scores['level']} | Target: {gaps['target_role']}\n"
                 f"Career Score: {scores['total_score']}%\n"
+                f"On-time delivery rate: {on_time_pct}%\n"
+                f"Recent tasks:\n{task_history}\n"
+                f"Project domains: {domains_text}\n"
                 f"Weaknesses: {[w['area'] + ' (' + str(w['score']) + ')' for w in weaknesses]}\n"
                 f"Strengths: {[s['area'] + ' (' + str(s['score']) + ')' for s in strengths]}\n"
                 f"Missing skills: {gaps['missing_skills']}\n"
-                f"Feedback: {nlp['sentiment_label']} | Themes: {nlp['top_keywords']}\n"
+                f"Feedback sentiment: {nlp['sentiment_label']} | Themes: {nlp['top_keywords']}\n"
             )
             r = client.messages.create(
-                model="claude-sonnet-4-20250514", max_tokens=400,
-                system=system, messages=[{"role": "user", "content": prompt}]
+                model="claude-sonnet-4-20250514",
+                max_tokens=600,
+                temperature=0.3,
+                system=system,
+                messages=[{"role": "user", "content": prompt}],
             )
-            return r.content[0].text
+            text = r.content[0].text.strip()
+            if text.startswith("{"):
+                import json
+                try:
+                    data = json.loads(text)
+                    sections = []
+                    if data.get("career_summary"):
+                        sections.append(f"## Career Summary\n{data['career_summary']}")
+                    if data.get("strengths"):
+                        bullets = "\n".join(f"- {s}" for s in data["strengths"])
+                        sections.append(f"## Strengths\n{bullets}")
+                    if data.get("areas_to_improve"):
+                        bullets = "\n".join(f"- {a}" for a in data["areas_to_improve"])
+                        sections.append(f"## Areas to Improve\n{bullets}")
+                    if data.get("next_step"):
+                        sections.append(f"## Your Next Step\n{data['next_step']}")
+                    if sections:
+                        return "\n\n".join(sections)
+                except json.JSONDecodeError:
+                    pass
+            return text
         except Exception as e:
             logger.warning("Claude API error in mentor report: %s — using fallback.", e)
 
@@ -460,10 +500,10 @@ def _generate_report(user, scores, weaknesses, strengths, nlp, gaps) -> str:
 # ── Course recommendations ─────────────────────────────────────────────────────
 
 def _recommend_courses(gaps, top_n=5) -> list:
-    missing = set(gaps["missing_skills"])
+    missing = {s.lower() for s in (gaps.get("missing_skills") or [])}
     recs = []
     for c in COURSE_CATALOG:
-        covered = set(c["skills_covered"].split("|"))
+        covered = {s.strip().lower() for s in c["skills_covered"].split("|")}
         overlap = covered & missing
         if not overlap:
             continue
@@ -477,16 +517,57 @@ def _recommend_courses(gaps, top_n=5) -> list:
             "platform": c["platform"],
             "url": _course_enroll_url(c["platform"], c["title"]),
             "relevance": round(relevance, 3),
+            "match_percent": round(relevance * 100, 1),
+            "match": round(relevance * 100),
+            "progress": 0,
             "fills": sorted(overlap),
             "rating": c["rating"],
             "hours": c["duration_hrs"],
             "duration": f"{c['duration_hrs']} hrs",
             "level": "Recommended",
+            "market_demand": demand,
         })
-    return sorted(recs, key=lambda x: x["relevance"], reverse=True)[:top_n]
+    recs.sort(key=lambda x: (x["relevance"], x["market_demand"]), reverse=True)
+    return recs[:top_n]
 
 
 # ── DB-backed performance snapshot ────────────────────────────────────────────
+
+def _score_to_100(value: float | int | None) -> Optional[float]:
+    """Map a 0–5 peer score to a 0–100 display value."""
+    if value is None:
+        return None
+    try:
+        return round(float(value) * 20, 1)
+    except (TypeError, ValueError):
+        return None
+
+
+def _task_commitment_score(user_id: int) -> Optional[float]:
+    """Task completion rate (0–100) when no peer feedback exists yet."""
+    from datetime import date
+
+    from models.task import Task
+
+    assigned = Task.query.filter_by(assigned_to=user_id).all()
+    if not assigned:
+        return None
+    done = [
+        t for t in assigned
+        if (t.status or "").lower() in {"done", "completed"}
+    ]
+    if not done:
+        return round(len(done) / len(assigned) * 100, 1)
+    today = date.today()
+    on_time = sum(
+        1
+        for t in done
+        if t.due_date is None
+        or (t.completed_date and t.completed_date.date() <= t.due_date)
+        or (not t.completed_date and t.due_date >= today)
+    )
+    return round(on_time / len(done) * 100, 1)
+
 
 def get_db_performance_snapshot(user_id: int) -> dict:
     """Aggregate commitment/teamwork/quality and history from Feedback + Rating rows."""
@@ -512,44 +593,77 @@ def get_db_performance_snapshot(user_id: int) -> dict:
     def _avg(vals: list[float]) -> Optional[float]:
         return round(sum(vals) / len(vals), 1) if vals else None
 
-    quality_vals = [f.quality_score * 20 for f in feedbacks if f.quality_score is not None]
-    teamwork_vals = [f.teamwork_score * 20 for f in feedbacks if f.teamwork_score is not None]
-    rating_vals = [r.score * 20 for r in ratings]
+    quality_vals = [
+        v for f in feedbacks
+        if (v := _score_to_100(f.quality_score)) is not None
+    ]
+    teamwork_vals = [
+        v for f in feedbacks
+        if (v := _score_to_100(f.teamwork_score)) is not None
+    ]
+    peer_overall_vals = [
+        v for f in feedbacks
+        if (v := _score_to_100(f.avg_rating)) is not None
+    ]
+    rating_vals = [v for r in ratings if (v := _score_to_100(r.score)) is not None]
 
-    commitment = round((user.member_on_time_rate or 0.75) * 100, 1) if user else 75.0
-    quality = _avg(quality_vals) or _avg(rating_vals)
-    teamwork = _avg(teamwork_vals) or quality
+    has_peer_data = bool(feedbacks or ratings)
+
+    quality = _avg(quality_vals) or _avg(peer_overall_vals) or _avg(rating_vals)
+    teamwork = _avg(teamwork_vals) or _avg(peer_overall_vals) or quality
+    commitment = (
+        _avg(peer_overall_vals)
+        or _avg(rating_vals)
+        or _avg([v for v in (quality, teamwork) if v is not None])
+    )
+
+    if commitment is None and not has_peer_data:
+        commitment = _task_commitment_score(user_id)
+    if commitment is None and user:
+        commitment = round((user.member_on_time_rate or 0.75) * 100, 1)
 
     scores = {
-        "commitment": commitment,
-        "teamwork": teamwork if teamwork is not None else commitment,
-        "quality": quality if quality is not None else teamwork if teamwork is not None else commitment,
+        "commitment": commitment if commitment is not None else 0.0,
+        "teamwork": teamwork if teamwork is not None else (commitment or 0.0),
+        "quality": quality if quality is not None else (teamwork if teamwork is not None else (commitment or 0.0)),
     }
-    overall = round(sum(scores.values()) / 3, 1)
+
+    if has_peer_data:
+        peer_keys = [k for k, v in scores.items() if v > 0]
+        overall = round(sum(scores[k] for k in peer_keys) / max(len(peer_keys), 1), 1)
+    else:
+        overall = 0.0
 
     by_month: dict[str, list[float]] = defaultdict(list)
     for fb in feedbacks:
         if not fb.created_at:
             continue
         pts: list[float] = []
-        if fb.quality_score is not None:
-            pts.append(fb.quality_score * 20)
-        if fb.teamwork_score is not None:
-            pts.append(fb.teamwork_score * 20)
-        if fb.avg_rating is not None:
-            pts.append(fb.avg_rating * 20)
+        for raw in (fb.quality_score, fb.teamwork_score, fb.avg_rating):
+            if (pt := _score_to_100(raw)) is not None:
+                pts.append(pt)
         if pts:
             by_month[fb.created_at.strftime("%Y-%m")].append(sum(pts) / len(pts))
 
     for rating in ratings:
         if not rating.created_at:
             continue
-        by_month[rating.created_at.strftime("%Y-%m")].append(rating.score * 20)
+        if (pt := _score_to_100(rating.score)) is not None:
+            by_month[rating.created_at.strftime("%Y-%m")].append(pt)
 
     history = [
         {"period": period, "score": round(sum(vals) / len(vals), 1)}
         for period, vals in sorted(by_month.items())
     ][-12:]
+
+    recent_feedback = [
+        fb.to_dict()
+        for fb in sorted(
+            feedbacks,
+            key=lambda f: f.created_at or datetime.min.replace(tzinfo=timezone.utc),
+            reverse=True,
+        )[:8]
+    ]
 
     return {
         "scores": scores,
@@ -557,6 +671,8 @@ def get_db_performance_snapshot(user_id: int) -> dict:
         "history": history,
         "feedback_count": len(feedbacks),
         "rating_count": len(ratings),
+        "recent_feedback": recent_feedback,
+        "source": "peer_feedback" if has_peer_data else "tasks_or_profile",
     }
 
 
@@ -568,10 +684,22 @@ def generate_mentor_report(user_id: int) -> dict:
 
     Returns the same shape as ai_mentor_csv.py's analyse_user() output.
     """
+    cached = _REPORT_CACHE.get(user_id)
+    if cached and (time.time() - cached[0]) < _REPORT_TTL_SECONDS:
+        return cached[1]
+
+    report = _generate_mentor_report_uncached(user_id)
+    if "error" not in report:
+        _REPORT_CACHE[user_id] = (time.time(), report)
+    return report
+
+
+def _generate_mentor_report_uncached(user_id: int) -> dict:
     from models import db
     from models.user import User
     from models.task import Task
     from models.feedback import Feedback
+    from models.project import Project
 
     user = db.session.get(User, user_id)
     if not user:
@@ -614,19 +742,22 @@ def generate_mentor_report(user_id: int) -> dict:
     weaknesses = _detect_weaknesses(user, perf_snapshot["scores"])
     strengths = _detect_strengths(user, perf_snapshot["scores"])
     gaps = _detect_skill_gaps(user, scores["level"])
-    report = _generate_report(user, scores, weaknesses, strengths, nlp, gaps)
+    report = _generate_report(user, scores, weaknesses, strengths, nlp, gaps, tasks=tasks)
     course_recs = _recommend_courses(gaps)
 
     done = [t for t in tasks if getattr(t, "status", None) == "done"]
     recent_tasks: list[dict[str, Any]] = []
     try:
-        from models.project import Project
-
-        for t in tasks[:8]:
-            proj_name = None
-            if getattr(t, "project_id", None):
-                proj = db.session.get(Project, t.project_id)
-                proj_name = getattr(proj, "name", None) if proj else None
+        rows = (
+            db.session.query(Task, Project)
+            .outerjoin(Project, Task.project_id == Project.id)
+            .filter(Task.assigned_to == user_id)
+            .order_by(Task.created_at.desc())
+            .limit(8)
+            .all()
+        )
+        for t, proj in rows:
+            proj_name = getattr(proj, "name", None) if proj else None
             recent_tasks.append({
                 "title": proj_name or t.title,
                 "task": t.title,
@@ -653,15 +784,6 @@ def generate_mentor_report(user_id: int) -> dict:
         "career_level": scores["level"],
         "target_role": gaps.get("target_role"),
     }
-
-    if not perf_snapshot.get("history") and scores["total_score"]:
-        perf_snapshot = {
-            **perf_snapshot,
-            "history": [{
-                "period": datetime.now(timezone.utc).strftime("%Y-%m"),
-                "score": scores["total_score"],
-            }],
-        }
 
     ai_summary = report.split("##")[1].strip() if "##" in report else report[:280]
     summary = db_summary if db_summary else ai_summary
@@ -709,9 +831,12 @@ def build_user_ml_stats(user_id: int) -> dict:
     """Build feature dict for Profiles&AI Rating teamify_model.pkl from live DB."""
     from models import db
     from models.feedback import Feedback
+    from models.project import Project
+    from models.project_member import ProjectMember
     from models.rating import Rating
     from models.task import Task
     from models.user import User
+    from services.ai_features import calc_availability_score, calc_project_similarity
 
     user = db.session.get(User, user_id)
     if not user:
@@ -748,6 +873,16 @@ def build_user_ml_stats(user_id: int) -> dict:
     avg_rating = round(sum(r_scores) / len(r_scores), 2) if r_scores else 3.5
     skills = normalize_skills_list(user.skills)
 
+    project_ids = {pm.project_id for pm in ProjectMember.query.filter_by(user_id=user_id).all()}
+    similarities: list[float] = []
+    for pid in project_ids:
+        project = db.session.get(Project, pid)
+        if project:
+            similarities.append(float(calc_project_similarity(user, project)))
+    project_similarity = (
+        round(sum(similarities) / len(similarities), 2) if similarities else 0.0
+    )
+
     return {
         "tasks_assigned": assigned or max(completed, 1),
         "tasks_completed": completed,
@@ -757,8 +892,8 @@ def build_user_ml_stats(user_id: int) -> dict:
         "attendance_rate": float(user.member_on_time_rate or 0.85),
         "skill_match_score": min(len(skills) / 8.0, 1.0),
         "avg_rating": avg_rating,
-        "availability_score": 0.85,
-        "project_similarity": 0.65,
+        "availability_score": calc_availability_score(user),
+        "project_similarity": project_similarity,
     }
 
 

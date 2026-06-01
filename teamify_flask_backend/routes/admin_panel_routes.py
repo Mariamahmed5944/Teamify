@@ -16,7 +16,6 @@ from models.audit_log import AuditLog
 from models.dispute import Dispute
 from models.feedback import Feedback
 from models.project import Project
-from models.rating import Rating
 from models.user import User
 from routes.admin import admin_bp, _page_args
 from services.analytics_snapshot_service import (
@@ -31,7 +30,9 @@ from utils.admin_audit import log_admin_action
 @admin_required
 def list_audit_logs():
     """Paginated security audit log query."""
-    page, per_page = _page_args(50)
+    page, per_page, page_err = _page_args(50)
+    if page_err:
+        return page_err
     action = request.args.get("action", "").strip()
     severity = request.args.get("severity", "").strip()
     user_id = request.args.get("user_id", type=int)
@@ -226,7 +227,9 @@ def update_role_permissions(role):
 @admin_bp.route("/notifications/history", methods=["GET"])
 @admin_required
 def list_broadcast_history():
-    page, per_page = _page_args(20)
+    page, per_page, page_err = _page_args(20)
+    if page_err:
+        return page_err
     p = BroadcastHistory.query.order_by(BroadcastHistory.sent_at.desc()).paginate(
         page=page, per_page=per_page, error_out=False
     )
@@ -249,27 +252,30 @@ def list_broadcast_history():
 @admin_bp.route("/ratings/leaderboard", methods=["GET"])
 @admin_required
 def ratings_leaderboard():
-    """Top-rated users by average rating score."""
-    page, per_page = _page_args(20)
+    """Top-rated users by peer feedback star rating (Feedback.avg_rating)."""
+    page, per_page, page_err = _page_args(20)
+    if page_err:
+        return page_err
     from sqlalchemy import func as sqlfunc
 
     q = (
         db.session.query(
-            Rating.ratee_id,
-            sqlfunc.avg(Rating.score).label("avg_score"),
-            sqlfunc.count(Rating.id).label("rating_count"),
+            Feedback.user_id,
+            sqlfunc.avg(Feedback.avg_rating).label("avg_score"),
+            sqlfunc.count(Feedback.id).label("rating_count"),
         )
-        .group_by(Rating.ratee_id)
-        .order_by(sqlfunc.avg(Rating.score).desc())
+        .filter(Feedback.avg_rating.isnot(None))
+        .group_by(Feedback.user_id)
+        .order_by(sqlfunc.avg(Feedback.avg_rating).desc())
     )
     total = q.count()
     rows = q.offset((page - 1) * per_page).limit(per_page).all()
     items = []
-    for ratee_id, avg_score, rating_count in rows:
-        u = db.session.get(User, ratee_id)
+    for user_id, avg_score, rating_count in rows:
+        u = db.session.get(User, user_id)
         items.append({
-            "user_id": ratee_id,
-            "user_name": (u.full_name or u.display_name or u.email) if u else f"User {ratee_id}",
+            "user_id": user_id,
+            "user_name": (u.full_name or u.display_name or u.email) if u else f"User {user_id}",
             "email": u.email if u else "",
             "avg_score": round(float(avg_score or 0), 2),
             "rating_count": rating_count,
@@ -288,17 +294,28 @@ def ratings_leaderboard():
 @admin_bp.route("/feedback/leaderboard", methods=["GET"])
 @admin_required
 def feedback_leaderboard():
-    page, per_page = _page_args(20)
+    """Top users by average quality + teamwork feedback scores."""
+    page, per_page, page_err = _page_args(20)
+    if page_err:
+        return page_err
     from sqlalchemy import func as sqlfunc
 
     q = (
         db.session.query(
             Feedback.user_id,
-            sqlfunc.avg(Feedback.avg_rating).label("avg_rating"),
+            sqlfunc.avg(
+                (Feedback.quality_score + Feedback.teamwork_score) / 2.0
+            ).label("avg_rating"),
             sqlfunc.count(Feedback.id).label("feedback_count"),
         )
+        .filter(
+            Feedback.quality_score.isnot(None),
+            Feedback.teamwork_score.isnot(None),
+        )
         .group_by(Feedback.user_id)
-        .order_by(sqlfunc.avg(Feedback.avg_rating).desc())
+        .order_by(
+            sqlfunc.avg((Feedback.quality_score + Feedback.teamwork_score) / 2.0).desc()
+        )
     )
     total = q.count()
     rows = q.offset((page - 1) * per_page).limit(per_page).all()

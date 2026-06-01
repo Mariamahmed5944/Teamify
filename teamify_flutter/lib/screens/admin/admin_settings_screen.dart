@@ -24,7 +24,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
   bool _emailNotifs = true;
   bool _pushNotifs = true;
   String _passwordPolicy = 'medium';
-  
+
   bool _loading = false;
   bool _saving = false;
 
@@ -43,21 +43,24 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
     super.dispose();
   }
 
+  void _applySettings(Map<String, dynamic> res) {
+    _registrationEnabled = res['registration_enabled'] == true;
+    _aiEnabled = res['ai_enabled'] == true;
+    _aiLimitsCtrl.text = (res['ai_limits'] ?? 100).toString();
+    _maxUploadCtrl.text = (res['max_upload_size_mb'] ?? 5).toString();
+    _allowedTypesCtrl.text = (res['allowed_file_types'] as List? ?? []).join(', ');
+    _sessionTimeoutCtrl.text = (res['session_timeout_min'] ?? 60).toString();
+    _passwordPolicy = (res['password_policy'] ?? 'medium').toString();
+    _emailNotifs = res['email_notifications'] == true;
+    _pushNotifs = res['push_notifications'] == true;
+  }
+
   Future<void> _loadSettings() async {
     setState(() => _loading = true);
     try {
       final res = await context.read<AppServices>().admin.getSettings().unwrap();
-      setState(() {
-        _registrationEnabled = res['registration_enabled'] ?? true;
-        _aiEnabled = res['ai_enabled'] ?? true;
-        _aiLimitsCtrl.text = (res['ai_limits'] ?? 100).toString();
-        _maxUploadCtrl.text = (res['max_upload_size_mb'] ?? 5).toString();
-        _allowedTypesCtrl.text = (res['allowed_file_types'] as List? ?? []).join(', ');
-        _sessionTimeoutCtrl.text = (res['session_timeout_min'] ?? 60).toString();
-        _passwordPolicy = res['password_policy'] ?? 'medium';
-        _emailNotifs = res['email_notifications'] ?? true;
-        _pushNotifs = res['push_notifications'] ?? true;
-      });
+      if (!mounted) return;
+      setState(() => _applySettings(res));
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -92,12 +95,15 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
     };
 
     try {
-      await context.read<AppServices>().admin.updateSettings(payload).unwrap();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Global system settings saved successfully!'), backgroundColor: AppColors.success),
-        );
-      }
+      final saved = await context.read<AppServices>().admin.updateSettings(payload).unwrap();
+      if (!mounted) return;
+      setState(() => _applySettings(saved));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Settings saved — changes are now active across the platform.'),
+          backgroundColor: AppColors.success,
+        ),
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -115,6 +121,13 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('System Settings', style: TextStyle(fontWeight: FontWeight.bold)),
+        actions: [
+          IconButton(
+            tooltip: 'Reload settings',
+            icon: const Icon(Icons.refresh),
+            onPressed: _loading || _saving ? null : _loadSettings,
+          ),
+        ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -123,22 +136,19 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  // 1. User Registration
                   const TSectionHeader(title: 'User Registration Preferences'),
                   const SizedBox(height: 10),
                   TCard(
                     padding: const EdgeInsets.all(12),
                     child: SwitchListTile(
                       title: const Text('Enable Registration', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                      subtitle: const Text('Toggle standard student and freelancer registrations globally', style: TextStyle(fontSize: 12)),
+                      subtitle: const Text('Blocks new sign-ups platform-wide when turned off', style: TextStyle(fontSize: 12)),
                       value: _registrationEnabled,
                       activeThumbColor: AppColors.primary,
-                      onChanged: (val) => setState(() => _registrationEnabled = val),
+                      onChanged: _saving ? null : (val) => setState(() => _registrationEnabled = val),
                     ),
                   ),
                   const SizedBox(height: 20),
-
-                  // 2. AI Preferences
                   const TSectionHeader(title: 'AI Services Preferences'),
                   const SizedBox(height: 10),
                   TCard(
@@ -148,14 +158,15 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                         SwitchListTile(
                           contentPadding: EdgeInsets.zero,
                           title: const Text('Enable Platform AI Features', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                          subtitle: const Text('Toggles STT transcription, summaries, and delay predictions', style: TextStyle(fontSize: 12)),
+                          subtitle: const Text('Disables AI Hub routes when turned off', style: TextStyle(fontSize: 12)),
                           value: _aiEnabled,
                           activeThumbColor: AppColors.primary,
-                          onChanged: (val) => setState(() => _aiEnabled = val),
+                          onChanged: _saving ? null : (val) => setState(() => _aiEnabled = val),
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
                           controller: _aiLimitsCtrl,
+                          enabled: !_saving,
                           decoration: const InputDecoration(
                             labelText: 'Daily API Limit Per User',
                             border: OutlineInputBorder(),
@@ -163,6 +174,8 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                           keyboardType: TextInputType.number,
                           validator: (val) {
                             if (val == null || val.trim().isEmpty) return 'Limit is required';
+                            final n = int.tryParse(val);
+                            if (n == null || n < 1) return 'Enter a valid limit (minimum 1)';
                             return null;
                           },
                         ),
@@ -170,8 +183,6 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
-
-                  // 3. Platform Uploads
                   const TSectionHeader(title: 'Upload Configurations'),
                   const SizedBox(height: 10),
                   TCard(
@@ -180,6 +191,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                       children: [
                         TextFormField(
                           controller: _maxUploadCtrl,
+                          enabled: !_saving,
                           decoration: const InputDecoration(
                             labelText: 'Maximum Upload Size (MB)',
                             border: OutlineInputBorder(),
@@ -187,12 +199,15 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                           keyboardType: TextInputType.number,
                           validator: (val) {
                             if (val == null || val.trim().isEmpty) return 'Max size is required';
+                            final n = int.tryParse(val);
+                            if (n == null || n < 1) return 'Enter a valid size in MB';
                             return null;
                           },
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
                           controller: _allowedTypesCtrl,
+                          enabled: !_saving,
                           decoration: const InputDecoration(
                             labelText: 'Allowed File Extensions (Comma separated)',
                             border: OutlineInputBorder(),
@@ -206,8 +221,6 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
-
-                  // 4. Security Policy
                   const TSectionHeader(title: 'Security & Access Control'),
                   const SizedBox(height: 10),
                   TCard(
@@ -216,6 +229,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                       children: [
                         TextFormField(
                           controller: _sessionTimeoutCtrl,
+                          enabled: !_saving,
                           decoration: const InputDecoration(
                             labelText: 'Session Timeout Duration (Minutes)',
                             border: OutlineInputBorder(),
@@ -223,11 +237,14 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                           keyboardType: TextInputType.number,
                           validator: (val) {
                             if (val == null || val.trim().isEmpty) return 'Timeout is required';
+                            final n = int.tryParse(val);
+                            if (n == null || n < 5) return 'Minimum session timeout is 5 minutes';
                             return null;
                           },
                         ),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
+                          key: ValueKey(_passwordPolicy),
                           initialValue: _passwordPolicy,
                           decoration: const InputDecoration(
                             labelText: 'Password Complexity Level',
@@ -238,16 +255,16 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                             DropdownMenuItem(value: 'medium', child: Text('Medium (Min 8 chars, 1 number, 1 capital)')),
                             DropdownMenuItem(value: 'high', child: Text('High (Min 10 chars, special characters required)')),
                           ],
-                          onChanged: (val) {
-                            if (val != null) setState(() => _passwordPolicy = val);
-                          },
+                          onChanged: _saving
+                              ? null
+                              : (val) {
+                                  if (val != null) setState(() => _passwordPolicy = val);
+                                },
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 20),
-
-                  // 5. Notifications
                   const TSectionHeader(title: 'Communication Pipelines'),
                   const SizedBox(height: 10),
                   TCard(
@@ -257,23 +274,23 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                         SwitchListTile(
                           contentPadding: EdgeInsets.zero,
                           title: const Text('Email Notifications', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                          subtitle: const Text('Reserved for outbound email delivery', style: TextStyle(fontSize: 12)),
                           value: _emailNotifs,
                           activeThumbColor: AppColors.primary,
-                          onChanged: (val) => setState(() => _emailNotifs = val),
+                          onChanged: _saving ? null : (val) => setState(() => _emailNotifs = val),
                         ),
                         SwitchListTile(
                           contentPadding: EdgeInsets.zero,
                           title: const Text('Mobile Push Notifications', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                          subtitle: const Text('Controls real-time Socket.IO push alerts', style: TextStyle(fontSize: 12)),
                           value: _pushNotifs,
                           activeThumbColor: AppColors.primary,
-                          onChanged: (val) => setState(() => _pushNotifs = val),
+                          onChanged: _saving ? null : (val) => setState(() => _pushNotifs = val),
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 24),
-
-                  // Save Button
                   _saving
                       ? const Center(child: CircularProgressIndicator())
                       : TButton(

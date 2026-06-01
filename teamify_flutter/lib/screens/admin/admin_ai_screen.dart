@@ -27,6 +27,12 @@ class _AdminAiScreenState extends State<AdminAiScreen> {
     });
   }
 
+  String _formatDuration(dynamic raw) {
+    if (raw == null) return '0.00';
+    final value = raw is num ? raw.toDouble() : double.tryParse(raw.toString());
+    return (value ?? 0).toStringAsFixed(2);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -61,56 +67,58 @@ class _AdminAiScreenState extends State<AdminAiScreen> {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              // KPI Row 1
               Row(
                 children: [
                   Expanded(
-                    child: _aiCard('Total AI Calls', '${metrics['total_ai_requests'] ?? 0}', Icons.bar_chart, AppColors.primary),
+                    child: _aiCard('Total AI Calls (Today)', '${metrics['total_ai_requests'] ?? 0}', Icons.bar_chart, AppColors.primary),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: _aiCard('Failed Calls', '${metrics['failed_ai_calls'] ?? 0}', Icons.error_outline, AppColors.error),
+                    child: _aiCard('Failed Calls (Today)', '${metrics['failed_ai_calls'] ?? 0}', Icons.error_outline, AppColors.error),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
-              // KPI Row 2
               Row(
                 children: [
                   Expanded(
-                    child: _aiCard('Avg Latency', '${metrics['average_response_time'] ?? 0.0}s', Icons.timer_outlined, AppColors.success),
+                    child: _aiCard('Avg Latency', '${_formatDuration(metrics['average_response_time'])}s', Icons.timer_outlined, AppColors.success),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: _aiCard('Token Usage', '${metrics['token_usage'] ?? 0}', Icons.monetization_on_outlined, AppColors.warning),
+                    child: _aiCard('Token Usage (Today)', '${metrics['token_usage'] ?? 0}', Icons.monetization_on_outlined, AppColors.warning),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
-              // Most Used Feature Card
               TCard(
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
                     const Icon(Icons.auto_awesome, color: AppColors.primary, size: 28),
                     const SizedBox(width: 16),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Most Popular AI Feature', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                        Text(
-                          (metrics['most_used_feature'] ?? 'None').toString().toUpperCase(),
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-                        ),
-                      ],
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Most Popular AI Feature (Today)', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                          Text(
+                            (metrics['most_used_feature'] ?? 'None').toString(),
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 24),
-
-              // Detailed Log Table
               const TSectionHeader(title: 'Recent AI Requests Audit'),
+              const SizedBox(height: 4),
+              const Text(
+                'Use AI Hub features to generate live audit entries.',
+                style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+              ),
               const SizedBox(height: 12),
               if (list.isEmpty)
                 const Center(
@@ -124,6 +132,7 @@ class _AdminAiScreenState extends State<AdminAiScreen> {
                   children: list.map((item) {
                     final req = item as Map<String, dynamic>;
                     final isOk = req['status'] == 'success';
+                    final feature = req['feature'] ?? req['endpoint'] ?? '/api/ai';
                     return TCard(
                       margin: const EdgeInsets.only(bottom: 8),
                       child: ListTile(
@@ -139,9 +148,9 @@ class _AdminAiScreenState extends State<AdminAiScreen> {
                             size: 16,
                           ),
                         ),
-                        title: Text(req['endpoint'] ?? '/api/ai/predict', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                        title: Text(feature.toString(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                         subtitle: Text(
-                          'User: ${req['user_name'] ?? 'System'} · Latency: ${req['duration'] != null ? double.parse(req['duration'].toString()).toStringAsFixed(2) : '0.00'}s',
+                          'User: ${req['user_name'] ?? 'System'} · Latency: ${_formatDuration(req['duration'])}s',
                           style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
                         ),
                         trailing: TChip(

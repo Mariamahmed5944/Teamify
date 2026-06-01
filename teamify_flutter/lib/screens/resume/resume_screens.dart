@@ -951,12 +951,35 @@ class _ResumeEditContentScreenState extends State<ResumeEditContentScreen> {
         .toList();
 
     final filtered = filterSkillsForCvApi(_skills);
-    if (filtered.removed.isNotEmpty && mounted) {
-      setState(() {
-        _skills
-          ..clear()
-          ..addAll(filtered.kept);
-      });
+    if (filtered.removed.isNotEmpty) {
+      if (mounted) {
+        setState(() {
+          _skills
+            ..clear()
+            ..addAll(filtered.kept);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Removed invalid skills: ${filtered.removed.join(', ')}',
+            ),
+          ),
+        );
+      }
+    }
+
+    if (filtered.kept.isEmpty && _skills.isNotEmpty) {
+      if (mounted) {
+        setState(() => _saving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'No valid skills to save. Add skills like backend, Python, or React.',
+            ),
+          ),
+        );
+      }
+      return;
     }
 
     final payload = buildCvApiPayload(
@@ -1107,8 +1130,9 @@ class _ResumeEditContentScreenState extends State<ResumeEditContentScreen> {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
-                                '"$raw" is not a recognized skill. '
-                                'Try Python, React, AWS, Docker, etc.',
+                                '"$raw" is not a valid skill name. '
+                                'Use letters, numbers, and spaces (2–80 characters), '
+                                'e.g. backend, Python, React.',
                               ),
                             ),
                           );

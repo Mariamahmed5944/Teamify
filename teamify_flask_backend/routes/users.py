@@ -491,6 +491,10 @@ def get_user_stats(user_id):
     t_scores  = [f.teamwork_score for f in feedbacks if f.teamwork_score is not None]
     avg_quality  = round(sum(q_scores)  / len(q_scores),  2) if q_scores  else None
     avg_teamwork = round(sum(t_scores)  / len(t_scores),  2) if t_scores  else None
+    fb_ratings = [f.avg_rating for f in feedbacks if f.avg_rating is not None]
+    avg_feedback_rating = (
+        round(sum(fb_ratings) / len(fb_ratings), 2) if fb_ratings else None
+    )
 
     quality_norm = round(user.quality_score, 2)
     on_time_pct = round((user.member_on_time_rate or 0) * 100)
@@ -500,14 +504,16 @@ def get_user_stats(user_id):
         round((avg_quality or 0) * 20) if avg_quality else 0
     )
 
-    if avg_rating is not None:
-        career_score = avg_rating
-    elif quality_norm:
-        career_score = round(quality_norm * 5, 1)
-    elif assigned:
-        career_score = round((tasks_completed / len(assigned)) * 5, 1)
+    # Profile score (1–5): peer feedback and reviews only — not task/on-time fallbacks
+    if avg_feedback_rating is not None:
+        display_score = avg_feedback_rating
+    elif avg_rating is not None:
+        display_score = avg_rating
+    elif avg_quality is not None or avg_teamwork is not None:
+        parts = [x for x in [avg_quality, avg_teamwork] if x is not None]
+        display_score = round(sum(parts) / len(parts), 1) if parts else None
     else:
-        career_score = round((user.member_on_time_rate or 0) * 5, 1)
+        display_score = None
 
     if user.availability:
         location = user.availability
@@ -543,12 +549,13 @@ def get_user_stats(user_id):
         },
         "ratings": {
             "total":   len(ratings),
-            "average": avg_rating,
+            "average": avg_feedback_rating if avg_feedback_rating is not None else avg_rating,
         },
         "feedback": {
             "total":         len(feedbacks),
             "avg_quality":   avg_quality,
             "avg_teamwork":  avg_teamwork,
+            "avg_rating":    avg_feedback_rating,
         },
         "performance": {
             "on_time_rate":    user.member_on_time_rate,
@@ -562,8 +569,8 @@ def get_user_stats(user_id):
             "completed_projects": len(project_ids),
             "tasks_done": tasks_completed,
             "completed_tasks": tasks_completed,
-            "score": career_score,
-            "rating": avg_rating if avg_rating is not None else career_score,
+            "score": display_score,
+            "rating": display_score,
             "location": location,
             "joined": joined,
             "role_title": role_title,

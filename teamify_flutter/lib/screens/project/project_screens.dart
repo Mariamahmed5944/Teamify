@@ -3890,6 +3890,42 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     }
   }
 
+  Future<void> _openAiSuggest() async {
+    final projectId = _activeProjectId;
+    if (projectId == null || projectId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Select a project before using AI suggestions.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    final result = await Navigator.pushNamed(
+      context,
+      R.aiPriority,
+      arguments: {
+        'project_id': projectId,
+        'title': _titleController.text.trim(),
+        'description': _descController.text.trim(),
+      },
+    );
+    if (!mounted || result == null) return;
+    if (result is Map) {
+      final priority = result['priority']?.toString();
+      if (priority != null && priority.isNotEmpty) {
+        setState(() => _selectedPriority = _priorityLabelFromApi(priority));
+      }
+      final date = result['date'];
+      if (date is DateTime) {
+        setState(() {
+          _dueDate = date;
+          _dueLabel = '${date.day}/${date.month}/${date.year}';
+        });
+      }
+    }
+  }
+
   Future<void> _submit() async {
     if (_isLoading) return;
     FocusScope.of(context).unfocus();
@@ -4217,7 +4253,15 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                           (val) => setState(() => _selectedPriority = val)),
                   child: _priorityDrop(),
                 ),
-                const SizedBox(height: 16),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: _isLoading ? null : _openAiSuggest,
+                    icon: const Icon(Icons.auto_awesome, size: 18),
+                    label: const Text('AI Suggest priority & deadline'),
+                  ),
+                ),
+                const SizedBox(height: 8),
                 _label('Description'),
                 TextFormField(
                   controller: _descController,

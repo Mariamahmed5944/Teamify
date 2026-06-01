@@ -5,6 +5,37 @@ import '../../core/network/api_result.dart';
 import '../../services/app_services.dart';
 import '../../widgets/widgets.dart';
 
+/// Normalizes API user payload to a UI status key.
+String _resolveAccountStatus(Map<String, dynamic> u) {
+  final raw = (u['account_status'] ?? u['status'] ?? 'approved')
+      .toString()
+      .trim()
+      .toLowerCase();
+  if (raw == 'locked' || raw == 'suspended') return raw;
+  if (raw == 'approved') {
+    if (u['locked_until'] != null) return 'locked';
+    return 'active';
+  }
+  return raw;
+}
+
+String _statusLabel(String status) {
+  switch (status) {
+    case 'active':
+      return 'ACTIVE';
+    case 'locked':
+      return 'LOCKED';
+    case 'suspended':
+      return 'SUSPENDED';
+    case 'pending':
+      return 'PENDING';
+    case 'rejected':
+      return 'REJECTED';
+    default:
+      return status.toUpperCase();
+  }
+}
+
 class AdminUsersScreen extends StatefulWidget {
   const AdminUsersScreen({super.key});
 
@@ -72,8 +103,11 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     try {
       await context.read<AppServices>().admin.updateUserStatus(userId, action, reason: reason).unwrap();
       if (!mounted) return;
+      final message = action == 'unlock'
+          ? 'Account unlocked — user can sign in again'
+          : 'User account marked as $action successfully';
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('User account marked as $action successfully'), backgroundColor: AppColors.success),
+        SnackBar(content: Text(message), backgroundColor: AppColors.success),
       );
       _loadUsers();
     } catch (e) {
@@ -81,6 +115,37 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
       );
+    }
+  }
+
+  Future<void> _confirmStatusChange({
+    required String userId,
+    required String action,
+    required String title,
+    required String message,
+  }) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: action == 'unlock' ? AppColors.success : AppColors.warning,
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(action == 'unlock' ? 'Unlock' : 'Lock'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await _updateStatus(userId, action);
     }
   }
 
@@ -241,8 +306,10 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                           itemBuilder: (context, index) {
                             final u = _users[index] as Map<String, dynamic>;
                             final String initials = (u['display_name'] ?? 'U').toString().substring(0, 1).toUpperCase();
-                            final String status = u['status'] ?? 'active';
+                            final String status = _resolveAccountStatus(u);
                             final String role = u['role'] ?? 'member';
+                            final bool isRestricted =
+                                status == 'locked' || status == 'suspended';
 
                             return TCard(
                               margin: const EdgeInsets.only(bottom: 10),
@@ -267,15 +334,15 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                           crossAxisAlignment: CrossAxisAlignment.end,
                                           children: [
                                             TChip(
-                                              label: status.toUpperCase(),
+                                              label: _statusLabel(status),
                                               bg: status == 'active'
                                                   ? AppColors.success.withValues(alpha: 0.1)
-                                                  : status == 'locked'
+                                                  : status == 'locked' || status == 'suspended'
                                                       ? AppColors.error.withValues(alpha: 0.1)
                                                       : AppColors.warning.withValues(alpha: 0.1),
                                               textColor: status == 'active'
                                                   ? AppColors.success
-                                                  : status == 'locked'
+                                                  : status == 'locked' || status == 'suspended'
                                                       ? AppColors.error
                                                       : AppColors.warning,
                                             ),
@@ -302,16 +369,28 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                             onPressed: () => _updateStatus(u['id'].toString(), 'reject'),
                                             tooltip: 'Reject User',
                                           ),
-                                        if (status != 'pending' && status != 'locked')
+                                        if (status != 'pending' && !isRestricted)
                                           IconButton(
                                             icon: const Icon(Icons.lock_outline, color: AppColors.warning),
-                                            onPressed: () => _updateStatus(u['id'].toString(), 'lock'),
+                                            onPressed: () => _confirmStatusChange(
+                                              userId: u['id'].toString(),
+                                              action: 'lock',
+                                              title: 'Lock Account',
+                                              message:
+                                                  'This user will be blocked from signing in until you unlock the account.',
+                                            ),
                                             tooltip: 'Lock Account',
                                           ),
-                                        if (status == 'locked')
+                                        if (isRestricted)
                                           IconButton(
                                             icon: const Icon(Icons.lock_open, color: AppColors.success),
-                                            onPressed: () => _updateStatus(u['id'].toString(), 'unlock'),
+                                            onPressed: () => _confirmStatusChange(
+                                              userId: u['id'].toString(),
+                                              action: 'unlock',
+                                              title: 'Unlock Account',
+                                              message:
+                                                  'Restore access so this user can sign in again.',
+                                            ),
                                             tooltip: 'Unlock Account',
                                           ),
                                         IconButton(

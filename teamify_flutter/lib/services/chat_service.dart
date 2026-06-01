@@ -82,6 +82,19 @@ class ChatService with ServiceErrorHandler {
   Future<ApiResult<Map<String, dynamic>>> startMeetingSession(String roomId) =>
       guard(() => _repo.startMeetingSession(roomId));
 
+  Future<ApiResult<Map<String, dynamic>>> saveMeetingCheckpoint(
+    String roomId,
+    String sessionId, {
+    required List<Map<String, dynamic>> transcript,
+    required List<String> participantIds,
+  }) =>
+      guard(() => _repo.saveMeetingCheckpoint(
+            roomId,
+            sessionId,
+            transcript: transcript,
+            participantIds: participantIds,
+          ));
+
   Future<ApiResult<Map<String, dynamic>>> stopMeetingSession(
     String roomId,
     String sessionId, {

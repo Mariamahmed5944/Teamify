@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 
+import 'session_controller.dart';
+
 abstract class Disposable {
   void dispose();
 }
@@ -28,6 +30,7 @@ class DisposableRegistry {
         } else if (item is Disposable) {
           item.dispose();
         } else if (item is ChangeNotifier) {
+          if (item is SessionController) continue;
           item.dispose();
         }
       } catch (e) {

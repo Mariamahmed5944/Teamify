@@ -59,6 +59,7 @@ class TaskService with ServiceErrorHandler {
   }
 
   Future<void> _invalidateTaskCaches() async {
+    await _cache.invalidate(_box, 'accessible');
     await _cache.invalidateBox(_box);
     await _cache.invalidateBox('home');
   }
@@ -88,6 +89,29 @@ class TaskService with ServiceErrorHandler {
                   onRefreshed: onRefreshed,
                 )
                 .then((res) => res.isSuccess ? res.data! : throw Exception(res.error));
+          }));
+
+  /// All tasks across accessible projects — single API round-trip for AI Hub screens.
+  Future<ApiResult<List<Map<String, dynamic>>>> listAccessibleTasks({
+    int limit = 100,
+    bool forceRefresh = false,
+  }) =>
+      _dedup.deduplicate('accessible_tasks', () => guard(() async {
+            const cacheKey = 'accessible';
+            if (!forceRefresh) {
+              final cached = await _cache.getList(_box, cacheKey);
+              if (cached != null && cached.isNotEmpty) {
+                _repo.listAccessibleTasks(limit: limit).then((fresh) async {
+                  await _cache.putList(_box, cacheKey, fresh);
+                }).catchError((_) {});
+                return cached
+                    .map((e) => Map<String, dynamic>.from(e as Map))
+                    .toList();
+              }
+            }
+            final tasks = await _repo.listAccessibleTasks(limit: limit);
+            await _cache.putList(_box, cacheKey, tasks);
+            return tasks;
           }));
 
   Future<ApiResult<ApiTask>> getTask(String id) =>

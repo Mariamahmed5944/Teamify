@@ -58,11 +58,12 @@ class AppServices {
 
   /// The shared [OfflineManager] — exposed so the UI can read queue depth,
   /// trigger manual replays, or display permanent-failure banners.
+  late final SessionController session;
   late final OfflineManager offline;
 
   AppServices({
     required AppRepositories repos,
-    required SessionController session,
+    required this.session,
     required CacheManager cache,
     required OfflineManager offlineManager,
     WebSocketManager? ws,

@@ -174,8 +174,10 @@ def _keyword_classify(text: str) -> dict:
     return {
         "category":        best_cat,
         "difficulty":      difficulty,
+        "complexity":      difficulty,
         "required_skills": skills[:5],
         "source":          "keyword_fallback",
+        "confidence":      0.72,
     }
 
 
@@ -194,7 +196,11 @@ def classify_task(text: str) -> dict:
             "required_skills": [], "source": "fallback", "error": "Empty text",
         }
 
-    model, tokenizer, le = _load_category_model()
+    # Only run ML if the model was warmed at startup — never load weights on a
+    # live HTTP request (that blocks gevent workers and causes client timeouts).
+    model = _cat_model_cache
+    tokenizer = _cat_tokenizer_cache
+    le = _cat_le_cache
 
     if model is not None and tokenizer is not None:
         try:
@@ -224,8 +230,10 @@ def classify_task(text: str) -> dict:
             return {
                 "category":        label,
                 "difficulty":      "medium",
+                "complexity":      "medium",
                 "required_skills": [],
                 "source":          "ml_model",
+                "confidence":      0.92,
             }
         except Exception as exc:
             logger.error("DistilBERT inference failed: %s", exc, exc_info=True)
@@ -383,3 +391,15 @@ def assign_best_members(task_info: dict, members_list: list) -> list:
         m["rank"] = rank
 
     return scored
+
+
+def startup_check() -> None:
+    """Warm-load task classifier so the first /classify-task request is fast."""
+    model, tokenizer, le = _load_category_model()
+    if model is not None and tokenizer is not None:
+        logger.info(
+            "Task category model ready (%d labels)",
+            len(le.classes_) if le is not None else 0,
+        )
+    else:
+        logger.info("Task category model using keyword fallback (%s)", _cat_load_error)

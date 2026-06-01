@@ -18,6 +18,17 @@ class TaskRepository {
         .toList();
   }
 
+  /// GET /api/tasks/accessible — all tasks across accessible projects (one call).
+  Future<List<Map<String, dynamic>>> listAccessibleTasks({int limit = 100}) async {
+    final response = await _client.get<dynamic>(
+      '/api/tasks/accessible',
+      queryParameters: {'limit': limit},
+    );
+    return responseList(response.data, ['tasks', 'data'])
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
+  }
+
   // POST /api/tasks
   Future<ApiTask> createTask(Map<String, dynamic> payload) async {
     final response = await _client.post<Map<String, dynamic>>(

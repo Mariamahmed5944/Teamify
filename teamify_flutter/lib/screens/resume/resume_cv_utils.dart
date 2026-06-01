@@ -34,7 +34,7 @@ Map<String, dynamic> normalizeCvForPreview(Map<String, dynamic> raw) {
       );
     }
   }
-  final sanitized = sanitizeSkillsList(List<String>.from(skills));
+  final sanitized = filterSkillsForCvApi(sanitizeSkillsList(List<String>.from(skills))).kept;
   skills
     ..clear()
     ..addAll(sanitized);
@@ -235,6 +235,12 @@ const Set<String> _allowedCvSkills = {
   'Reliability & Consistency', 'Teamwork & Synergy',
   'HTML/CSS', 'Unit Testing', 'Code Review',
   'Product Thinking', 'Stakeholder Communication', 'Architecture', 'OKRs',
+  'Backend Development', 'Frontend Development', 'Mobile App Development',
+  'Full Stack Development', 'AI Tools', 'DevOps Engineering',
+  'Cloud Engineering', 'Software Engineering', 'Web Development',
+  'Team Leadership', 'Cross-functional Collaboration', 'Time Management',
+  'Efficient Execution', 'Professional Integrity',
+  'High Initiative & Engagement',
 };
 
 const Map<String, String> _skillAliases = {
@@ -265,16 +271,35 @@ const Map<String, String> _skillAliases = {
   'spring': 'Spring Boot',
   'tailwind': 'TailwindCSS',
   'tailwind css': 'TailwindCSS',
+  'backend': 'Backend Development',
+  'backend development': 'Backend Development',
+  'backend dev': 'Backend Development',
+  'frontend': 'Frontend Development',
+  'frontend development': 'Frontend Development',
+  'mobile': 'Mobile App Development',
+  'mobile development': 'Mobile App Development',
+  'mobile app development': 'Mobile App Development',
+  'full stack': 'Full Stack Development',
+  'fullstack': 'Full Stack Development',
+  'full-stack': 'Full Stack Development',
+  'full stack development': 'Full Stack Development',
+  'ai tools': 'AI Tools',
+  'devops': 'DevOps Engineering',
+  'software engineering': 'Software Engineering',
+  'web development': 'Web Development',
 };
+
+final _safeSkillPattern = RegExp(r'^[\w][\w\s&+#./\-]{1,79}$');
 
 String? canonicalSkillName(String raw) {
   final s = raw.trim();
-  if (s.length < 2) return null;
+  if (s.length < 2 || s.length > 80) return null;
   final key = s.toLowerCase();
   if (_skillAliases.containsKey(key)) return _skillAliases[key];
   if (_allowedCvSkills.map((e) => e.toLowerCase()).contains(key)) {
     return _allowedCvSkills.firstWhere((e) => e.toLowerCase() == key);
   }
+  if (_safeSkillPattern.hasMatch(s)) return s;
   return null;
 }
 
@@ -303,11 +328,12 @@ String? canonicalSkillName(String raw) {
   List<Map<String, String>> projects,
 }) editFormFromPreview(Map<String, dynamic> preview) {
   final summary = preview['summary']?.toString() ?? '';
-  final skills = (preview['skills'] as List?)
+  final rawSkills = (preview['skills'] as List?)
           ?.map((e) => e.toString())
           .where((s) => s.isNotEmpty)
           .toList() ??
       <String>[];
+  final skills = filterSkillsForCvApi(rawSkills).kept;
 
   final projects = <Map<String, String>>[];
   final exp = preview['experience'];

@@ -11,12 +11,15 @@ is missing.
 """
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from models import db
 from models.login_log import LoginLog
 from models.alert import Alert
+
+logger = logging.getLogger(__name__)
 
 # Tunables (could be moved to env / config)
 WINDOW_MINUTES = 5
@@ -74,8 +77,12 @@ def check_login_anomalies(
                 ml_anomaly_note = (
                     f" ML anomaly detector flagged this login (score={score})."
                 )
-        except Exception:
-            pass  # ML scoring is non-critical; never block the auth flow
+        except Exception as exc:
+            logger.warning(
+                "ML anomaly scoring failed for user %s: %s",
+                user_id,
+                exc,
+            )  # ML scoring is non-critical; never block the auth flow
 
     if fail_count < threshold and not ml_anomaly_note:
         return None

@@ -200,12 +200,39 @@ def upload_file():
         )
         return jsonify({"error": f"Unsupported media type: File type '{ext}' is not allowed"}), 415
 
+    # ── 1b. Admin-configured extension allowlist ─────────────────────────────
+    allowed_exts = None
+    try:
+        from services.system_settings_service import get_allowed_file_extensions
+
+        allowed_exts = get_allowed_file_extensions()
+    except Exception:
+        logger.warning("Could not load upload allowlist from system settings", exc_info=True)
+
+    if allowed_exts:
+        parts = original_filename.lower().rsplit(".", 1)
+        ext = parts[1] if len(parts) > 1 else ""
+        if ext not in allowed_exts:
+            return jsonify({
+                "error": f"Unsupported media type: '.{ext}' is not in the allowed file types list"
+            }), 415
+
     # ── 2. Read body ───────────────────────────────────────────────────────
     raw = upload.read()
     if not raw:
         return jsonify({"error": "Empty file body"}), 400
-    if len(raw) > MAX_UPLOAD_BYTES:
-        return jsonify({"error": "File exceeds 10 MB limit"}), 413
+
+    max_bytes = MAX_UPLOAD_BYTES
+    try:
+        from services.system_settings_service import get_upload_max_bytes
+
+        max_bytes = min(MAX_UPLOAD_BYTES, get_upload_max_bytes())
+    except Exception:
+        logger.warning("Could not load upload size limit from system settings", exc_info=True)
+
+    if len(raw) > max_bytes:
+        limit_mb = max(1, max_bytes // (1024 * 1024))
+        return jsonify({"error": f"File exceeds {limit_mb} MB limit"}), 413
 
     # ── 3. MIME validation (client-supplied header) ───────────────────────
     mime = (upload.mimetype or "application/octet-stream").split(";")[0].strip()

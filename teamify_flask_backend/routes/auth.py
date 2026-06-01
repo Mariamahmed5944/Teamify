@@ -46,6 +46,34 @@ auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 bcrypt = Bcrypt()
 
 
+def _session_access_token(user_id, additional_claims: dict | None = None) -> str:
+    from services.system_settings_service import get_session_timeout_minutes
+
+    kwargs: dict[str, Any] = {
+        "identity": str(user_id),
+        "expires_delta": timedelta(minutes=get_session_timeout_minutes()),
+    }
+    if additional_claims:
+        kwargs["additional_claims"] = additional_claims
+    return create_access_token(**kwargs)
+
+
+def _track_session(user_id: int, access_token: str) -> None:
+    from services.security_session_service import register_session
+
+    ip = request.remote_addr or "unknown"
+    ua = (request.headers.get("User-Agent") or "")[:512]
+    register_session(user_id, access_token, ip_address=ip, device_info=ua)
+
+
+@auth_bp.route("/public-settings", methods=["GET"])
+def public_settings():
+    """Public platform settings for clients (registration gate, upload limits)."""
+    from services.system_settings_service import get_public_settings
+
+    return jsonify(get_public_settings()), 200
+
+
 def _request_json() -> dict[str, Any]:
     """Return the JSON body as a dict (empty dict when missing or invalid)."""
     payload = request.get_json(silent=True, force=True)
@@ -177,6 +205,8 @@ def register():
     if not data:
         return jsonify({"error": "Request body is required"}), 400
 
+    from services.system_settings_service import is_registration_enabled, validate_password
+
     from marshmallow import ValidationError
     from validators.auth_validator import register_schema
 
@@ -208,6 +238,16 @@ def register():
                 is_admin_caller = True
     except Exception:
         pass
+
+    if not is_admin_caller and not is_registration_enabled():
+        return jsonify({
+            "error": "Registration disabled",
+            "message": "New user registration is currently disabled by the administrator.",
+        }), 403
+
+    ok, pw_msg = validate_password(str(password or ""))
+    if not ok:
+        return jsonify({"error": "Validation failed", "messages": [pw_msg]}), 400
 
     PUBLIC_ROLES = {"member", "guest"}
     allowed_roles = {"member", "guest", "admin"} if is_admin_caller else PUBLIC_ROLES
@@ -258,7 +298,8 @@ def register():
     db.session.commit()
 
     # --- Generate JWT access + refresh tokens ---
-    access_token = create_access_token(identity=str(new_user.id))
+    access_token = _session_access_token(new_user.id)
+    _track_session(new_user.id, access_token)
     refresh_token = create_refresh_token(identity=str(new_user.id))
 
     # ── VULN-002 FIX ─────────────────────────────────────────────────────────
@@ -480,10 +521,8 @@ def login():
     )
 
     # --- Generate JWT access + refresh tokens ---
-    access_token = create_access_token(
-        identity=str(user.id),
-        additional_claims=token_claims or None,
-    )
+    access_token = _session_access_token(user.id, token_claims or None)
+    _track_session(user.id, access_token)
     refresh_token = create_refresh_token(identity=str(user.id))
 
     # ── VULN-002 FIX ─────────────────────────────────────────────────────────
@@ -578,7 +617,8 @@ def refresh():
         description: Missing or invalid refresh token
     """
     user_id = get_jwt_identity()
-    new_access_token = create_access_token(identity=user_id)
+    new_access_token = _session_access_token(user_id)
+    _track_session(int(user_id), new_access_token)
     # ── VULN-002 FIX: refresh the cookie as well ───────────────────────────
     response = make_response(jsonify({"access_token": new_access_token}), 200)
     set_access_cookies(response, new_access_token)
@@ -622,8 +662,9 @@ def logout():
     expires_at = (
         datetime.fromtimestamp(exp_ts, tz=timezone.utc) if exp_ts else None
     )
-    from models.token_blocklist import TokenBlocklist
-    TokenBlocklist.revoke(jti, expires_at=expires_at)
+    from services.security_session_service import revoke_session_jti
+
+    revoke_session_jti(jti, expires_at=expires_at)
     # ── VULN-002 FIX: clear JWT cookies on logout ──────────────────────────
     response = make_response(jsonify({"message": "Successfully logged out"}), 200)
     unset_jwt_cookies(response)
@@ -833,11 +874,14 @@ def reset_password():
     reset_token = data.get("reset_token", "").strip()
     new_password = data.get("new_password", "")
 
+    from services.system_settings_service import validate_password
+
     if not reset_token or not new_password:
         return jsonify({"error": "reset_token and new_password are required"}), 400
 
-    if not PASSWORD_RE.match(new_password):
-        return jsonify({"error": "Password must be at least 8 characters with 1 uppercase letter and 1 digit"}), 400
+    ok, pw_msg = validate_password(new_password)
+    if not ok:
+        return jsonify({"error": pw_msg}), 400
 
     # Decode the reset token
     from flask_jwt_extended import decode_token
@@ -962,7 +1006,8 @@ def google_login():
         db.session.commit()
         _record_login_attempt(user.id, "success")
 
-    access_token = create_access_token(identity=str(user.id))
+    access_token = _session_access_token(user.id)
+    _track_session(user.id, access_token)
     refresh_token = create_refresh_token(identity=str(user.id))
 
     status_code = 201 if is_new else 200
@@ -1110,11 +1155,9 @@ def verify_2fa():
         return jsonify({"error": "Invalid or expired TOTP token"}), 400
 
     # First successful verification activates 2FA
-    activated = False
     if not user.totp_enabled:
         user.totp_enabled = True
         db.session.commit()
-        activated = True
 
     log_security_event(
         "2FA_VERIFIED",
@@ -1122,23 +1165,21 @@ def verify_2fa():
         ip=request.remote_addr or "unknown",
     )
 
+    db.session.refresh(user)
+
+    access_token = _session_access_token(user.id)
+    _track_session(user.id, access_token)
+    refresh_token = create_refresh_token(identity=str(user.id))
     payload = {
         "message": "2FA verified successfully. Two-factor authentication is now active.",
         "user": user.to_dict(),
+        "access_token": access_token,
+        "refresh_token": refresh_token,
     }
-
-    claims = get_jwt() or {}
-    if activated or claims.get("admin_2fa_pending"):
-        access_token = create_access_token(identity=str(user.id))
-        refresh_token = create_refresh_token(identity=str(user.id))
-        payload["access_token"] = access_token
-        payload["refresh_token"] = refresh_token
-        response = make_response(jsonify(payload), 200)
-        set_access_cookies(response, access_token)
-        set_refresh_cookies(response, refresh_token)
-        return response
-
-    return jsonify(payload), 200
+    response = make_response(jsonify(payload), 200)
+    set_access_cookies(response, access_token)
+    set_refresh_cookies(response, refresh_token)
+    return response
 
 
 # ─── POST /api/auth/2fa/confirm-login ─────────────────────────────────────────
@@ -1180,7 +1221,8 @@ def confirm_2fa_login():
         )
         return jsonify({"error": "Invalid or expired TOTP token"}), 400
 
-    access_token = create_access_token(identity=str(user.id))
+    access_token = _session_access_token(user.id)
+    _track_session(user.id, access_token)
     refresh_token = create_refresh_token(identity=str(user.id))
 
     log_security_event(
@@ -1401,7 +1443,8 @@ def github_login():
         ))
         db.session.commit()
 
-    access_token = create_access_token(identity=str(user.id))
+    access_token = _session_access_token(user.id)
+    _track_session(user.id, access_token)
     refresh_token = create_refresh_token(identity=str(user.id))
 
     ip = request.remote_addr or "unknown"

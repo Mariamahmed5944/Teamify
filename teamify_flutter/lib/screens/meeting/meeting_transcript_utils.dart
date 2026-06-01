@@ -1,6 +1,18 @@
 /// Helpers to clean meeting transcripts before summary UI / API calls.
 library;
 
+/// Join streaming speech segments into one continuous utterance block.
+String mergeSpeechSegment(String existing, String segment) {
+  final s = segment.trim();
+  if (s.isEmpty) return existing.trim();
+  final e = existing.trim();
+  if (e.isEmpty) return s;
+  if (e == s || e.endsWith(s)) return e;
+  if (s.startsWith(e)) return s;
+  if (e.contains(s)) return e;
+  return '$e $s';
+}
+
 /// Normalizes, sorts, and deduplicates meeting transcript entries.
 List<Map<String, dynamic>> normalizeMeetingTranscript(
   List<Map<String, dynamic>> raw,

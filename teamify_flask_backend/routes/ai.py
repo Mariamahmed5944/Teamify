@@ -18,14 +18,14 @@ Endpoints:
 """
 import os
 import logging
+import time
 from typing import Any, cast
 
 import requests
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify, current_app, g
 from flask_jwt_extended import get_jwt_identity
 from middleware.auth import auth_required
 
-from services.delay_predictor_service import predict_task_delay
 from services.task_pipeline_service import classify_task, assign_best_members
 from services.chat_summarization_service import summarize_chat
 from services.ai_mentor_service import (
@@ -46,9 +46,11 @@ from services.ai_service import (
 
 # Models and auth — imported at module level so @patch("routes.ai.X") works in tests
 from models.project import Project
+from models.project_member import ProjectMember
 from models.task import Task
+from models.user import User
 from models import db
-from middleware.auth import get_project_role
+from middleware.auth import get_project_role, _WRITE_ROLES
 
 # Marshmallow validation (reused from existing validators)
 from marshmallow import Schema, fields, validates, ValidationError
@@ -56,6 +58,78 @@ from validators.cv_validator import cv_build_schema
 
 logger = logging.getLogger(__name__)
 ai_bp = Blueprint("ai", __name__, url_prefix="/api/ai")
+
+
+@ai_bp.before_request
+def _ai_before_request():
+    if request.method == "OPTIONS":
+        return None
+    g.ai_request_start = time.time()
+    from services.system_settings_service import is_ai_enabled
+
+    if not is_ai_enabled():
+        return jsonify({
+            "error": "AI disabled",
+            "message": "Platform AI features are currently disabled by the administrator.",
+        }), 503
+
+
+@ai_bp.after_request
+def _log_ai_request(response):
+    """Persist every AI API call for the admin monitor dashboard."""
+    if request.method == "OPTIONS":
+        return response
+    try:
+        user_id = None
+        try:
+            from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+
+            verify_jwt_in_request(optional=True)
+            uid = get_jwt_identity()
+            if uid:
+                user_id = int(uid)
+        except Exception:
+            pass
+
+        started = getattr(g, "ai_request_start", None)
+        duration_ms = int((time.time() - started) * 1000) if started else 0
+        status = "success" if response.status_code < 400 else "fail"
+        body_text = response.get_data(as_text=True) or ""
+        token_usage = max(1, len(body_text) // 4) if body_text else 0
+
+        from services.audit_log_service import log_ai_event
+
+        log_ai_event(
+            "AI_REQUEST",
+            user_id=user_id,
+            ip=request.remote_addr or "unknown",
+            severity="INFO" if status == "success" else "WARNING",
+            details={
+                "endpoint": request.path,
+                "method": request.method,
+                "status": status,
+                "status_code": response.status_code,
+                "latency_ms": duration_ms,
+                "token_usage": token_usage,
+            },
+        )
+    except Exception:
+        logger.debug("AI request audit skipped", exc_info=True)
+    return response
+
+_RECOMMEND_CACHE: dict[int, tuple[float, dict]] = {}
+_RECOMMEND_TTL_SECONDS = 300
+
+
+def _cache_get(cache: dict, key: int, ttl: float):
+    entry = cache.get(key)
+    if entry and (time.time() - entry[0]) < ttl:
+        return entry[1]
+    return None
+
+
+def _cache_set(cache: dict, key: int, value: dict) -> None:
+    cache[key] = (time.time(), value)
 
 
 # ─── Predict Task Delay ───────────────────────────────────────────────────────
@@ -140,8 +214,43 @@ def api_classify_task():
     if not text:
         return jsonify({"error": "text field is required"}), 400
 
-    result = classify_task(text)
-    return jsonify(result), 200
+    try:
+        result = classify_task(text)
+    except Exception as exc:
+        logger.exception("classify-task failed")
+        from services.task_pipeline_service import _keyword_classify
+
+        result = _keyword_classify(text)
+        result["error"] = str(exc)
+
+    category = result.get("category") or "general"
+    difficulty = result.get("difficulty") or result.get("complexity") or "medium"
+    suggested = {
+        "backend": "Backend specialist",
+        "frontend": "Frontend specialist",
+        "mobile": "Mobile developer",
+        "data_science": "Data / ML engineer",
+        "devops": "DevOps engineer",
+        "security": "Security engineer",
+        "testing": "QA engineer",
+        "ui_ux": "UI/UX designer",
+        "project_management": "Project lead",
+        "cloud": "Cloud engineer",
+        "database": "Database engineer",
+        "ai_ml": "AI/ML engineer",
+    }.get(str(category).lower(), "Best matching teammate")
+
+    payload = {
+        **result,
+        "complexity": result.get("complexity") or difficulty,
+        "difficulty": difficulty,
+        "confidence": result.get(
+            "confidence",
+            0.92 if result.get("source") == "ml_model" else 0.72,
+        ),
+        "suggested_assignee": suggested,
+    }
+    return jsonify(payload), 200
 
 
 # ─── Feedback assist ─────────────────────────────────────────────────────────
@@ -194,7 +303,56 @@ def api_assign_members():
     """
     data = request.get_json(silent=True) or {}
     task_info = data.get("task_info", {})
-    members_list = data.get("members", [])
+    project_id = data.get("project_id")
+
+    if not project_id:
+        return jsonify({"error": "project_id is required"}), 400
+
+    try:
+        project_id_int = int(project_id)
+    except (TypeError, ValueError):
+        return jsonify({"error": "project_id must be an integer"}), 400
+
+    current_user_id = int(get_jwt_identity())
+    role = get_project_role(current_user_id, project_id_int)
+    if role not in _WRITE_ROLES:
+        return jsonify({
+            "error": "Forbidden",
+            "message": "Only project owners can rank members for assignment",
+        }), 403
+
+    project = db.session.get(Project, project_id_int)
+    if not project:
+        return jsonify({"error": "Project not found"}), 404
+
+    member_ids = {project.user_id}
+    for pm in ProjectMember.query.filter_by(project_id=project_id_int).all():
+        member_ids.add(pm.user_id)
+
+    from services.ai_service import get_user_workload
+
+    members_list = []
+    for uid in member_ids:
+        member = db.session.get(User, uid)
+        if not member:
+            continue
+        active = get_user_workload(uid)
+        max_allowed = member.max_allowed_tasks or 5
+        members_list.append({
+            "id": uid,
+            "user_id": uid,
+            "member_name": member.display_name,
+            "member_primary_domain": (
+                getattr(member, "professional_field", None)
+                or getattr(member, "member_primary_domain", "")
+                or ""
+            ),
+            "member_skills": member.skills or [],
+            "current_tasks": active,
+            "workload_score": 1.0 - min(active / max(max_allowed, 1), 1.0),
+            "availability_encoded": 1 if active < max_allowed else 0,
+            "rating": (member.member_on_time_rate or 0.75) * 5,
+        })
 
     assignments = assign_best_members(task_info, members_list)
     return jsonify({"assignments": assignments}), 200
@@ -385,7 +543,11 @@ def api_predict_rating(user_id):
 
     user_stats = build_user_ml_stats(user_id)
     rating_result = predict_user_rating(user_stats)
-    teammates = recommend_teammates(user_stats, top_n=3)
+    teammates = recommend_teammates(
+        user_stats,
+        top_n=3,
+        current_user_id=user_id,
+    )
 
     return jsonify({
         "user_id": user_id,
@@ -427,11 +589,20 @@ def api_recommend_teammates():
 
     from services.ai_mentor_service import build_user_ml_stats
 
+    cached = _cache_get(_RECOMMEND_CACHE, current_id, _RECOMMEND_TTL_SECONDS)
+    if cached is not None:
+        return jsonify(cached), 200
+
     user_stats = build_user_ml_stats(current_id)
 
-    teammates = recommend_teammates(user_stats, top_n=top_n + 3)
-    teammates = [t for t in teammates if int(t.get("user_id", 0)) != current_id][:top_n]
-    return jsonify({"recommendations": teammates}), 200
+    teammates = recommend_teammates(
+        user_stats,
+        top_n=top_n,
+        current_user_id=current_id,
+    )
+    payload = {"recommendations": teammates}
+    _cache_set(_RECOMMEND_CACHE, current_id, payload)
+    return jsonify(payload), 200
 
 
 # ─── Detect Login Anomaly (internal) ─────────────────────────────────────────
@@ -461,6 +632,19 @@ def api_detect_anomaly():
         description: Anomaly detection result
     """
     data = request.get_json(silent=True) or {}
+    current_user_id = int(get_jwt_identity())
+    current_user = db.session.get(User, current_user_id)
+    if not current_user:
+        return jsonify({"error": "User not found"}), 404
+
+    target_id = data.get("user_id")
+    if target_id is not None and str(target_id) != str(current_user_id):
+        if current_user.role != "admin":
+            return jsonify({
+                "error": "Forbidden",
+                "detail": "You can only run anomaly detection for your own account",
+            }), 403
+
     result = detect_anomaly(data)
     return jsonify(result), 200
 
@@ -841,13 +1025,14 @@ def api_mentor_performance(user_id: int):
     if "error" in report:
         return jsonify(report), 404
 
-    snapshot = report.get("performance_snapshot") or get_db_performance_snapshot(user_id)
+    snapshot = get_db_performance_snapshot(user_id)
     weaknesses = report.get("weaknesses", [])
-    ai_tip = (
-        weaknesses[0]["message"]
-        if weaknesses
-        else "Keep up the great work — no critical issues detected."
-    )
+    if snapshot.get("feedback_count", 0) == 0 and snapshot.get("rating_count", 0) == 0:
+        ai_tip = "No peer feedback yet — ask teammates to rate you on the Feedback tab."
+    elif weaknesses:
+        ai_tip = weaknesses[0]["message"]
+    else:
+        ai_tip = "Keep up the great work — no critical issues detected."
 
     history = snapshot.get("history", [])
     trend = "stable"
@@ -864,6 +1049,8 @@ def api_mentor_performance(user_id: int):
         "trend": trend,
         "feedback_count": snapshot.get("feedback_count", 0),
         "rating_count": snapshot.get("rating_count", 0),
+        "recent_feedback": snapshot.get("recent_feedback", []),
+        "source": snapshot.get("source", "peer_feedback"),
     }), 200
 
 
@@ -1009,13 +1196,14 @@ def api_mentor_insights(user_id: int):
     if "error" in report:
         return jsonify(report), 404
 
-    snapshot = report.get("performance_snapshot") or get_db_performance_snapshot(user_id)
+    snapshot = get_db_performance_snapshot(user_id)
     weaknesses = report.get("weaknesses") or []
-    ai_tip = (
-        weaknesses[0]["message"]
-        if weaknesses and isinstance(weaknesses[0], dict)
-        else "Keep up the great work — no critical issues detected."
-    )
+    if snapshot.get("feedback_count", 0) == 0 and snapshot.get("rating_count", 0) == 0:
+        ai_tip = "No peer feedback yet — ask teammates to rate you on the Feedback tab."
+    elif weaknesses and isinstance(weaknesses[0], dict):
+        ai_tip = weaknesses[0]["message"]
+    else:
+        ai_tip = "Keep up the great work — no critical issues detected."
     history = snapshot.get("history", [])
     trend = "stable"
     if len(history) >= 2:
@@ -1036,6 +1224,8 @@ def api_mentor_insights(user_id: int):
             "trend": trend,
             "feedback_count": snapshot.get("feedback_count", 0),
             "rating_count": snapshot.get("rating_count", 0),
+            "recent_feedback": snapshot.get("recent_feedback", []),
+            "source": snapshot.get("source", "peer_feedback"),
         },
         "courses": {
             "courses": courses,

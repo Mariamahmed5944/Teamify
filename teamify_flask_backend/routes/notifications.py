@@ -247,6 +247,10 @@ def create_notification(
 def _emit_notification(user_id: int, notif: Notification) -> None:
     """Push ``new_notification`` to the user's personal room. Never raises."""
     try:
+        from services.system_settings_service import is_push_notifications_enabled
+
+        if not is_push_notifications_enabled():
+            return
         from app import socketio
         unread_count = Notification.query.filter_by(
             user_id=user_id, is_read=False

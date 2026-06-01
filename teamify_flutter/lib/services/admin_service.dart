@@ -208,7 +208,10 @@ class AdminService with ServiceErrorHandler {
       _dedup.deduplicate('admin_security_summary', () => guard(() => _repo.getSecuritySummary()));
 
   Future<ApiResult<void>> revokeSessions(String userId) =>
-      guard(() => _repo.revokeSessions(userId));
+      guard(() async {
+        await _repo.revokeSessions(userId);
+        _dedup.clear();
+      });
 
   // ── 11. Analytics ───────────────────────────────────────────────────────────
   Future<ApiResult<Map<String, dynamic>>> getAnalyticsDetails() =>
@@ -218,8 +221,13 @@ class AdminService with ServiceErrorHandler {
   Future<ApiResult<Map<String, dynamic>>> getSettings() =>
       _dedup.deduplicate('admin_settings', () => guard(() => _repo.getSettings()));
 
-  Future<ApiResult<void>> updateSettings(Map<String, dynamic> settings) =>
-      guard(() => _repo.updateSettings(settings));
+  Future<ApiResult<Map<String, dynamic>>> updateSettings(Map<String, dynamic> settings) =>
+      guard(() async {
+        final result = await _repo.updateSettings(settings);
+        _dedup.clear();
+        final saved = result['settings'] as Map<String, dynamic>? ?? result;
+        return saved;
+      });
 
   // ── 13. Compatibility / Legacy Wrappers ─────────────────────────────────────
   

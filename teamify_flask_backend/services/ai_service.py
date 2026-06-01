@@ -21,6 +21,48 @@ logger = logging.getLogger(__name__)
 # Feature flag: set AI_ENABLE_LOCAL_MODELS=false to bypass all .pkl inference
 _ML_ENABLED = os.getenv("AI_ENABLE_LOCAL_MODELS", "true").lower() not in ("false", "0", "no")
 
+_ASSIGNMENT_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "ml_models", "model2_assignment")
+)
+_ASSIGNMENT_MODEL_PATH = os.path.join(_ASSIGNMENT_DIR, "model.pkl")
+_ASSIGNMENT_FEATURES_PATH = os.path.join(_ASSIGNMENT_DIR, "features.pkl")
+_assignment_model_cache = None
+_assignment_features_cache = None
+_assignment_load_error = None
+
+
+def _load_assignment_model():
+    """Load model.pkl (estimator) and features.pkl (column name list)."""
+    global _assignment_model_cache, _assignment_features_cache, _assignment_load_error
+
+    if _assignment_model_cache is not None:
+        return _assignment_model_cache, _assignment_features_cache
+    if _assignment_load_error:
+        return None, None
+
+    try:
+        import joblib
+
+        mdl = joblib.load(_ASSIGNMENT_MODEL_PATH)
+        if not hasattr(mdl, "predict"):
+            raise ValueError("model.pkl has no predict() — not a sklearn estimator")
+
+        feat_names = joblib.load(_ASSIGNMENT_FEATURES_PATH)
+        if not isinstance(feat_names, list):
+            raise ValueError("features.pkl is not a list of column names")
+
+        _assignment_model_cache = mdl
+        _assignment_features_cache = feat_names
+        return _assignment_model_cache, _assignment_features_cache
+    except FileNotFoundError as exc:
+        _assignment_load_error = f"Assignment model file not found: {exc}"
+        logger.warning(_assignment_load_error)
+    except Exception as exc:
+        _assignment_load_error = f"Failed to load assignment model: {exc}"
+        logger.error(_assignment_load_error, exc_info=True)
+
+    return None, None
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 1. Auto-assign: pick the best member for a task inside a project
@@ -37,50 +79,45 @@ def get_user_workload(user_id):
 
 def _ml_score_candidate(user, project) -> float:
     """
-    Score a single candidate using the assignment features model.
+    Score a single candidate using the assignment GradientBoostingRegressor.
     Higher score = better fit. Returns a float; falls back to 0 on error.
     """
     if not _ML_ENABLED:
         return 0.0
     try:
-        import joblib
         import pandas as pd
-        import numpy as np
 
-        model_path = os.path.join(
-            os.path.dirname(__file__), "..", "ml_models",
-            "model2_assignment", "features.pkl"
-        )
-        model_path = os.path.abspath(model_path)
-        if not os.path.exists(model_path):
+        model, feature_names = _load_assignment_model()
+        if model is None or not feature_names:
             return 0.0
-
-        transformer = joblib.load(model_path)
 
         active_tasks = get_user_workload(user.id)
         max_allowed = user.max_allowed_tasks or 5
-        workload_score = 1.0 - min(active_tasks / max(max_allowed, 1), 1.0)
-        availability_enc = 1 if active_tasks < max_allowed else 0
-
-        skill_level = getattr(user, "member_experience_years", 2) or 2
-        rating = (user.member_on_time_rate or 0.75) * 5
+        skills = user.skills or []
+        task_category = getattr(project, "category", None) or ""
+        member_domain = (
+            getattr(user, "professional_field", None)
+            or getattr(user, "member_primary_domain", "")
+            or ""
+        )
 
         row = {
-            "skill_level": skill_level,
+            "domain_match_new": (
+                1.0
+                if task_category
+                and str(task_category).lower() == str(member_domain).lower()
+                else 0.0
+            ),
+            "skill_match_new": min(len(skills) / 8.0, 1.0),
+            "rating": (user.member_on_time_rate or 0.75) * 5,
             "current_tasks": active_tasks,
-            "workload_score": workload_score,
-            "availability_encoded": availability_enc,
-            "rating": rating,
+            "skill_level": getattr(user, "member_experience_years", 2) or 2,
+            "workload_score": 1.0 - min(active_tasks / max(max_allowed, 1), 1.0),
+            "availability_encoded": 1 if active_tasks < max_allowed else 0,
         }
 
-        df = pd.DataFrame([row])
-
-        if hasattr(transformer, "transform"):
-            transformed = transformer.transform(df)
-            return float(np.mean(transformed))
-        elif hasattr(transformer, "predict"):
-            return float(transformer.predict(df)[0])
-        return workload_score
+        df = pd.DataFrame([{col: row.get(col, 0.0) for col in feature_names}])
+        return float(model.predict(df)[0])
 
     except Exception as exc:
         logger.debug("ML assignment scoring failed for user %s: %s", user.id, exc)

@@ -170,6 +170,8 @@ def create_feedback():
     )
     db.session.add(feedback)
     db.session.commit()
+    from services.ai_mentor_service import invalidate_mentor_cache
+    invalidate_mentor_cache(int(user_id))
     return jsonify({"message": "Feedback submitted", "feedback": feedback.to_dict()}), 201
 
 
@@ -504,6 +506,8 @@ def update_feedback(feedback_id):
         fb.feedback_text = (data["feedback_text"] or "").strip() or None
 
     db.session.commit()
+    from services.ai_mentor_service import invalidate_mentor_cache
+    invalidate_mentor_cache(int(fb.user_id))
     return jsonify({"message": "Feedback updated", "feedback": fb.to_dict()}), 200
 
 
@@ -558,4 +562,6 @@ def delete_feedback(feedback_id):
 
     db.session.delete(fb)
     db.session.commit()
+    from services.ai_mentor_service import invalidate_mentor_cache
+    invalidate_mentor_cache(int(fb.user_id))
     return jsonify({"message": "Feedback deleted"}), 200

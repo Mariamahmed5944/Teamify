@@ -113,13 +113,6 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
                 icon: const Icon(Icons.menu),
                 onPressed: () => _scaffoldKey.currentState?.openDrawer(),
               ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout, color: AppColors.error),
-            tooltip: 'Log out',
-            onPressed: _logout,
-          ),
-        ],
       ),
       drawer: wide ? null : _buildDrawer(),
       body: Row(

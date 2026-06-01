@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/course_link.dart';
 import '../../core/theme.dart';
 import '../../core/routes.dart';
 import '../../core/network/api_result.dart';
@@ -48,9 +49,9 @@ int _profileInt(dynamic v) {
 }
 
 String _profileFormatScore(dynamic v) {
-  if (v == null) return '0';
+  if (v == null) return '—';
   final n = v is num ? v.toDouble() : double.tryParse(v.toString());
-  if (n == null) return '0';
+  if (n == null || n <= 0) return '—';
   if (n == n.roundToDouble()) return '${n.round()}';
   return n.toStringAsFixed(1);
 }
@@ -93,6 +94,7 @@ ProfileDisplayStats profileDisplayStats(
   final summary = raw['summary'] as Map<String, dynamic>? ?? {};
   final tasks = raw['tasks'] as Map<String, dynamic>? ?? {};
   final ratings = raw['ratings'] as Map<String, dynamic>? ?? {};
+  final feedback = raw['feedback'] as Map<String, dynamic>? ?? {};
   final projects = raw['projects'] as Map<String, dynamic>? ?? {};
   final performance = raw['performance'] as Map<String, dynamic>? ?? {};
 
@@ -105,10 +107,12 @@ ProfileDisplayStats profileDisplayStats(
     summary['tasks_done'] ?? summary['completed_tasks'] ?? tasks['completed'],
   );
 
-  dynamic scoreVal =
-      summary['score'] ?? summary['rating'] ?? ratings['average'];
-  if (scoreVal == null && performance['quality_score'] != null) {
-    scoreVal = (performance['quality_score'] as num) * 5;
+  dynamic scoreVal = summary['score'] ??
+      summary['rating'] ??
+      feedback['avg_rating'] ??
+      ratings['average'];
+  if (scoreVal == null && feedback['avg_quality'] != null) {
+    scoreVal = feedback['avg_quality'];
   }
 
   final location = summary['location']?.toString().trim().isNotEmpty == true
@@ -1314,6 +1318,7 @@ class _CoursesTab extends StatelessWidget {
             final rating = c['rating']?.toString() ?? '';
             return TCard(
                 margin: const EdgeInsets.only(bottom: 10),
+                onTap: () => openCourseLink(context, c),
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -1334,6 +1339,9 @@ class _CoursesTab extends StatelessWidget {
                                     fontSize: 11,
                                     color: AppColors.primary,
                                     fontWeight: FontWeight.w600))),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.open_in_new,
+                            size: 16, color: AppColors.textSecondary),
                       ]),
                       Text(
                           duration.isNotEmpty

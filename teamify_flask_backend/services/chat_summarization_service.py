@@ -176,6 +176,15 @@ def _load_model() -> Any:
     return None
 
 
+def startup_check() -> None:
+    """Log a structured warning at boot when the chat summarization pkl is missing."""
+    _load_model()
+    if _model_load_error:
+        logger.warning("AI startup: chat summarization unavailable — %s", _model_load_error)
+    else:
+        logger.info("AI startup: chat summarization model loaded")
+
+
 # ── Built-in extractive summarizer (mirrors notebook; always available) ───────
 
 def _get_participants(text: str) -> list:

@@ -226,6 +226,42 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       );
 }
 
+class _ComingSoonFeatureBody extends StatelessWidget {
+  final String message;
+  const _ComingSoonFeatureBody({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.construction_outlined,
+                size: 48, color: AppColors.textHint),
+            const SizedBox(height: 16),
+            const Text(
+              'Coming Soon',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.textSecondary),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // ── AI Teammate Matching ──────────────────────────────────────────────────────
 class AITeammateMatchingScreen extends StatelessWidget {
   const AITeammateMatchingScreen({super.key});
@@ -235,95 +271,12 @@ class AITeammateMatchingScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Talent Matching')),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(24),
-        itemCount: 3,
-        itemBuilder: (context, i) {
-          final names = ['Sarah Johnson', 'Ahmed Ali', 'Jessica Chen'];
-          final roles = ['UI Designer', 'Backend Dev', 'Project Manager'];
-          final scores = [0.98, 0.85, 0.76];
-          return TCard(
-            margin: const EdgeInsets.only(bottom: 20),
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    TAvatar(
-                        initials: names[i][0],
-                        radius: 26,
-                        bg: AppColors.accent),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(names[i],
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 17)),
-                          Text(roles[i],
-                              style: const TextStyle(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 13)),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                          color: AppColors.success.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(20)),
-                      child: Text('${(scores[i] * 100).toInt()}% Match',
-                          style: const TextStyle(
-                              color: AppColors.success,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12)),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                const Divider(color: AppColors.border),
-                const SizedBox(height: 16),
-                _scoreRow('Skills Compatibility', scores[i]),
-                _scoreRow('Schedule Sync', 0.9),
-                _scoreRow('Communication Style', 0.88),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Expanded(
-                        child: TButton(label: 'Quick Invite', onTap: () {})),
-                    const SizedBox(width: 12),
-                    Expanded(
-                        child: TButton(
-                            label: 'Profile', outline: true, onTap: () {})),
-                  ],
-                ),
-              ],
-            ),
-          );
-        },
+      body: const _ComingSoonFeatureBody(
+        message:
+            'AI talent matching is not available yet. Use Team Recommendation from the AI Hub.',
       ),
     );
   }
-
-  Widget _scoreRow(String label, double val) => Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: Column(
-          children: [
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              Text(label,
-                  style: const TextStyle(
-                      color: AppColors.textSecondary, fontSize: 12)),
-              Text('${(val * 100).toInt()}%',
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 12)),
-            ]),
-            const SizedBox(height: 6),
-            TBar(value: val, height: 4),
-          ],
-        ),
-      );
 }
 
 // ── Project Risk Predictor ────────────────────────────────────────────────────
@@ -335,148 +288,12 @@ class ProjectRiskPredictorScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Risk Analysis')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Center(
-              child: SizedBox(
-                width: 200,
-                height: 200,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    SizedBox(
-                      width: 180,
-                      height: 180,
-                      child: CircularProgressIndicator(
-                          value: 0.82,
-                          strokeWidth: 12,
-                          backgroundColor: AppColors.border,
-                          color: AppColors.error),
-                    ),
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text('82%',
-                            style: TextStyle(
-                                fontSize: 40,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.error)),
-                        Text('HIGH RISK',
-                            style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textSecondary)),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 40),
-            const AIBanner(
-              title: 'Project Status',
-              subtitle: 'Task "Redesign" is 4 days behind schedule.',
-              badge: 'ATTENTION',
-            ),
-            const SizedBox(height: 32),
-            const TSectionHeader(title: 'Top Risk Factors'),
-            const SizedBox(height: 16),
-            _riskCard(
-                'Resource Bottleneck',
-                'Senior Designer is overloaded with 5 active projects.',
-                Icons.person_off_outlined),
-            _riskCard(
-                'Scope Creep',
-                'Recent client requests added 15% more work to the current sprint.',
-                Icons.trending_up),
-            const SizedBox(height: 32),
-            const TSectionHeader(title: 'Workload Insights'),
-            const SizedBox(height: 16),
-            TCard(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  _workloadRow('Team Capacity', 0.85, AppColors.warning),
-                  const SizedBox(height: 12),
-                  _workloadRow('Project Velocity', 0.42, AppColors.error),
-                ],
-              ),
-            ),
-            const SizedBox(height: 32),
-            const TSectionHeader(title: 'Suggested Actions'),
-            const SizedBox(height: 16),
-            TCard(
-              padding: const EdgeInsets.all(8),
-              child: Column(
-                children: [
-                  _recItem('Reassign "Logo Design" to Freelancer Sarah'),
-                  const Divider(indent: 50),
-                  _recItem('Schedule a client meeting to finalize scope'),
-                  const Divider(indent: 50),
-                  _recItem('Apply for 3-day extension on Phase 1'),
-                ],
-              ),
-            ),
-            const SizedBox(height: 40),
-            TButton(label: 'Optimize Project', onTap: () {}),
-            const SizedBox(height: 32),
-          ],
-        ),
+      body: const _ComingSoonFeatureBody(
+        message:
+            'Project risk prediction is not available yet. Use AI Insights for delay risk analysis.',
       ),
     );
   }
-
-  Widget _riskCard(String title, String desc, IconData icon) => TCard(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                    color: AppColors.error.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10)),
-                child: Icon(icon, color: AppColors.error, size: 20)),
-            const SizedBox(width: 16),
-            Expanded(
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                  Text(title,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 14)),
-                  Text(desc,
-                      style: const TextStyle(
-                          color: AppColors.textSecondary, fontSize: 12)),
-                ])),
-          ],
-        ),
-      );
-
-  Widget _recItem(String text) => ListTile(
-        leading: const Icon(Icons.lightbulb_outline, color: AppColors.warning),
-        title: Text(text, style: const TextStyle(fontSize: 14)),
-        trailing:
-            const Icon(Icons.add_circle_outline, color: AppColors.primary),
-      );
-
-  Widget _workloadRow(String label, double val, Color color) => Column(
-        children: [
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Text(label,
-                style:
-                    const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-            Text('${(val * 100).toInt()}%',
-                style: TextStyle(
-                    color: color, fontWeight: FontWeight.bold, fontSize: 12)),
-          ]),
-          const SizedBox(height: 8),
-          TBar(value: val, color: color, height: 6),
-        ],
-      );
 }
 
 // ── Chat Emotion Detection ────────────────────────────────────────────────────
@@ -488,118 +305,14 @@ class ChatEmotionScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Project Chat')),
-      body: Column(
-        children: [
-          const AIBanner(
-            title: 'Team Insights',
-            subtitle: 'Recent messages show a shift in team sentiment.',
-            badge: 'INFO',
-          ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(24),
-              children: [
-                _chatBubble(
-                    'Sarah J.',
-                    'Where are the final icons? We need them now.',
-                    '10:02 AM',
-                    AppColors.error,
-                    'Anxious'),
-                _chatBubble(
-                    'Ahmed A.',
-                    'Working on them, giving the final touches.',
-                    '10:05 AM',
-                    AppColors.textSecondary,
-                    'Calm'),
-                _chatBubble(
-                    'Sarah J.',
-                    'The client is waiting. This is the third delay.',
-                    '10:08 AM',
-                    AppColors.error,
-                    'Frustrated'),
-                _chatBubble(
-                    'AI Assistant',
-                    'I\'ve suggested a sync for 11 AM to resolve blockers.',
-                    '10:09 AM',
-                    AppColors.primary,
-                    'Suggestion',
-                    isAI: true),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(
-                color: Colors.white,
-                border: Border(top: BorderSide(color: AppColors.border))),
-            child: const Row(
-              children: [
-                Icon(Icons.add_circle_outline, color: AppColors.textHint),
-                SizedBox(width: 12),
-                Expanded(
-                    child: TextField(
-                        decoration: InputDecoration(
-                            hintText: 'Type a message...',
-                            border: InputBorder.none,
-                            hintStyle: TextStyle(color: AppColors.textHint)))),
-                Icon(Icons.sentiment_satisfied_alt,
-                    color: AppColors.textHint),
-                SizedBox(width: 12),
-                Icon(Icons.send, color: AppColors.primary),
-              ],
-            ),
-          ),
-        ],
+      body: const _ComingSoonFeatureBody(
+        message:
+            'Chat emotion detection is not available yet. Backend support is required before this feature can launch.',
       ),
     );
   }
-
-  Widget _chatBubble(
-          String sender, String msg, String time, Color color, String tone,
-          {bool isAI = false}) =>
-      Padding(
-        padding: const EdgeInsets.only(bottom: 24),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TAvatar(
-                initials: sender[0],
-                radius: 18,
-                bg: isAI ? AppColors.primary : AppColors.accent),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(children: [
-                    Text(sender,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 13)),
-                    const SizedBox(width: 8),
-                    Text(time,
-                        style: const TextStyle(
-                            color: AppColors.textHint, fontSize: 11)),
-                    const Spacer(),
-                    Text(tone,
-                        style: TextStyle(
-                            color: color,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold)),
-                  ]),
-                  const SizedBox(height: 6),
-                  TCard(
-                    color: isAI ? AppColors.primaryLight : Colors.white,
-                    padding: const EdgeInsets.all(12),
-                    child: Text(msg,
-                        style: const TextStyle(fontSize: 14, height: 1.4)),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
 }
+
 
 // ── Meeting Transcription ─────────────────────────────────────────────────────
 class MeetingTranscriptionScreen extends StatelessWidget {

@@ -11,7 +11,8 @@ import 'mentor_skill_ui.dart';
 
 // ── Mentor Main Screen (Tabs Container) ──────────────────────────────────────
 class MentorMainScreen extends StatefulWidget {
-  const MentorMainScreen({super.key});
+  final int initialTab;
+  const MentorMainScreen({super.key, this.initialTab = 0});
   @override
   State<MentorMainScreen> createState() => _MentorMainScreenState();
 }
@@ -26,7 +27,11 @@ class _MentorMainScreenState extends State<MentorMainScreen>
   @override
   void initState() {
     super.initState();
-    _tab = TabController(length: 5, vsync: this);
+    _tab = TabController(
+      length: 5,
+      vsync: this,
+      initialIndex: widget.initialTab.clamp(0, 4),
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) => _load(forceRefresh: true));
   }
 
@@ -219,6 +224,34 @@ class _DetailedPerformanceTab extends StatelessWidget {
     }
   }
 
+  int _feedbackStars(Map<String, dynamic> f) =>
+      (f['avg_rating'] as num?)?.toInt() ??
+      (f['rating'] as num?)?.toInt() ??
+      (f['quality_score'] as num?)?.round() ??
+      0;
+
+  String _feedbackAuthor(Map<String, dynamic> f) =>
+      f['reviewer_name']?.toString() ??
+      f['author_name']?.toString() ??
+      'Teammate';
+
+  String _feedbackBody(Map<String, dynamic> f) =>
+      f['feedback_text']?.toString() ??
+      f['content']?.toString() ??
+      '';
+
+  String _feedbackDate(String raw) {
+    if (raw.isEmpty) return '';
+    final dt = DateTime.tryParse(raw);
+    if (dt == null) return raw;
+    final local = dt.toLocal();
+    final diff = DateTime.now().difference(local);
+    if (diff.inDays > 0) return '${diff.inDays}d ago';
+    if (diff.inHours > 0) return '${diff.inHours}h ago';
+    if (diff.inMinutes > 0) return '${diff.inMinutes}m ago';
+    return 'Just now';
+  }
+
   @override
   Widget build(BuildContext context) {
     final perfScore = insights.performanceOverall;
@@ -228,14 +261,20 @@ class _DetailedPerformanceTab extends StatelessWidget {
     final teamwork = insights.metricScore('teamwork');
     final quality = insights.metricScore('quality');
     final trend = insights.trend;
+    final recent = insights.recentFeedback;
+    final hasPeer = insights.hasPeerPerformanceData;
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         const Text('Performance',
             style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-        const Text('Scores from peer feedback & ratings in your projects',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+        Text(
+          hasPeer
+              ? 'Scores from ${insights.feedbackCount} peer feedback & ${insights.ratingCount} ratings in your projects'
+              : 'No peer scores yet — complete tasks and collect feedback from teammates',
+          style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+        ),
         const SizedBox(height: 12),
         TCard(
           child: Row(
@@ -244,7 +283,10 @@ class _DetailedPerformanceTab extends StatelessWidget {
               const SizedBox(width: 8),
               _statChip('Ratings', '${insights.ratingCount}'),
               const SizedBox(width: 8),
-              _statChip('Career', '${insights.careerScore.toInt()}/100'),
+              _statChip(
+                hasPeer ? 'Peer avg' : 'Score',
+                hasPeer ? '${perfScore.toInt()}/100' : '—',
+              ),
             ],
           ),
         ),
@@ -265,18 +307,18 @@ class _DetailedPerformanceTab extends StatelessWidget {
                   width: 140,
                   height: 140,
                   child: CircularProgressIndicator(
-                      value: perfScore / 100,
+                      value: hasPeer ? perfScore / 100 : 0,
                       strokeWidth: 12,
                       backgroundColor: AppColors.border,
                       valueColor: const AlwaysStoppedAnimation(AppColors.primary))),
               Column(mainAxisSize: MainAxisSize.min, children: [
-                Text(perfScore.toInt().toString(),
+                Text(hasPeer ? perfScore.toInt().toString() : '—',
                     style: const TextStyle(
                         fontSize: 36,
                         fontWeight: FontWeight.bold,
                         color: AppColors.textPrimary)),
-                const Text('Performance avg',
-                    style: TextStyle(
+                Text(hasPeer ? 'Performance avg' : 'Awaiting feedback',
+                    style: const TextStyle(
                         fontSize: 12, color: AppColors.textSecondary)),
               ]),
             ]),
@@ -307,6 +349,85 @@ class _DetailedPerformanceTab extends StatelessWidget {
             'Teamwork', teamwork.toInt(), Icons.people_outline, AppColors.primary),
         _metricItem('Quality', quality.toInt(),
             Icons.workspace_premium_outlined, AppColors.accent),
+        const SizedBox(height: 24),
+        const Text('Recent Peer Feedback',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        const SizedBox(height: 10),
+        if (recent.isEmpty)
+          const Text(
+            'No peer feedback stored yet. Teammates can rate you on the Feedback tab.',
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+          )
+        else
+          ...recent.take(6).map((f) {
+            final stars = _feedbackStars(f);
+            final created = f['created_at']?.toString() ?? '';
+            final body = _feedbackBody(f);
+            return TCard(
+              margin: const EdgeInsets.only(bottom: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _feedbackAuthor(f),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ),
+                      Row(
+                        children: List.generate(
+                          5,
+                          (i) => Icon(
+                            i < stars ? Icons.star : Icons.star_border,
+                            size: 14,
+                            color: Colors.amber,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (f['project_name'] != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        f['project_name'].toString(),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  if (body.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        body,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                  if (created.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(
+                        _feedbackDate(created),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            );
+          }),
         const SizedBox(height: 24),
         const Text('History',
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
@@ -771,8 +892,11 @@ class _FeedbackTabState extends State<_FeedbackTab> {
                 'Feedback saved to database. Performance & mentor insights will refresh.'),
             backgroundColor: AppColors.success));
       } else {
+        final msg = result.error ?? 'Submission failed.';
         messenger.showSnackBar(SnackBar(
-            content: Text(result.error ?? 'Submission failed.'),
+            content: Text(result.statusCode != null
+                ? 'Error ${result.statusCode}: $msg'
+                : msg),
             backgroundColor: AppColors.error));
       }
     } catch (e) {
@@ -1650,19 +1774,33 @@ class _CareerMentorChatScreenState extends State<CareerMentorChatScreen> {
         Expanded(
             child: ListView.builder(
           controller: _scrollCtrl,
-          padding: const EdgeInsets.all(16),
-          itemCount: _msgs.length,
-          itemBuilder: (_, i) => _buildBubble(_msgs[i]),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          itemCount: _msgs.length + (_loading ? 1 : 0),
+          itemBuilder: (_, i) {
+            if (_loading && i == _msgs.length) {
+              return const Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: EdgeInsets.only(bottom: 12),
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              );
+            }
+            return _buildBubble(_msgs[i]);
+          },
         )),
         if (_loadingHistory)
           const Padding(
               padding: EdgeInsets.all(8),
               child: CircularProgressIndicator())
-        else if (_loading)
-          const Padding(
-              padding: EdgeInsets.all(8), child: CircularProgressIndicator()),
-        if (!_loadingHistory && _msgs.length <= 1) _buildSuggestions(),
-        _buildInput(),
+        else ...[
+          if (_currentSuggestions.isNotEmpty) _buildSuggestions(),
+          _buildInput(),
+        ],
       ]),
     );
   }
@@ -1823,10 +1961,13 @@ class _CareerMentorChatScreenState extends State<CareerMentorChatScreen> {
     );
   }
 
-  Widget _buildInput() => Container(
-        padding: const EdgeInsets.all(12),
+  Widget _buildInput() => Material(
+        elevation: 6,
         color: Colors.white,
+        child: Container(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
         child: SafeArea(
+            top: false,
             child: Row(children: [
           Expanded(
               child: Container(
@@ -1836,20 +1977,35 @@ class _CareerMentorChatScreenState extends State<CareerMentorChatScreen> {
                       borderRadius: BorderRadius.circular(24)),
                   child: TextField(
                       controller: _ctrl,
+                      enabled: !_loading,
+                      minLines: 1,
+                      maxLines: 4,
+                      textInputAction: TextInputAction.send,
+                      onSubmitted: (text) {
+                        final t = text.trim();
+                        if (t.isNotEmpty && !_loading) {
+                          _ctrl.clear();
+                          _sendMsg(t);
+                        }
+                      },
                       decoration: const InputDecoration(
                           hintText: 'Ask your mentor anything...',
                           border: InputBorder.none)))),
           const SizedBox(width: 8),
           IconButton(
-              icon: const Icon(Icons.send, color: AppColors.primary),
-              onPressed: () {
-                if (_ctrl.text.isNotEmpty) {
-                  final t = _ctrl.text.trim();
-                  _ctrl.clear();
-                  _sendMsg(t);
-                }
-              }),
+              icon: Icon(Icons.send,
+                  color: _loading ? AppColors.textSecondary : AppColors.primary),
+              onPressed: _loading
+                  ? null
+                  : () {
+                      if (_ctrl.text.isNotEmpty) {
+                        final t = _ctrl.text.trim();
+                        _ctrl.clear();
+                        _sendMsg(t);
+                      }
+                    }),
         ])),
+      ),
       );
 
   @override

@@ -9,6 +9,7 @@ import '../../services/app_services.dart';
 import '../../core/network/api_result.dart';
 import '../../models/models.dart';
 import '../../widgets/widgets.dart';
+import '../../core/course_link.dart';
 import '../mentor/mentor_skill_ui.dart';
 import '../../services/ai_service.dart';
 
@@ -17,10 +18,13 @@ Future<List<Map<String, dynamic>>> _fetchTeammateRecommendationMaps(
   final services = context.read<AppServices>();
   final user = context.read<SessionController>().currentUser;
   final result = await services.ai
-      .recommendTeammates({
-        'user_id': user?.id,
-        'skills': user?.skills ?? const <String>[],
-      })
+      .recommendTeammates(
+        {
+          'user_id': user?.id,
+          'skills': user?.skills ?? const <String>[],
+        },
+        topN: 8,
+      )
       .unwrap();
   final raw = result['recommendations'] ??
       result['teammates'] ??
@@ -35,17 +39,57 @@ Future<List<Map<String, dynamic>>> _fetchTeammateRecommendationMaps(
   return const [];
 }
 
-Future<List<UserModel>> _fetchTeammateRecommendations(
-    BuildContext context) async {
-  final services = context.read<AppServices>();
-  final maps = await _fetchTeammateRecommendationMaps(context);
-  if (maps.isNotEmpty) {
-    return maps
-        .map((item) => api.ApiUser.fromJson(item).toDisplayModel())
-        .toList();
+int _matchPercentFromMap(Map<String, dynamic> map) {
+  final matchPercent = map['match_percent'];
+  if (matchPercent is num) {
+    return matchPercent.round().clamp(0, 100);
   }
-  return services.search.users('').unwrap().then(
-      (users) => users.map((user) => user.toDisplayModel()).toList());
+  final similarity = (map['similarity_score'] as num?)?.toDouble() ?? 0;
+  return (similarity * 100).round().clamp(0, 100);
+}
+
+int _courseMatchPercent(Map<String, dynamic> course) {
+  final matchPercent = course['match_percent'];
+  if (matchPercent is num) {
+    return matchPercent.round().clamp(0, 100);
+  }
+  final match = course['match'];
+  if (match is num) {
+    return match.round().clamp(0, 100);
+  }
+  final relevance = course['relevance'];
+  if (relevance is num) {
+    return (relevance * 100).round().clamp(0, 100);
+  }
+  return 0;
+}
+
+String _courseStatusLine(Map<String, dynamic> course) {
+  final match = _courseMatchPercent(course);
+  final progress = course['progress'];
+  if (progress is num && progress > 0) {
+    return '${progress.round()}% complete • $match% match';
+  }
+  final fills = course['fills'];
+  if (fills is List && fills.isNotEmpty) {
+    return 'Closes gap: ${fills.take(3).join(', ')} • $match% match';
+  }
+  final duration = course['duration'] ?? course['hours'];
+  if (duration != null && duration.toString().isNotEmpty) {
+    return '${duration.toString()} • $match% match';
+  }
+  return '$match% skill match';
+}
+
+Future<List<({UserModel user, Map<String, dynamic> raw})>>
+    _fetchTeammateRecommendationItems(BuildContext context) async {
+  final maps = await _fetchTeammateRecommendationMaps(context);
+  return maps
+      .map((item) => (
+            user: api.ApiUser.fromJson(item).toDisplayModel(),
+            raw: item,
+          ))
+      .toList();
 }
 
 Future<List<Map<String, dynamic>>> _fetchRecommendedCourses(
@@ -95,10 +139,18 @@ class AIHubScreen extends StatelessWidget {
       },
       {
         'icon': Icons.psychology_outlined,
-        'title': 'AI Mentor',
-        'sub': 'Personalized guidance',
-        'route': R.aiMentor,
+        'title': 'AI Career Mentor',
+        'sub': 'Mentor, courses & feedback',
+        'route': R.mentorMain,
         'color': AppColors.success
+      },
+      {
+        'icon': Icons.rate_review_outlined,
+        'title': 'Peer Feedback',
+        'sub': 'Rate your teammates',
+        'route': R.mentorMain,
+        'tab': 4,
+        'color': const Color(0xFF0EA5E9)
       },
       {
         'icon': Icons.trending_up,
@@ -113,13 +165,6 @@ class AIHubScreen extends StatelessWidget {
         'sub': 'Focus timer',
         'route': R.pomodoro,
         'color': Colors.red
-      },
-      {
-        'icon': Icons.school_outlined,
-        'title': 'Recommended Courses',
-        'sub': 'Learn & grow',
-        'route': R.recommendedCourses,
-        'color': Colors.purple
       },
       {
         'icon': Icons.bar_chart,
@@ -148,45 +193,61 @@ class AIHubScreen extends StatelessWidget {
                 subtitle: 'All systems operational. 3 insights available.',
                 onTap: () => Navigator.pushNamed(context, R.aiInsights)),
             const SizedBox(height: 20),
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 1.3,
-              children: tools
-                  .map((t) => GestureDetector(
-                        onTap: () =>
-                            Navigator.pushNamed(context, t['route'] as String),
-                        child: TCard(
-                          padding: const EdgeInsets.all(14),
-                          child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                        color: (t['color'] as Color)
-                                            .withValues(alpha: 0.1),
-                                        borderRadius:
-                                            BorderRadius.circular(10)),
-                                    child: Icon(t['icon'] as IconData,
-                                        color: t['color'] as Color, size: 22)),
-                                const SizedBox(height: 8),
-                                Text(t['title'] as String,
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.textPrimary,
-                                        fontSize: 13)),
-                                Text(t['sub'] as String,
-                                    style: const TextStyle(
-                                        fontSize: 11,
-                                        color: AppColors.textSecondary)),
-                              ]),
-                        ),
-                      ))
-                  .toList(),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final width = constraints.maxWidth;
+                final crossAxisCount =
+                    width >= 900 ? 3 : (width >= 520 ? 2 : 1);
+                return GridView.count(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisCount: crossAxisCount,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: crossAxisCount == 1 ? 2.4 : 1.3,
+                  children: tools
+                      .map((t) => GestureDetector(
+                            onTap: () {
+                              final route = t['route'] as String;
+                              final tab = t['tab'] as int?;
+                              if (tab != null) {
+                                Navigator.pushNamed(context, route,
+                                    arguments: {'tab': tab});
+                              } else {
+                                Navigator.pushNamed(context, route);
+                              }
+                            },
+                            child: TCard(
+                              padding: const EdgeInsets.all(14),
+                              child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                            color: (t['color'] as Color)
+                                                .withValues(alpha: 0.1),
+                                            borderRadius:
+                                                BorderRadius.circular(10)),
+                                        child: Icon(t['icon'] as IconData,
+                                            color: t['color'] as Color,
+                                            size: 22)),
+                                    const SizedBox(height: 8),
+                                    Text(t['title'] as String,
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.textPrimary,
+                                            fontSize: 13)),
+                                    Text(t['sub'] as String,
+                                        style: const TextStyle(
+                                            fontSize: 11,
+                                            color: AppColors.textSecondary)),
+                                  ]),
+                            ),
+                          ))
+                      .toList(),
+                );
+              },
             ),
           ],
         ),
@@ -208,7 +269,7 @@ class _SmartTodoScreenState extends State<SmartTodoScreen> {
   bool _loading = true;
   String? _error;
   final List<Map<String, dynamic>> _todos = [];
-  final Set<int> _done = {};
+  final Set<String> _done = {};
 
   static const _priorityOrder = {'critical': 0, 'high': 1, 'medium': 2, 'low': 3};
 
@@ -222,29 +283,21 @@ class _SmartTodoScreenState extends State<SmartTodoScreen> {
     setState(() { _loading = true; _error = null; });
     try {
       final svc = context.read<AppServices>();
-      final projectsResult = await svc.projects.listProjects();
-      final projects = projectsResult.when(
+      final accessible = await svc.tasks.listAccessibleTasks(limit: 100);
+      final rows = accessible.when(
         success: (list) => list,
-        failure: (_) => <dynamic>[],
+        failure: (_) => <Map<String, dynamic>>[],
       );
-      final todos = <Map<String, dynamic>>[];
-      for (final p in projects.take(5)) {
-        final taskRes = await svc.tasks.listTasks(projectId: p.id.toString());
-        taskRes.when(
-          success: (tasks) {
-            for (final t in tasks) {
-              todos.add({
-                'id': t.id,
-                'title': t.title,
-                'priority': t.priority.toLowerCase(),
-                'project': p.name,
-                'status': t.status,
-              });
-            }
-          },
-          failure: (_) {},
-        );
-      }
+      final todos = rows
+          .map((t) => {
+                'id': t['id']?.toString() ?? '',
+                'title': t['title']?.toString() ?? 'Task',
+                'priority': (t['priority']?.toString() ?? 'medium').toLowerCase(),
+                'project': t['project_name']?.toString() ?? 'Project',
+                'status': t['status']?.toString() ?? 'pending',
+              })
+          .where((t) => (t['id']?.toString() ?? '').isNotEmpty)
+          .toList();
       todos.sort((a, b) =>
           (_priorityOrder[a['priority']] ?? 3)
               .compareTo(_priorityOrder[b['priority']] ?? 3));
@@ -252,6 +305,14 @@ class _SmartTodoScreenState extends State<SmartTodoScreen> {
       setState(() {
         _todos.clear();
         _todos.addAll(todos);
+        _done
+          ..clear()
+          ..addAll(
+            todos
+                .where((t) =>
+                    t['status']?.toString().toLowerCase() == 'done')
+                .map((t) => t['id'].toString()),
+          );
         _loading = false;
       });
     } catch (e) {
@@ -314,15 +375,28 @@ class _SmartTodoScreenState extends State<SmartTodoScreen> {
                               subtitle: 'Tasks sorted by impact and urgency'));
                     }
                     final t = _todos[i - 1];
-                    final done = _done.contains(t['id']);
+                    final id = t['id'].toString();
+                    final done = _done.contains(id);
                     final priority = (t['priority'] as String?) ?? 'medium';
                     return TCard(
                       margin: const EdgeInsets.only(bottom: 10),
                       child: Row(children: [
                         GestureDetector(
-                          onTap: () => setState(() => done
-                              ? _done.remove(t['id'])
-                              : _done.add(t['id'] as int)),
+                          onTap: () async {
+                            final newDone = !done;
+                            setState(() {
+                              if (newDone) {
+                                _done.add(id);
+                              } else {
+                                _done.remove(id);
+                              }
+                            });
+                            await context.read<AppServices>().tasks
+                                .updateStatus(
+                              id,
+                              newDone ? 'done' : 'in_progress',
+                            );
+                          },
                           child: Icon(
                               done
                                   ? Icons.check_circle
@@ -370,7 +444,8 @@ class AITaskAllocationScreen extends StatefulWidget {
 }
 
 class _AITaskAllocationScreenState extends State<AITaskAllocationScreen> {
-  bool _loading = true;
+  bool _loadingTasks = true;
+  bool _classifying = false;
   String? _error;
   Map<String, dynamic>? _data;
   List<Map<String, dynamic>> _tasks = [];
@@ -379,76 +454,82 @@ class _AITaskAllocationScreenState extends State<AITaskAllocationScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _init());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadTasks());
   }
 
-  Future<void> _init() async {
+  Future<void> _loadTasks() async {
+    setState(() {
+      _loadingTasks = true;
+      _error = null;
+    });
     try {
       final services = context.read<AppServices>();
-      final projects = await services.projects.listProjects().unwrap();
-      final tasks = <Map<String, dynamic>>[];
-      for (final project in projects) {
-        final projectTasks =
-            await services.tasks.listTasks(projectId: project.id).unwrap();
-        for (final task in projectTasks) {
-          tasks.add({
-            'id': task.id,
-            'title': task.title,
-            'project_name': project.name,
-          });
-        }
-      }
+      final rows = await services.tasks.listAccessibleTasks(limit: 100).unwrap();
+      final tasks = rows
+          .map((t) => <String, dynamic>{
+                'id': t['id']?.toString(),
+                'title': t['title']?.toString() ?? '',
+                'project_name': t['project_name']?.toString() ?? 'Project',
+              })
+          .where((t) =>
+              t['id'] != null && (t['title']?.toString() ?? '').isNotEmpty)
+          .toList();
       if (!mounted) return;
+      final firstId =
+          tasks.isNotEmpty ? tasks.first['id']?.toString() : null;
       setState(() {
         _tasks = tasks;
-        _selectedTaskId = tasks.isNotEmpty ? tasks.first['id']?.toString() : null;
+        _selectedTaskId = firstId;
+        _loadingTasks = false;
       });
-      if (_selectedTaskId != null) {
-        await _load(_taskTextForId(_selectedTaskId!));
-      } else {
-        setState(() {
-          _loading = false;
-          _error = 'No tasks found in your projects.';
-        });
+      if (firstId != null) {
+        _classify(_taskTextForId(firstId));
       }
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.toString();
-        _loading = false;
+        _error = e.toString().replaceFirst('Exception: ', '');
+        _loadingTasks = false;
       });
     }
   }
 
   String _taskTextForId(String id) {
-    final task = _tasks.firstWhere(
-      (t) => t['id']?.toString() == id,
-      orElse: () => const {},
-    );
-    return task['title']?.toString() ?? '';
+    for (final t in _tasks) {
+      if (t['id']?.toString() == id) {
+        return t['title']?.toString() ?? '';
+      }
+    }
+    return '';
   }
 
-  Future<void> _load(String taskText) async {
+  Future<void> _classify(String taskText) async {
     if (taskText.trim().isEmpty) return;
     setState(() {
-      _loading = true;
+      _classifying = true;
       _error = null;
     });
-    try {
-      final svc = context.read<AppServices>();
-      final result = await svc.ai.classifyTask(taskText).unwrap();
-      if (!mounted) return;
-      setState(() {
-        _data = result;
-        _loading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = e.toString();
-        _loading = false;
-      });
-    }
+    final svc = context.read<AppServices>();
+    final result = await svc.ai.classifyTask(taskText);
+    if (!mounted) return;
+    result.when(
+      success: (data) {
+        setState(() {
+          _data = data;
+          _classifying = false;
+          _error = null;
+        });
+      },
+      failure: (msg) {
+        setState(() {
+          _classifying = false;
+          final code = result.statusCode;
+          _error = code != null
+              ? 'Error $code: $msg'
+              : (msg.isNotEmpty ? msg : 'Classification failed');
+        });
+      },
+    );
   }
 
   @override
@@ -461,40 +542,84 @@ class _AITaskAllocationScreenState extends State<AITaskAllocationScreen> {
               onPressed: () => Navigator.pop(context)),
           title: const Text('AI Task Allocation',
               style: TextStyle(fontWeight: FontWeight.bold))),
-      body: _loading && _data == null
+      body: _loadingTasks
           ? const Center(child: CircularProgressIndicator())
-          : _error != null && _data == null
-              ? Center(child: Text(_error!, style: const TextStyle(color: AppColors.error)))
-              : ListView(padding: const EdgeInsets.all(16), children: [
-                  if (_tasks.isNotEmpty) ...[
-                    DropdownButtonFormField<String>(
-                      key: ValueKey(_selectedTaskId),
-                      initialValue: _selectedTaskId,
-                      decoration: const InputDecoration(
-                        labelText: 'Select a task',
-                        border: OutlineInputBorder(),
+          : _tasks.isEmpty
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(
+                      _error ?? 'No tasks found in your projects.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: _error != null
+                            ? AppColors.error
+                            : AppColors.textSecondary,
                       ),
-                      items: _tasks
-                          .map((t) => DropdownMenuItem<String>(
-                                value: t['id']?.toString(),
-                                child: Text(
-                                  '${t['project_name']}: ${t['title']}',
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ))
-                          .toList(),
-                      onChanged: (id) {
-                        if (id == null) return;
-                        setState(() => _selectedTaskId = id);
-                        _load(_taskTextForId(id));
-                      },
                     ),
-                    const SizedBox(height: 16),
-                  ],
-                  if (_loading)
+                  ),
+                )
+              : ListView(padding: const EdgeInsets.all(16), children: [
+                  DropdownButtonFormField<String>(
+                    key: ValueKey(_selectedTaskId),
+                    initialValue: _selectedTaskId,
+                    decoration: const InputDecoration(
+                      labelText: 'Select a task',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: _tasks
+                        .map((t) => DropdownMenuItem<String>(
+                              value: t['id']?.toString(),
+                              child: Text(
+                                '${t['project_name']}: ${t['title']}',
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ))
+                        .toList(),
+                    onChanged: (id) {
+                      if (id == null) return;
+                      setState(() {
+                        _selectedTaskId = id;
+                        _data = null;
+                      });
+                      _classify(_taskTextForId(id));
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  if (_classifying)
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 24),
-                      child: Center(child: CircularProgressIndicator()),
+                      child: Column(
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 12),
+                          Text(
+                            'Running AI classifier…',
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else if (_error != null && _data == null)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      child: Column(
+                        children: [
+                          Text(_error!,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: AppColors.error)),
+                          const SizedBox(height: 12),
+                          TextButton(
+                            onPressed: _selectedTaskId == null
+                                ? null
+                                : () => _classify(_taskTextForId(_selectedTaskId!)),
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
                     )
                   else if (_data != null) ...[
                   const AIBanner(
@@ -591,13 +716,16 @@ class AISuggestedResultScreen extends StatelessWidget {
               onPressed: () => Navigator.pop(context)),
           title: const Text('AI Result',
               style: TextStyle(fontWeight: FontWeight.bold))),
-      body: RepositoryLoader<List<UserModel>>(
-        load: () => _fetchTeammateRecommendations(context),
-        isEmpty: (users) => users.isEmpty,
+      body: RepositoryLoader<List<({UserModel user, Map<String, dynamic> raw})>>(
+        load: () => _fetchTeammateRecommendationItems(context),
+        isEmpty: (items) => items.isEmpty,
         emptyMessage: 'No suggested teammates found',
-        builder: (context, users) =>
+        builder: (context, items) =>
             ListView(padding: const EdgeInsets.all(16), children: [
-          ...users.take(3).map((u) => TCard(
+          ...items.take(3).map((item) {
+            final u = item.user;
+            final pct = _matchPercentFromMap(item.raw);
+            return TCard(
                 margin: const EdgeInsets.only(bottom: 12),
                 child: Row(children: [
                   TAvatar(initials: u.initials, radius: 24),
@@ -614,11 +742,11 @@ class AISuggestedResultScreen extends StatelessWidget {
                             style: const TextStyle(
                                 fontSize: 12, color: AppColors.textSecondary)),
                         const SizedBox(height: 4),
-                        TBar(value: u.rating / 5, color: AppColors.primary),
+                        TBar(value: pct / 100, color: AppColors.primary),
                       ])),
                   const SizedBox(width: 12),
                   Column(children: [
-                    Text('${(u.rating * 20).toInt()}%',
+                    Text('$pct%',
                         style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             color: AppColors.primary,
@@ -627,8 +755,8 @@ class AISuggestedResultScreen extends StatelessWidget {
                         style: TextStyle(
                             fontSize: 11, color: AppColors.textSecondary)),
                   ]),
-                ]),
-              )),
+                ]));
+          }),
           const SizedBox(height: 8),
           TButton(
               label: 'View Explanation',
@@ -664,20 +792,31 @@ class AIExplanationScreen extends StatelessWidget {
         (rec.containsKey('match_percent') ? 100 : 1);
     final skills = (rec['skills'] as List?)?.cast<String>() ?? const [];
     final experience = rec['experience_level']?.toString() ?? '';
+    final skillMatch = ((rec['skill_match_score'] as num?)?.toDouble() ??
+            match)
+        .clamp(0.0, 1.0);
+    final avgRating =
+        ((rec['avg_rating'] as num?)?.toDouble() ?? 0) / 5.0;
+    final availability = ((rec['availability_score'] as num?)?.toDouble() ??
+            match)
+        .clamp(0.0, 1.0);
+    final currentTasks = (rec['current_tasks'] as num?)?.toDouble() ?? 0;
+    final workload =
+        (1.0 - (currentTasks / 10).clamp(0.0, 1.0)).clamp(0.0, 1.0);
     return [
       {
         'label': 'Skills Match',
-        'value': match.clamp(0.0, 1.0),
+        'value': skillMatch,
         'desc': skills.isEmpty
             ? 'Skills profile compared against your requirements'
             : 'Strong overlap: ${skills.take(4).join(', ')}',
       },
       {
-        'label': 'Experience',
-        'value': (match * 0.9).clamp(0.0, 1.0),
+        'label': 'Avg Rating',
+        'value': avgRating.clamp(0.0, 1.0),
         'desc': experience.isNotEmpty
             ? 'Experience level: $experience'
-            : 'Experience profile aligns with team needs',
+            : 'Average peer rating from Teamify records',
       },
       {
         'label': 'Compatibility',
@@ -686,8 +825,13 @@ class AIExplanationScreen extends StatelessWidget {
       },
       {
         'label': 'Availability',
-        'value': (match * 0.85).clamp(0.0, 1.0),
+        'value': availability,
         'desc': 'Workload and capacity considered in the recommendation',
+      },
+      {
+        'label': 'Workload',
+        'value': workload,
+        'desc': 'Lower active task load improves assignment fit',
       },
     ];
   }
@@ -771,7 +915,26 @@ class _AIPriorityScreenState extends State<AIPriorityScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadProject());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _bootstrap());
+  }
+
+  Future<void> _bootstrap() async {
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is Map) {
+      final pid = args['project_id']?.toString();
+      if (pid != null && pid.isNotEmpty) {
+        setState(() => _projectId = pid);
+      }
+      final title = args['title']?.toString();
+      if (title != null && title.isNotEmpty) {
+        _titleCtrl.text = title;
+      }
+      final desc = args['description']?.toString();
+      if (desc != null && desc.isNotEmpty) {
+        _descCtrl.text = desc;
+      }
+    }
+    await _loadProject();
   }
 
   @override
@@ -782,6 +945,7 @@ class _AIPriorityScreenState extends State<AIPriorityScreen> {
   }
 
   Future<void> _loadProject() async {
+    if (_projectId != null) return;
     final svc = context.read<AppServices>();
     final result = await svc.projects.listProjects();
     result.when(
@@ -957,8 +1121,20 @@ class _AIPriorityScreenState extends State<AIPriorityScreen> {
           const Spacer(),
           TButton(
               label: 'Confirm Priority',
-              onTap: () => Navigator.pushNamed(context, R.aiDeadline,
-                  arguments: {'priority': _priority, 'project_id': _projectId})),
+              onTap: () async {
+                final result = await Navigator.pushNamed(
+                  context,
+                  R.aiDeadline,
+                  arguments: {
+                    'priority': _priority,
+                    'project_id': _projectId,
+                    'title': _titleCtrl.text.trim(),
+                    'description': _descCtrl.text.trim(),
+                  },
+                );
+                if (!context.mounted || result == null) return;
+                Navigator.pop(context, result);
+              }),
         ]),
       ),
     );
@@ -977,6 +1153,55 @@ class _AIDeadlineScreenState extends State<AIDeadlineScreen> {
   bool _loading = true;
   String _bannerSubtitle = 'Fetching AI suggestion…';
   List<String> _reasons = [];
+  String _priority = 'medium';
+  String? _projectId;
+  String? _taskId;
+  String _title = '';
+  String _description = '';
+  bool _saving = false;
+
+  String _isoDate(DateTime date) =>
+      '${date.year.toString().padLeft(4, '0')}-'
+      '${date.month.toString().padLeft(2, '0')}-'
+      '${date.day.toString().padLeft(2, '0')}';
+
+  Future<void> _confirmDeadline() async {
+    if (_saving) return;
+    setState(() => _saving = true);
+    final svc = context.read<AppServices>();
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      if (_taskId != null && _taskId!.isNotEmpty) {
+        await svc.tasks.updateTask(_taskId!, {
+          'due_date': _isoDate(_date),
+          'priority': _priority,
+        }).unwrap();
+      } else if (_projectId != null &&
+          _projectId!.isNotEmpty &&
+          _title.trim().isNotEmpty) {
+        await svc.tasks.createTask({
+          'title': _title.trim(),
+          'project_id': int.parse(_projectId!),
+          'description': _description.trim(),
+          'priority': _priority,
+          'due_date': _isoDate(_date),
+          'status': 'pending',
+        }).unwrap();
+      }
+      if (!mounted) return;
+      Navigator.pop(context, {
+        'date': _date,
+        'priority': _priority,
+        'project_id': _projectId,
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      messenger.showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    }
+  }
 
   @override
   void initState() {
@@ -991,6 +1216,11 @@ class _AIDeadlineScreenState extends State<AIDeadlineScreen> {
     if (args is Map) {
       priority = (args['priority'] as String?) ?? 'medium';
       projectId = args['project_id']?.toString();
+      _priority = priority;
+      _projectId = projectId;
+      _taskId = args['task_id']?.toString();
+      _title = args['title']?.toString() ?? '';
+      _description = args['description']?.toString() ?? '';
     }
     if (projectId == null) {
       final svc = context.read<AppServices>();
@@ -1098,8 +1328,8 @@ class _AIDeadlineScreenState extends State<AIDeadlineScreen> {
               ])),
           const Spacer(),
           TButton(
-              label: 'Confirm Deadline',
-              onTap: () => Navigator.pop(context, _date)),
+              label: _saving ? 'Saving…' : 'Confirm Deadline',
+              onTap: _saving ? null : _confirmDeadline),
         ]),
       ),
     );
@@ -1887,17 +2117,20 @@ class TeamRecommendationScreen extends StatelessWidget {
               onPressed: () => Navigator.pop(context)),
           title: const Text('Team Recommendation',
               style: TextStyle(fontWeight: FontWeight.bold))),
-      body: RepositoryLoader<List<UserModel>>(
-        load: () => _fetchTeammateRecommendations(context),
-        isEmpty: (users) => users.isEmpty,
-        emptyMessage: 'No team recommendations found',
-        builder: (context, users) =>
+      body: RepositoryLoader<List<({UserModel user, Map<String, dynamic> raw})>>(
+        load: () => _fetchTeammateRecommendationItems(context),
+        isEmpty: (items) => items.isEmpty,
+        emptyMessage: 'No teammate matches yet. Add skills to your profile and complete tasks to improve recommendations.',
+        builder: (context, items) =>
             ListView(padding: const EdgeInsets.all(16), children: [
           const AIBanner(
               title: 'AI Team Builder',
               subtitle: 'Optimal team composition for your project'),
           const SizedBox(height: 16),
-          ...users.map((u) => TCard(
+          ...items.map((item) {
+            final u = item.user;
+            final pct = _matchPercentFromMap(item.raw);
+            return TCard(
                 margin: const EdgeInsets.only(bottom: 10),
                 child: Row(children: [
                   TAvatar(initials: u.initials, radius: 24),
@@ -1914,11 +2147,11 @@ class TeamRecommendationScreen extends StatelessWidget {
                             style: const TextStyle(
                                 fontSize: 12, color: AppColors.textSecondary)),
                         const SizedBox(height: 4),
-                        TBar(value: u.rating / 5),
+                        TBar(value: pct / 100),
                       ])),
                   const SizedBox(width: 12),
                   Column(children: [
-                    Text('${(u.rating * 20).toInt()}%',
+                    Text('$pct%',
                         style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             color: AppColors.primary)),
@@ -1926,8 +2159,8 @@ class TeamRecommendationScreen extends StatelessWidget {
                         style: TextStyle(
                             fontSize: 11, color: AppColors.textSecondary)),
                   ]),
-                ]),
-              )),
+                ]));
+          }),
         ]),
       ),
     );
@@ -1956,11 +2189,10 @@ class RecommendedCoursesScreen extends StatelessWidget {
           itemCount: courses.length,
           itemBuilder: (_, i) {
             final c = courses[i];
-            final progress =
-                c['progress'] is num ? (c['progress'] as num).toInt() : 0;
-            final match = c['match'] is num ? (c['match'] as num).toInt() : 0;
+            final match = _courseMatchPercent(c);
             return TCard(
               margin: const EdgeInsets.only(bottom: 12),
+              onTap: () => openCourseLink(context, c),
               child: Row(children: [
                 Container(
                     padding: const EdgeInsets.all(12),
@@ -1984,12 +2216,14 @@ class RecommendedCoursesScreen extends StatelessWidget {
                           style: const TextStyle(
                               fontSize: 12, color: AppColors.textSecondary)),
                       const SizedBox(height: 6),
-                      TBar(value: progress / 100),
+                      TBar(value: match / 100),
                       const SizedBox(height: 2),
-                      Text('$progress% complete • $match% match',
+                      Text(_courseStatusLine(c),
                           style: const TextStyle(
                               fontSize: 11, color: AppColors.primary)),
                     ])),
+                const Icon(Icons.open_in_new,
+                    size: 18, color: AppColors.textSecondary),
               ]),
             );
           },
@@ -2071,7 +2305,7 @@ class _SkillsScreenState extends State<SkillsScreen> {
       final key = name.trim().toLowerCase();
       if (key.isEmpty || seen.contains(key)) continue;
       seen.add(key);
-      rows.add((title: name, score: 72, owned: true));
+      rows.add((title: name, score: 0, owned: true));
     }
 
     rows.sort((a, b) => b.score.compareTo(a.score));
@@ -2133,325 +2367,6 @@ class _SkillsScreenState extends State<SkillsScreen> {
                       ),
                   ],
                 ),
-    );
-  }
-}
-
-// ── AI Mentor Chat ────────────────────────────────────────────────────────────
-class AIMentorChatScreen extends StatefulWidget {
-  const AIMentorChatScreen({super.key});
-  @override
-  State<AIMentorChatScreen> createState() => _AIMentorChatScreenState();
-}
-
-class _AIMentorChatScreenState extends State<AIMentorChatScreen> {
-  final _ctrl = TextEditingController();
-  final _scrollCtrl = ScrollController();
-  bool _sending = false;
-  final List<Map<String, dynamic>> _msgs = [
-    {
-      'isMe': false,
-      'text':
-          "Hi! I'm your AI Career Mentor. I'm here to help you grow in your career. What would you like to focus on today?",
-      'time': '9:41 AM'
-    },
-  ];
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    _scrollCtrl.dispose();
-    super.dispose();
-  }
-
-  String _now() {
-    final t = DateTime.now();
-    return '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
-  }
-
-  Future<void> _send([String? presetText]) async {
-    final text = presetText ?? _ctrl.text.trim();
-    if (text.isEmpty || _sending) return;
-
-    setState(() {
-      _msgs.add({'isMe': true, 'text': text, 'time': _now()});
-      _sending = true;
-      if (presetText == null) _ctrl.clear();
-    });
-    _scrollToBottom();
-
-    try {
-      final svc = context.read<AppServices>();
-      final history = _msgs
-          .where((m) => !(m['isMe'] as bool) || _msgs.indexOf(m) < _msgs.length - 1)
-          .map((m) => {
-                'role': (m['isMe'] as bool) ? 'user' : 'assistant',
-                'content': m['text'] as String,
-              })
-          .toList();
-
-      final result = await svc.ai.mentorChat(
-        question: text,
-        history: history.length > 1
-            ? history.sublist(0, history.length - 1)
-            : const [],
-      ).unwrap();
-
-      if (!mounted) return;
-      final reply = result.reply.isNotEmpty
-          ? result.reply
-          : 'I\'m here to help! Could you provide more context?';
-      setState(() {
-        _msgs.add({'isMe': false, 'text': reply, 'time': _now()});
-        _sending = false;
-      });
-      _scrollToBottom();
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _msgs.add({
-          'isMe': false,
-          'text': 'Sorry, I\'m having trouble connecting right now. Please try again.',
-          'time': _now()
-        });
-        _sending = false;
-      });
-      _scrollToBottom();
-    }
-  }
-
-  void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollCtrl.hasClients) {
-        _scrollCtrl.animateTo(
-          _scrollCtrl.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final suggestions = [
-      {
-        'label': 'What should I focus\non next?',
-        'color': const Color(0xFF2D5FA6),
-        'icon': Icons.track_changes
-      },
-      {
-        'label': 'How do I get\npromoted?',
-        'color': AppColors.success,
-        'icon': Icons.trending_up
-      },
-      {
-        'label': 'Recommend courses\nfor me',
-        'color': Colors.purple,
-        'icon': Icons.menu_book_outlined
-      },
-      {
-        'label': 'Review my skill\ngaps',
-        'color': Colors.orange,
-        'icon': Icons.code
-      },
-    ];
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios,
-                size: 18, color: AppColors.textPrimary),
-            onPressed: () => Navigator.pop(context)),
-        title: Row(children: [
-          Container(
-              width: 36,
-              height: 36,
-              decoration: const BoxDecoration(
-                  color: AppColors.primary, shape: BoxShape.circle),
-              child: const Icon(Icons.auto_awesome,
-                  color: Colors.white, size: 18)),
-          const SizedBox(width: 10),
-          const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('AI Mentor',
-                style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                    fontSize: 15)),
-            Row(children: [
-              Icon(Icons.circle, color: AppColors.success, size: 8),
-              SizedBox(width: 4),
-              Text('Online',
-                  style: TextStyle(fontSize: 11, color: AppColors.success))
-            ]),
-          ]),
-        ]),
-      ),
-      body: Column(children: [
-        Expanded(
-            child: ListView.builder(
-          controller: _scrollCtrl,
-          padding: const EdgeInsets.all(16),
-          itemCount: _msgs.length + (_msgs.length == 1 ? 1 : 0) + (_sending ? 1 : 0),
-          itemBuilder: (_, i) {
-            if (i == 1 && _msgs.length == 1) {
-              return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Suggested questions:',
-                        style: TextStyle(
-                            fontSize: 12, color: AppColors.textSecondary)),
-                    const SizedBox(height: 8),
-                    GridView.count(
-                      crossAxisCount: 2,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      crossAxisSpacing: 10,
-                      mainAxisSpacing: 10,
-                      childAspectRatio: 1.5,
-                      children: suggestions
-                          .map((s) => GestureDetector(
-                                onTap: () => _send(
-                                    (s['label'] as String).replaceAll('\n', ' ')),
-                                child: Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(14),
-                                      border:
-                                          Border.all(color: AppColors.border)),
-                                  child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Container(
-                                            padding: const EdgeInsets.all(6),
-                                            decoration: BoxDecoration(
-                                                color: s['color'] as Color,
-                                                shape: BoxShape.circle),
-                                            child: Icon(s['icon'] as IconData,
-                                                color: Colors.white, size: 14)),
-                                        const SizedBox(height: 8),
-                                        Text(s['label'] as String,
-                                            style: const TextStyle(
-                                                fontSize: 12,
-                                                color: AppColors.textPrimary,
-                                                fontWeight: FontWeight.w500)),
-                                      ]),
-                                ),
-                              ))
-                          .toList(),
-                    ),
-                  ]);
-            }
-            final offset = (_msgs.length == 1 ? 1 : 0);
-            if (_sending && i == _msgs.length + offset) {
-              return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                            width: 36, height: 36,
-                            decoration: const BoxDecoration(
-                                color: AppColors.primary,
-                                shape: BoxShape.circle),
-                            child: const Icon(Icons.auto_awesome,
-                                color: Colors.white, size: 18)),
-                        const SizedBox(width: 8),
-                        Container(
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
-                                color: AppColors.background,
-                                borderRadius: BorderRadius.circular(16)),
-                            child: const SizedBox(
-                                width: 40, height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2))),
-                      ]));
-            }
-            final m = _msgs[i];
-            final isMe = m['isMe'] as bool;
-            return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment:
-                        isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-                    children: [
-                      if (!isMe)
-                        Container(
-                            width: 36,
-                            height: 36,
-                            decoration: const BoxDecoration(
-                                color: AppColors.primary,
-                                shape: BoxShape.circle),
-                            child: const Icon(Icons.auto_awesome,
-                                color: Colors.white, size: 18)),
-                      if (!isMe) const SizedBox(width: 8),
-                      Flexible(
-                          child: Column(
-                              crossAxisAlignment: isMe
-                                  ? CrossAxisAlignment.end
-                                  : CrossAxisAlignment.start,
-                              children: [
-                            Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                    color: isMe
-                                        ? AppColors.primary
-                                        : AppColors.background,
-                                    borderRadius: BorderRadius.circular(16)),
-                                child: Text(m['text'] as String,
-                                    style: TextStyle(
-                                        color: isMe
-                                            ? Colors.white
-                                            : AppColors.textPrimary,
-                                        fontSize: 14))),
-                            const SizedBox(height: 4),
-                            Text(m['time'] as String,
-                                style: const TextStyle(
-                                    fontSize: 10,
-                                    color: AppColors.textSecondary)),
-                          ])),
-                    ]));
-          },
-        )),
-        Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: const BoxDecoration(
-                color: Colors.white,
-                border: Border(top: BorderSide(color: AppColors.border))),
-            child: Row(children: [
-              Expanded(
-                  child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
-                      decoration: BoxDecoration(
-                          color: AppColors.background,
-                          borderRadius: BorderRadius.circular(24)),
-                      child: TextField(
-                          controller: _ctrl,
-                          onSubmitted: (_) => _send(),
-                          decoration: const InputDecoration(
-                              hintText: 'Ask your mentor anything...',
-                              border: InputBorder.none,
-                              isDense: true,
-                              hintStyle: TextStyle(
-                                  color: AppColors.textHint, fontSize: 13))))),
-              const SizedBox(width: 8),
-              GestureDetector(
-                  onTap: _sending ? null : _send,
-                  child: Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                          color: _sending ? AppColors.border : AppColors.primary,
-                          shape: BoxShape.circle),
-                      child: const Icon(Icons.send,
-                          color: Colors.white, size: 18))),
-            ])),
-      ]),
     );
   }
 }

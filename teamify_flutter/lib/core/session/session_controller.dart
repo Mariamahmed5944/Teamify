@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 
 import '../../data/models/models.dart';
 import '../../data/repositories/auth_repository.dart';
-import 'disposable_registry.dart';
 
 enum SessionStatus {
   unknown,
@@ -19,15 +18,25 @@ class SessionController extends ChangeNotifier {
   String? lastMessage;
   bool admin2faLoginPending = false;
   bool admin2faSetupRequired = false;
+  bool admin2faPassed = false;
 
   SessionController(this._authRepository);
 
-  bool get isAuthenticated => status == SessionStatus.authenticated;
+  /// App-lifetime singleton — Provider/registry must never tear this down.
+  @override
+  // ignore: must_call_super
+  void dispose() {}
+
+  bool get isAuthenticated =>
+      status == SessionStatus.authenticated ||
+      (status == SessionStatus.unknown && currentUser != null);
+
   bool get isPendingApproval => status == SessionStatus.pendingApproval;
   bool get needsAdmin2faStep =>
-      currentUser?.needsAdmin2faSetup == true ||
-      admin2faLoginPending ||
-      admin2faSetupRequired;
+      !admin2faPassed &&
+      (currentUser?.needsAdmin2faSetup == true ||
+          admin2faLoginPending ||
+          admin2faSetupRequired);
 
   Future<void> restoreSession() async {
     status = SessionStatus.unknown;
@@ -71,6 +80,7 @@ class SessionController extends ChangeNotifier {
     lastMessage = result.message;
     admin2faLoginPending = result.requires2faLogin;
     admin2faSetupRequired = result.requires2faSetup;
+    admin2faPassed = false;
     if (currentUser == null && !hasSession) {
       status = SessionStatus.unauthenticated;
     } else {
@@ -107,9 +117,43 @@ class SessionController extends ChangeNotifier {
     return result;
   }
 
+  /// Refresh user from /me without clearing the session UI (avoids route unmount).
+  Future<ApiUser?> refreshCurrentUser() async {
+    if (!await _authRepository.hasSavedSession()) return currentUser;
+    try {
+      final user = await _authRepository.me();
+      if (user != null) {
+        currentUser = user;
+        status = user.isPending
+            ? SessionStatus.pendingApproval
+            : SessionStatus.authenticated;
+        notifyListeners();
+      }
+      return user;
+    } catch (_) {
+      return currentUser;
+    }
+  }
+
   void clearAdmin2faLoginPending() {
     admin2faLoginPending = false;
     admin2faSetupRequired = false;
+    notifyListeners();
+  }
+
+  /// Call after a successful 2FA verify/confirm so admin routes stop looping.
+  void completeAdmin2fa({ApiUser? refreshedUser}) {
+    admin2faLoginPending = false;
+    admin2faSetupRequired = false;
+    admin2faPassed = true;
+    final user = refreshedUser ?? currentUser;
+    if (user != null) {
+      currentUser =
+          user.isAdmin && !user.totpEnabled ? user.copyWith(totpEnabled: true) : user;
+      status = user.isPending
+          ? SessionStatus.pendingApproval
+          : SessionStatus.authenticated;
+    }
     notifyListeners();
   }
 
@@ -131,8 +175,8 @@ class SessionController extends ChangeNotifier {
     currentUser = null;
     admin2faLoginPending = false;
     admin2faSetupRequired = false;
+    admin2faPassed = false;
     status = SessionStatus.unauthenticated;
-    globalDisposableRegistry.disposeAll();
     notifyListeners();
   }
 
@@ -144,6 +188,7 @@ class SessionController extends ChangeNotifier {
     currentUser = null;
     admin2faLoginPending = false;
     admin2faSetupRequired = false;
+    admin2faPassed = false;
     status = SessionStatus.unauthenticated;
     notifyListeners();
   }

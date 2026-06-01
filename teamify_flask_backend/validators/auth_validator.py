@@ -44,10 +44,11 @@ class RegisterSchema(Schema):
 
     @validates("password")
     def validate_password(self, value, **kwargs):
-        if not PASSWORD_RE.match(value):
-            raise ValidationError(
-                "Password must be at least 8 characters with 1 uppercase letter and 1 digit"
-            )
+        from services.system_settings_service import validate_password as check_password
+
+        ok, message = check_password(value)
+        if not ok:
+            raise ValidationError(message)
 
 
 class LoginSchema(Schema):

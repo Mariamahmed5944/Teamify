@@ -82,6 +82,28 @@ class ChatRepository {
     return data;
   }
 
+  /// POST /api/chat/rooms/<roomId>/meetings/<sessionId>/save — checkpoint (meeting stays live)
+  Future<Map<String, dynamic>> saveMeetingCheckpoint(
+    String roomId,
+    String sessionId, {
+    required List<Map<String, dynamic>> transcript,
+    required List<String> participantIds,
+  }) async {
+    final response = await _client.post<Map<String, dynamic>>(
+      '/api/chat/rooms/$roomId/meetings/$sessionId/save',
+      data: {
+        'transcript': transcript,
+        'participant_ids': participantIds,
+      },
+    );
+    final data = responseMap(response.data);
+    final session = data['session'];
+    if (session is Map) {
+      return Map<String, dynamic>.from(session);
+    }
+    return data;
+  }
+
   /// POST /api/chat/rooms/<roomId>/meetings/<sessionId>/stop
   Future<Map<String, dynamic>> stopMeetingSession(
     String roomId,

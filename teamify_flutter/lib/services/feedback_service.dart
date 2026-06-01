@@ -78,6 +78,7 @@ class FeedbackService with ServiceErrorHandler {
       () async {
         await _repo.submitFeedback(payload);
         await _cache.invalidate(_box, 'user_$targetUserId');
+        await _cache.invalidate('users', 'user_stats_$targetUserId');
       },
       mutation: OfflineMutation(
         id: MutationId.generate(),

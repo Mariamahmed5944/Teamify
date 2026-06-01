@@ -1,13 +1,14 @@
 from models import db
 
+
 class SystemSetting(db.Model):
     __tablename__ = 'system_settings'
 
     key = db.Column(db.String(255), primary_key=True, nullable=False)
-    value = db.Column(db.Text, nullable=False)
+    value = db.Column(db.JSON, nullable=False)
 
     def __init__(self, key, value):
-        self.key   = key
+        self.key = key
         self.value = value
 
     @classmethod

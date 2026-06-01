@@ -21,6 +21,10 @@ class AIRepository {
     final response = await _client.post<Map<String, dynamic>>(
       '/api/ai/classify-task',
       data: {'text': text},
+      options: Options(
+        receiveTimeout: const Duration(seconds: 90),
+        sendTimeout: const Duration(seconds: 30),
+      ),
     );
     return responseMap(response.data);
   }

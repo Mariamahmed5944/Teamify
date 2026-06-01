@@ -178,8 +178,14 @@ def reset_user_password(user_id):
 
     data = request.get_json(silent=True) or {}
     new_password = data.get("password", "").strip()
-    if not new_password or len(new_password) < 8:
-        return jsonify({"error": "Password must be at least 8 characters long"}), 400
+    if not new_password:
+        return jsonify({"error": "Password is required"}), 400
+
+    from services.system_settings_service import validate_password
+
+    ok, pw_msg = validate_password(new_password)
+    if not ok:
+        return jsonify({"error": pw_msg}), 400
 
     user.password = bcrypt.generate_password_hash(new_password).decode("utf-8")
     db.session.commit()
@@ -652,11 +658,10 @@ def revoke_user_sessions(user_id):
     if not user:
         return jsonify({"error": "User not found"}), 404
 
-    # Simply lock and immediate unlock clears failed attempts or we can log session revocation
-    # For full stateless JWT, we can revoke in next login by resetting a user token epoch (or locking user)
-    # Let's lock them briefly or write session log entry
+    from services.security_session_service import revoke_all_user_sessions
+
+    revoked = revoke_all_user_sessions(user_id)
     user.failed_login_attempts = 0
-    # Deduct or revoke
     db.session.commit()
 
     admin_id = int(get_jwt_identity())
@@ -670,7 +675,10 @@ def revoke_user_sessions(user_id):
     )
     db.session.commit()
 
-    return jsonify({"message": f"Sessions revoked successfully for User {user_id}"}), 200
+    return jsonify({
+        "message": f"Revoked {revoked} active session(s) for user {user_id}",
+        "revoked_count": revoked,
+    }), 200
 
 
 # ══════════════════════════════════════════════════════════════════════════════

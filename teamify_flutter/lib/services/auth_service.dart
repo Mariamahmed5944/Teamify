@@ -111,10 +111,18 @@ class AuthService with ServiceErrorHandler {
       guard(() => _repo.setup2fa());
 
   Future<ApiResult<ApiUser?>> verify2fa(String token) =>
-      guard(() => _repo.verify2fa(token));
+      guard(() async {
+        final user = await _repo.verify2fa(token);
+        _session.completeAdmin2fa(refreshedUser: user);
+        return _session.currentUser;
+      });
 
   Future<ApiResult<ApiUser?>> confirm2faLogin(String token) =>
-      guard(() => _repo.confirm2faLogin(token));
+      guard(() async {
+        final user = await _repo.confirm2faLogin(token);
+        _session.completeAdmin2fa(refreshedUser: user);
+        return _session.currentUser;
+      });
 
   Future<ApiResult<void>> disable2fa(String token) =>
       guard(() => _repo.disable2fa(token));

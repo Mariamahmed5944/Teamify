@@ -6,8 +6,8 @@ import 'package:provider/provider.dart';
 
 import '../../core/network/api_result.dart';
 import '../../core/routes.dart';
-import '../../core/session/session_controller.dart';
 import '../../core/theme.dart';
+import '../../data/models/api_user.dart';
 import '../../services/app_services.dart';
 import '../../widgets/widgets.dart';
 
@@ -96,7 +96,7 @@ class _AdminTwoFASetupScreenState extends State<AdminTwoFASetupScreen> {
       _error = null;
     });
 
-    final session = context.read<SessionController>();
+    final session = context.read<AppServices>().session;
     try {
       await session.restoreSession();
       if (!mounted) return;
@@ -136,19 +136,23 @@ class _AdminTwoFASetupScreenState extends State<AdminTwoFASetupScreen> {
       return;
     }
 
-    setState(() => _submitting = true);
-    final session = context.read<SessionController>();
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
     final auth = context.read<AppServices>().auth;
+    final messenger = ScaffoldMessenger.of(context);
 
     try {
-      final ApiResult<dynamic> result = _confirmOnly
+      final ApiResult<ApiUser?> result = _confirmOnly
           ? await auth.confirm2faLogin(code)
           : await auth.verify2fa(code);
 
       if (!mounted) return;
 
       if (result.isFailure) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        setState(() => _error = result.error ?? 'Verification failed');
+        messenger.showSnackBar(
           SnackBar(
             content: Text(result.error ?? 'Verification failed'),
             backgroundColor: AppColors.error,
@@ -157,14 +161,23 @@ class _AdminTwoFASetupScreenState extends State<AdminTwoFASetupScreen> {
         return;
       }
 
-      final user = result.data;
-      if (user != null) {
-        session.setCurrentUser(user);
-      } else {
-        await session.restoreSession();
-      }
-      session.clearAdmin2faLoginPending();
+      if (!mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('2FA enabled. Opening admin dashboard…'),
+          backgroundColor: AppColors.success,
+        ),
+      );
       await _goToAdmin();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.toString());
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: AppColors.error,
+        ),
+      );
     } finally {
       if (mounted) setState(() => _submitting = false);
     }

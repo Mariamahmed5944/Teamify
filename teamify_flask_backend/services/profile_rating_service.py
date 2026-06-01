@@ -164,59 +164,90 @@ def predict_user_rating(user_stats: dict) -> dict:
     }
 
 
-def recommend_teammates(user_stats: dict, top_n: int = 5) -> list:
+def recommend_teammates(
+    user_stats: dict,
+    top_n: int = 5,
+    *,
+    current_user_id: int | None = None,
+) -> list:
     """
-    Find the most compatible teammates based on feature vector similarity.
-
-    Reads all users from the DB, computes cosine similarity against
-    user_stats, and returns the top_n most compatible profiles.
-
-    Returns a list of dicts with user_id, display_name, similarity_score.
+    Rank compatible teammates using the same ML feature vector as mentor/rating
+    services, blended with skill overlap for readable match percentages.
     """
     try:
         import numpy as np
-        from models import db
         from models.user import User
+        from services.ai_mentor_service import build_user_ml_stats
+        from utils.skills import normalize_skills_list
 
         _FEAT_KEYS = [
-            "member_on_time_rate", "member_avg_delay_days",
-            "member_experience_years", "max_capacity", "max_allowed_tasks",
+            "tasks_assigned",
+            "tasks_completed",
+            "overdue_tasks",
+            "quality_score",
+            "teamwork_score",
+            "attendance_rate",
+            "skill_match_score",
+            "avg_rating",
+            "availability_score",
+            "project_similarity",
         ]
 
-        def _vec(source: dict) -> list:
-            return [float(source.get(k, 0)) for k in _FEAT_KEYS]
+        def _vec(stats: dict) -> np.ndarray:
+            return np.array(
+                [float(stats.get(k, 0) or 0) for k in _FEAT_KEYS],
+                dtype=float,
+            )
 
-        ref_vec = np.array(_vec(user_stats))
-        ref_norm = np.linalg.norm(ref_vec)
-        if ref_norm == 0:
-            ref_norm = 1.0
+        def _cosine(a: np.ndarray, b: np.ndarray) -> float:
+            na = float(np.linalg.norm(a))
+            nb = float(np.linalg.norm(b))
+            if na == 0.0 or nb == 0.0:
+                return 0.0
+            return float(np.dot(a, b) / (na * nb))
 
-        users = User.query.all()
+        if not user_stats and current_user_id:
+            user_stats = build_user_ml_stats(current_user_id)
+
+        ref_vec = _vec(user_stats or {})
+        current_skills: set[str] = set()
+        if current_user_id:
+            current = User.query.get(current_user_id)
+            if current:
+                current_skills = set(normalize_skills_list(current.skills))
+
+        q = User.query.filter(User.account_status == "approved")
+        if current_user_id:
+            q = q.filter(User.id != current_user_id)
+
         scored = []
-        for u in users:
-            u_stats = {
-                "member_on_time_rate":    u.member_on_time_rate,
-                "member_avg_delay_days":  u.member_avg_delay_days,
-                "member_experience_years": u.member_experience_years,
-                "max_capacity":           u.max_capacity,
-                "max_allowed_tasks":      u.max_allowed_tasks,
-            }
-            u_vec = np.array(_vec(u_stats))
-            u_norm = np.linalg.norm(u_vec) or 1.0
-            similarity = float(np.dot(ref_vec, u_vec) / (ref_norm * u_norm))
+        for u in q.all():
+            u_stats = build_user_ml_stats(u.id)
+            similarity = _cosine(ref_vec, _vec(u_stats))
+
+            u_skills = set(normalize_skills_list(u.skills))
+            skill_overlap = 0.0
+            if current_skills and u_skills:
+                skill_overlap = len(current_skills & u_skills) / len(current_skills | u_skills)
+
+            match_pct = round(min(100.0, similarity * 100 * 0.65 + skill_overlap * 100 * 0.35), 1)
+            if match_pct <= 0 and skill_overlap > 0:
+                match_pct = round(skill_overlap * 100, 1)
+
             scored.append({
                 "user_id": u.id,
                 "display_name": u.display_name,
-                "full_name": u.full_name,
+                "full_name": u.full_name or u.display_name,
+                "email": u.email,
                 "user_type": u.user_type,
                 "professional_field": u.professional_field,
                 "similarity_score": round(similarity, 4),
-                "match_percent": round(similarity * 100, 1),
+                "match_percent": match_pct,
                 "experience_level": u.experience_level,
-                "skills": (u.skills or [])[:8],
+                "skills": normalize_skills_list(u.skills)[:8],
             })
 
-        scored.sort(key=lambda x: x["similarity_score"], reverse=True)
+        scored.sort(key=lambda x: (x["match_percent"], x["similarity_score"]), reverse=True)
         return scored[:top_n]
 
     except Exception as exc:

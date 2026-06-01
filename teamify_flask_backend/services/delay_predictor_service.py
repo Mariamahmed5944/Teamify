@@ -107,6 +107,15 @@ def _load_model() -> Any:
     return None
 
 
+def startup_check() -> None:
+    """Log a structured warning at boot when the delay predictor pkl is missing."""
+    _load_model()
+    if _model_load_error:
+        logger.warning("AI startup: delay predictor unavailable — %s", _model_load_error)
+    else:
+        logger.info("AI startup: delay predictor model loaded")
+
+
 def predict_delay_probability(task_features: dict) -> dict:
     """
     Predict delay probability for a single task using the ML model.

@@ -450,6 +450,50 @@ def create_task():
     return jsonify(response), 201
 
 
+# ─── GET /api/tasks/accessible ────────────────────────────────────────────────
+
+@tasks_bp.route("/accessible", methods=["GET"])
+@auth_required
+def get_accessible_tasks():
+    """
+    List tasks across every project the caller can access (single query).
+    Used by AI Hub screens to avoid N+1 project task fetches.
+    """
+    from services.project_access import get_accessible_project_ids
+
+    user_id = get_current_user_id()
+    try:
+        limit = min(max(int(request.args.get("limit", 100)), 1), 200)
+    except (TypeError, ValueError):
+        limit = 100
+
+    project_ids = get_accessible_project_ids(user_id)
+    if not project_ids:
+        return jsonify({"tasks": [], "total": 0}), 200
+
+    rows = (
+        db.session.query(Task, Project.name)
+        .join(Project, Task.project_id == Project.id)
+        .filter(Task.project_id.in_(project_ids))
+        .order_by(Task.updated_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+    tasks = [
+        {
+            "id": str(task.id),
+            "title": task.title,
+            "status": task.status,
+            "priority": task.priority,
+            "project_id": str(task.project_id),
+            "project_name": project_name,
+        }
+        for task, project_name in rows
+    ]
+    return jsonify({"tasks": tasks, "total": len(tasks)}), 200
+
+
 # ─── GET /api/tasks/<id> ──────────────────────────────────────────────────────
 
 @tasks_bp.route("/<int:task_id>", methods=["GET"])

@@ -136,6 +136,41 @@ class ApiUser {
     return 'Freelancer';
   }
 
+  ApiUser copyWith({
+    bool? totpEnabled,
+  }) {
+    return ApiUser(
+      id: id,
+      displayName: displayName,
+      fullName: fullName,
+      email: email,
+      role: role,
+      systemRole: systemRole,
+      projectRole: projectRole,
+      userType: userType,
+      skills: skills,
+      professionalField: professionalField,
+      availability: availability,
+      experienceLevel: experienceLevel,
+      joinedAt: joinedAt,
+      phone: phone,
+      bio: bio,
+      avatarFileId: avatarFileId,
+      accountStatus: accountStatus,
+      major: major,
+      currentLevel: currentLevel,
+      lookingForTeam: lookingForTeam,
+      reasonForJoining: reasonForJoining,
+      memberExperienceYears: memberExperienceYears,
+      tasksCompleted: tasksCompleted,
+      qualityScore: qualityScore,
+      attendanceRate: attendanceRate,
+      memberOnTimeRate: memberOnTimeRate,
+      totpEnabled: totpEnabled ?? this.totpEnabled,
+      preferredLanguage: preferredLanguage,
+    );
+  }
+
   factory ApiUser.fromJson(Map<String, dynamic> json) {
     final display = asString(
       json['display_name'] ?? json['displayName'] ?? json['name'],

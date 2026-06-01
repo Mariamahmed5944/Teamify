@@ -519,6 +519,52 @@ def get_meeting_session(room_id, session_id):
     return jsonify({"session": session.to_dict()}), 200
 
 
+@chat_bp.route("/rooms/<int:room_id>/meetings/<int:session_id>/save", methods=["POST"])
+@auth_required
+def save_meeting_checkpoint(room_id, session_id):
+    """Persist transcript while the meeting stays live (checkpoint save)."""
+    user_id = int(get_jwt_identity())
+    _, _, err = _require_room_member(user_id, room_id)
+    if err:
+        return err
+
+    session = MeetingSession.query.filter_by(id=session_id, room_id=room_id).first()
+    if not session:
+        return jsonify({"error": "Meeting session not found"}), 404
+
+    data = request.get_json(silent=True) or {}
+    transcript = data.get("transcript")
+    if transcript is None:
+        transcript = session.transcript or []
+    if not isinstance(transcript, list):
+        return jsonify({"error": "transcript must be a list"}), 400
+
+    participant_ids = data.get("participant_ids")
+    if participant_ids is None:
+        participant_ids = session.participant_ids or []
+    if not isinstance(participant_ids, list):
+        return jsonify({"error": "participant_ids must be a list"}), 400
+
+    session.transcript = transcript
+    session.participant_ids = [int(x) for x in participant_ids if str(x).isdigit()]
+    session.is_active = True
+    if session.started_at:
+        started = session.started_at
+        if started.tzinfo is None:
+            started = started.replace(tzinfo=timezone.utc)
+        session.duration_seconds = max(
+            0,
+            int((datetime.now(timezone.utc) - started).total_seconds()),
+        )
+
+    summary = _summarize_meeting_transcript(transcript)
+    if summary:
+        session.ai_summary = summary
+
+    db.session.commit()
+    return jsonify({"session": session.to_dict()}), 200
+
+
 @chat_bp.route("/rooms/<int:room_id>/meetings/<int:session_id>/stop", methods=["POST"])
 @auth_required
 def stop_meeting_session(room_id, session_id):

@@ -12,7 +12,7 @@ _monkey.patch_all()
 import os
 import logging
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from flask_bcrypt import Bcrypt
@@ -306,6 +306,39 @@ def create_app(test_config=None):
     app.register_blueprint(disputes_bp)
     app.register_blueprint(chat_bp)
 
+    @app.before_request
+    def enforce_maintenance_mode():
+        if request.method == "OPTIONS":
+            return None
+        path = request.path or ""
+        if (
+            path.startswith("/admin")
+            or path.startswith("/swagger")
+            or path.startswith("/api/auth")
+            or path.startswith("/api/health")
+            or path.startswith("/socket.io")
+        ):
+            return None
+        try:
+            from services.system_settings_service import is_maintenance_mode
+            if not is_maintenance_mode():
+                return None
+            from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+            from models.user import User
+
+            verify_jwt_in_request(optional=True)
+            caller_id = get_jwt_identity()
+            if caller_id:
+                caller = User.query.filter_by(id=int(caller_id)).first()
+                if caller and caller.role == "admin":
+                    return None
+        except Exception:
+            pass
+        return jsonify({
+            "error": "Maintenance mode",
+            "message": "The platform is temporarily unavailable for maintenance.",
+        }), 503
+
     # ─── Health Check ─────────────────────────────────────────────────────────
     @app.route("/api/health", methods=["GET"])
     def health():
@@ -368,9 +401,18 @@ def create_app(test_config=None):
             RolePermission,
             AdminSession,
         )
+        from models.system_setting import SystemSetting  # noqa: F401
 
         db.create_all()
         _apply_runtime_schema_patches(app)
+
+        from services.delay_predictor_service import startup_check as delay_startup_check
+        from services.chat_summarization_service import startup_check as chat_startup_check
+        from services.task_pipeline_service import startup_check as task_pipeline_startup_check
+
+        delay_startup_check()
+        chat_startup_check()
+        task_pipeline_startup_check()
 
     # --- Start reminders scheduler ---
     from services.scheduler import init_scheduler

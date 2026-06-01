@@ -83,7 +83,6 @@ void main() async {
       offline.clearAll();
     }
   });
-  globalDisposableRegistry.register(session);
   globalDisposableRegistry.register(ws);
 
   // ── Lifecycle Manager ─────────────────────────────────────────────────
@@ -163,7 +162,11 @@ class TeamifyApp extends StatelessWidget {
         R.settings: (_) => protected(const SettingsScreen()),
         R.privacyPolicy: (_) => protected(const PrivacyPolicyScreen()),
         R.addUser: (_) => adminOnly(const AddUserScreen()),
-        R.mentorMain: (_) => protected(const MentorMainScreen()),
+        R.mentorMain: (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          final tab = args is Map ? (args['tab'] as int?) ?? 0 : 0;
+          return protected(MentorMainScreen(initialTab: tab));
+        },
         R.addTask: (_) => protected(const AddTaskScreen()),
 
         // ── Project ───────────────────────────────────────────────────────────
@@ -185,7 +188,7 @@ class TeamifyApp extends StatelessWidget {
         R.meeting: (_) => protected(const MeetingScreen()),
 
         // ── AI ────────────────────────────────────────────────────────────────
-        R.aiHub: (_) => protected(const MentorMainScreen()),
+        R.aiHub: (_) => protected(const AIHubScreen()),
         R.smartTodo: (_) => protected(const SmartTodoScreen()),
         R.aiTaskAllocation: (_) => protected(const AITaskAllocationScreen()),
         R.aiSuggestedResult: (_) => protected(const AISuggestedResultScreen()),
@@ -278,7 +281,7 @@ class ProtectedRoute extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final session = context.watch<SessionController>();
-    if (session.status == SessionStatus.unknown) {
+    if (session.status == SessionStatus.unknown && session.currentUser == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     if (!session.isAuthenticated) {

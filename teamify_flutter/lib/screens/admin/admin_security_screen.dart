@@ -48,7 +48,7 @@ class _AdminSecurityScreenState extends State<AdminSecurityScreen> {
       await context.read<AppServices>().admin.revokeSessions(userId).unwrap();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Active sessions revoked successfully'), backgroundColor: AppColors.success),
+        const SnackBar(content: Text('Active sessions revoked — user must sign in again'), backgroundColor: AppColors.success),
       );
       _refresh();
     } catch (e) {
@@ -57,6 +57,11 @@ class _AdminSecurityScreenState extends State<AdminSecurityScreen> {
         SnackBar(content: Text('Revocation failed: $e'), backgroundColor: AppColors.error),
       );
     }
+  }
+
+  String _formatTimestamp(String? raw) {
+    if (raw == null || raw.isEmpty) return '';
+    return raw.replaceAll('T', ' ').split('.').first;
   }
 
   @override
@@ -94,15 +99,24 @@ class _AdminSecurityScreenState extends State<AdminSecurityScreen> {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              // KPI Cards
               Row(
                 children: [
                   Expanded(
-                    child: _securityCard('Failed Logins', '${metrics['failed_logins'] ?? 0}', Icons.lock_open, AppColors.error),
+                    child: _securityCard(
+                      'Failed Logins (24h)',
+                      '${metrics['failed_logins'] ?? 0}',
+                      Icons.lock_open,
+                      AppColors.error,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: _securityCard('Locked Users', '${metrics['locked_users'] ?? 0}', Icons.block_outlined, AppColors.warning),
+                    child: _securityCard(
+                      'Locked Accounts',
+                      '${metrics['locked_users'] ?? 0}',
+                      Icons.block_outlined,
+                      AppColors.warning,
+                    ),
                   ),
                 ],
               ),
@@ -110,33 +124,51 @@ class _AdminSecurityScreenState extends State<AdminSecurityScreen> {
               Row(
                 children: [
                   Expanded(
-                    child: _securityCard('Active Sessions', '${metrics['active_sessions'] ?? 0}', Icons.devices_other, AppColors.success),
+                    child: _securityCard(
+                      'Live Sessions',
+                      '${metrics['active_sessions'] ?? 0}',
+                      Icons.devices_other,
+                      AppColors.success,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: _securityCard('Suspicious Alerts', '${metrics['suspicious_activity_alerts'] ?? 0}', Icons.shield_outlined, AppColors.error),
+                    child: _securityCard(
+                      'Open Alerts',
+                      '${metrics['suspicious_activity_alerts'] ?? 0}',
+                      Icons.shield_outlined,
+                      AppColors.error,
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 24),
 
-              // Anomalies/Alerts Log
               if (alerts.isNotEmpty) ...[
                 const TSectionHeader(title: 'Active Intrusion Alerts'),
                 const SizedBox(height: 12),
                 Column(
                   children: alerts.map((a) {
                     final alert = a as Map<String, dynamic>;
+                    final userId = alert['user_id'];
                     return TCard(
                       margin: const EdgeInsets.only(bottom: 8),
                       child: ListTile(
                         leading: const Icon(Icons.warning_amber_rounded, color: AppColors.error),
-                        title: Text(alert['type'] ?? 'Anomaly Detected', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                        subtitle: Text(alert['details']?.toString() ?? 'Failed attempts', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-                        trailing: OutlinedButton(
-                          onPressed: () => _lockAccount(alert['user_id'].toString()),
-                          child: const Text('Lock User', style: TextStyle(fontSize: 11, color: AppColors.error)),
+                        title: Text(
+                          (alert['type'] ?? 'Anomaly').toString().replaceAll('_', ' '),
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                         ),
+                        subtitle: Text(
+                          alert['description']?.toString() ?? alert['details']?.toString() ?? '',
+                          style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                        ),
+                        trailing: userId != null
+                            ? OutlinedButton(
+                                onPressed: () => _lockAccount(userId.toString()),
+                                child: const Text('Lock User', style: TextStyle(fontSize: 11, color: AppColors.error)),
+                              )
+                            : null,
                       ),
                     );
                   }).toList(),
@@ -144,14 +176,18 @@ class _AdminSecurityScreenState extends State<AdminSecurityScreen> {
                 const SizedBox(height: 24),
               ],
 
-              // Access Log Table
-              const TSectionHeader(title: 'Recent Authenticated Logins'),
+              const TSectionHeader(title: 'Recent Browser Logins'),
+              const SizedBox(height: 4),
+              const Text(
+                'API test traffic (python-requests, etc.) is excluded.',
+                style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+              ),
               const SizedBox(height: 12),
               if (logins.isEmpty)
                 const Center(
                   child: Padding(
                     padding: EdgeInsets.all(24),
-                    child: Text('No access records tracked.', style: TextStyle(color: AppColors.textSecondary)),
+                    child: Text('No browser login activity recorded yet.', style: TextStyle(color: AppColors.textSecondary)),
                   ),
                 )
               else
@@ -159,7 +195,7 @@ class _AdminSecurityScreenState extends State<AdminSecurityScreen> {
                   children: logins.map((item) {
                     final log = item as Map<String, dynamic>;
                     final isSuccess = log['status'] == 'success';
-                    final dateStr = (log['timestamp'] ?? '').toString().replaceAll('T', ' ').split('.').first;
+                    final dateStr = _formatTimestamp(log['timestamp']?.toString());
 
                     return TCard(
                       margin: const EdgeInsets.only(bottom: 8),
@@ -168,6 +204,7 @@ class _AdminSecurityScreenState extends State<AdminSecurityScreen> {
                         child: Column(
                           children: [
                             Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Icon(
                                   isSuccess ? Icons.verified_user : Icons.gpp_bad,
@@ -179,11 +216,30 @@ class _AdminSecurityScreenState extends State<AdminSecurityScreen> {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(log['user_name'] ?? 'System', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                                      Text('IP: ${log['ip_address']} · Device: ${log['device_info']}', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              log['user_name'] ?? 'Unknown user',
+                                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                            ),
+                                          ),
+                                          TChip(
+                                            label: isSuccess ? 'SUCCESS' : 'FAILED',
+                                            bg: (isSuccess ? AppColors.success : AppColors.error).withValues(alpha: 0.1),
+                                            textColor: isSuccess ? AppColors.success : AppColors.error,
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'IP: ${log['ip_address']} · ${log['device_info']}',
+                                        style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                                      ),
                                     ],
                                   ),
                                 ),
+                                const SizedBox(width: 8),
                                 Text(dateStr, style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
                               ],
                             ),
