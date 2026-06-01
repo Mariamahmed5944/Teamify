@@ -1,20 +1,18 @@
-// ignore_for_file: avoid_web_libraries_in_flutter, deprecated_member_use
+// ignore_for_file: avoid_web_libraries_in_flutter
 
 import 'dart:async';
-import 'dart:html' as html;
-import 'dart:js_util' as js_util;
+import 'dart:js_interop';
+import 'dart:js_interop_unsafe';
+
+import 'package:web/web.dart' as web;
 
 import 'meeting_web_continuous_speech_stub.dart';
 
 /// Native Web Speech API with continuous=true and interimResults=true.
 class MeetingWebContinuousSpeech {
-  static bool get isApiAvailable {
-    final ctor = js_util.getProperty(html.window, 'SpeechRecognition') ??
-        js_util.getProperty(html.window, 'webkitSpeechRecognition');
-    return ctor != null;
-  }
+  static bool get isApiAvailable => _speechRecognitionCtor() != null;
 
-  Object? _recognition;
+  JSObject? _recognition;
   bool _intentionalStop = false;
   bool _restartScheduled = false;
   DateTime? _lastRestartAt;
@@ -22,6 +20,12 @@ class MeetingWebContinuousSpeech {
   void Function(String message)? _onError;
   void Function(String status)? _onStatus;
   String _localeId = 'en-US';
+
+  JSFunction? _onResultJs;
+  JSFunction? _onErrorJs;
+  JSFunction? _onEndJs;
+  JSFunction? _onStartJs;
+  JSFunction? _onSpeechStartJs;
 
   static const Duration _restartDebounce = Duration(milliseconds: 450);
   static const Duration _minRestartGap = Duration(milliseconds: 800);
@@ -43,70 +47,69 @@ class MeetingWebContinuousSpeech {
     return _startEngine();
   }
 
+  static JSObject get _window => web.window as JSObject;
+
+  static JSObject? _speechRecognitionCtor() {
+    final standard = _window.getProperty('SpeechRecognition'.toJS);
+    if (standard != null) return standard as JSObject;
+    final webkit = _window.getProperty('webkitSpeechRecognition'.toJS);
+    return webkit as JSObject?;
+  }
+
   bool _startEngine() {
-    final ctor = js_util.getProperty(html.window, 'SpeechRecognition') ??
-        js_util.getProperty(html.window, 'webkitSpeechRecognition');
+    final ctor = _speechRecognitionCtor();
     if (ctor == null) return false;
 
-    _recognition = js_util.callConstructor(ctor as Object, []);
-    js_util.setProperty(_recognition!, 'continuous', true);
-    js_util.setProperty(_recognition!, 'interimResults', true);
-    js_util.setProperty(_recognition!, 'maxAlternatives', 1);
-    js_util.setProperty(_recognition!, 'lang', _localeId);
+    final created = (ctor as JSFunction).callAsConstructor<JSObject>();
+    _recognition = created;
+    final rec = created;
 
-    js_util.setProperty(
-      _recognition!,
-      'onresult',
-      js_util.allowInterop(_handleResult),
-    );
-    js_util.setProperty(
-      _recognition!,
-      'onerror',
-      js_util.allowInterop(_handleError),
-    );
-    js_util.setProperty(
-      _recognition!,
-      'onend',
-      js_util.allowInterop((_) => _handleEnd()),
-    );
-    js_util.setProperty(
-      _recognition!,
-      'onstart',
-      js_util.allowInterop((_) => _onStatus?.call('listening')),
-    );
-    js_util.setProperty(
-      _recognition!,
-      'onspeechstart',
-      js_util.allowInterop((_) => _onStatus?.call('speech_detected')),
-    );
+    rec.setProperty('continuous'.toJS, true.toJS);
+    rec.setProperty('interimResults'.toJS, true.toJS);
+    rec.setProperty('maxAlternatives'.toJS, 1.toJS);
+    rec.setProperty('lang'.toJS, _localeId.toJS);
+
+    _onResultJs = ((JSObject event) => _handleResult(event)).toJS;
+    rec.setProperty('onresult'.toJS, _onResultJs);
+
+    _onErrorJs = ((JSObject event) => _handleError(event)).toJS;
+    rec.setProperty('onerror'.toJS, _onErrorJs);
+
+    _onEndJs = ((JSObject _) => _handleEnd()).toJS;
+    rec.setProperty('onend'.toJS, _onEndJs);
+
+    _onStartJs = ((JSObject _) => _onStatus?.call('listening')).toJS;
+    rec.setProperty('onstart'.toJS, _onStartJs);
+
+    _onSpeechStartJs = ((JSObject _) => _onStatus?.call('speech_detected')).toJS;
+    rec.setProperty('onspeechstart'.toJS, _onSpeechStartJs);
 
     try {
-      js_util.callMethod(_recognition!, 'start', []);
+      rec.callMethod('start'.toJS);
       return true;
     } catch (_) {
       return false;
     }
   }
 
-  void _handleResult(dynamic event) {
+  void _handleResult(JSObject event) {
     final handler = _onResult;
     if (handler == null) return;
 
-    final results = js_util.getProperty(event, 'results');
+    final results = event.getProperty('results'.toJS);
     if (results == null) return;
+    final resultsObj = results as JSObject;
 
-    final length = (js_util.getProperty(results, 'length') as num?)?.toInt() ?? 0;
-    final resultIndex =
-        (js_util.getProperty(event, 'resultIndex') as num?)?.toInt() ?? 0;
+    final length = _jsInt(resultsObj.getProperty('length'.toJS));
+    final resultIndex = _jsInt(event.getProperty('resultIndex'.toJS));
 
-  // Per-utterance interim is cumulative in Chrome — use the latest non-final only.
     var lastInterim = '';
     for (var i = resultIndex; i < length; i++) {
-      final result = js_util.callMethod(results, 'item', [i]);
-      final isFinal = _isResultFinal(result);
+      final result = resultsObj.callMethod('item'.toJS, i.toJS) as JSObject?;
+      if (result == null) continue;
       final transcript = _transcriptFromResult(result);
       if (transcript.isEmpty) continue;
-      if (isFinal) {
+      if (_isResultFinal(result)) {
         handler(transcript, true);
       } else {
         lastInterim = transcript;
@@ -119,38 +122,35 @@ class MeetingWebContinuousSpeech {
       return;
     }
 
-    // Some Chrome builds only expose the latest phrase on the last result slot.
     if (length > 0) {
-      final last = js_util.callMethod(results, 'item', [length - 1]);
-      if (!_isResultFinal(last)) {
+      final last =
+          resultsObj.callMethod('item'.toJS, (length - 1).toJS) as JSObject?;
+      if (last != null && !_isResultFinal(last)) {
         final tail = _transcriptFromResult(last);
         if (tail.isNotEmpty) handler(tail, false);
       }
     }
   }
 
-  String _transcriptFromResult(Object? result) {
-    if (result == null) return '';
+  String _transcriptFromResult(JSObject result) {
     try {
-      // SpeechRecognitionResult.item(0) → SpeechRecognitionAlternative.transcript
-      final alt = js_util.callMethod(result, 'item', [0]);
+      final alt = result.callMethod('item'.toJS, 0.toJS) as JSObject?;
       if (alt == null) return '';
-      final text = js_util.getProperty(alt, 'transcript');
-      return (text as String?)?.trim() ?? text?.toString().trim() ?? '';
+      return _jsString(alt.getProperty('transcript'.toJS)) ?? '';
     } catch (_) {
       return '';
     }
   }
 
-  bool _isResultFinal(Object? result) {
-    if (result == null) return false;
-    final v = js_util.getProperty(result, 'isFinal');
-    return v == true;
+  bool _isResultFinal(JSObject result) {
+    final v = result.getProperty('isFinal'.toJS);
+    if (v is JSBoolean) return v.toDart;
+    return false;
   }
 
-  void _handleError(dynamic event) {
-    final err = js_util.getProperty(event, 'error');
-    _onError?.call(err?.toString() ?? 'speech_error');
+  void _handleError(JSObject event) {
+    final err = _jsString(event.getProperty('error'.toJS));
+    _onError?.call(err ?? 'speech_error');
     _onStatus?.call('error');
   }
 
@@ -181,8 +181,9 @@ class MeetingWebContinuousSpeech {
       if (_intentionalStop || _onResult == null) return;
       _lastRestartAt = DateTime.now();
       try {
-        if (_recognition != null) {
-          js_util.callMethod(_recognition!, 'start', []);
+        final rec = _recognition;
+        if (rec != null) {
+          rec.callMethod('start'.toJS);
         } else {
           _startEngine();
         }
@@ -197,11 +198,28 @@ class MeetingWebContinuousSpeech {
     _restartScheduled = false;
     final rec = _recognition;
     _recognition = null;
+    _onResultJs = null;
+    _onErrorJs = null;
+    _onEndJs = null;
+    _onStartJs = null;
+    _onSpeechStartJs = null;
     if (rec != null) {
       try {
-        js_util.callMethod(rec, 'stop', []);
+        rec.callMethod('stop'.toJS);
       } catch (_) {}
     }
     _onResult = null;
+  }
+
+  static int _jsInt(JSAny? value) {
+    if (value == null) return 0;
+    if (value is JSNumber) return value.toDartInt;
+    return int.tryParse(value.toString()) ?? 0;
+  }
+
+  static String? _jsString(JSAny? value) {
+    if (value == null) return null;
+    if (value is JSString) return value.toDart;
+    return value.toString();
   }
 }

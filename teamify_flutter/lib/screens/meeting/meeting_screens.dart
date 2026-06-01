@@ -816,6 +816,9 @@ class _MeetingScreenState extends State<MeetingScreen> {
   Future<void> _saveTranscriptCheckpoint() async {
     if (_stoppingSession || !_isLive) return;
 
+    final chat = context.read<AppServices>().chat;
+    final messenger = ScaffoldMessenger.of(context);
+
     setState(() => _stoppingSession = true);
     await _flushSpeechCapture();
     await _refreshLiveNotes();
@@ -827,7 +830,6 @@ class _MeetingScreenState extends State<MeetingScreen> {
       return;
     }
 
-    final chat = context.read<AppServices>().chat;
     try {
       await chat.saveMeetingCheckpoint(
         rid,
@@ -836,7 +838,7 @@ class _MeetingScreenState extends State<MeetingScreen> {
         participantIds: _participantIdsForSession(),
       ).unwrap();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           const SnackBar(
             content: Text(
               'Transcript saved — meeting still live. Recording continues.',
@@ -846,7 +848,7 @@ class _MeetingScreenState extends State<MeetingScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(content: Text('Failed to save transcript: $e')),
         );
       }
@@ -1419,6 +1421,9 @@ class _MeetingSummaryScreenState extends State<MeetingSummaryScreen> {
   bool _exportBusy = false;
   bool _canCreateTasks = false;
   String? _linkedProjectId;
+  List<String> _transcriptLines = [];
+  int _transcriptEntryCount = 0;
+  bool _transcriptExpanded = false;
 
   @override
   void initState() {
@@ -1552,28 +1557,11 @@ class _MeetingSummaryScreenState extends State<MeetingSummaryScreen> {
       }
 
       if (storedSummary != null && msgs.isNotEmpty) {
-        final kp = storedSummary['key_points'];
-        final ai = storedSummary['action_items'];
-        final sparseKeyPoints = kp == null || (kp is List && kp.isEmpty);
-        final sparseActions = ai == null || (ai is List && ai.isEmpty);
-        if (sparseKeyPoints && sparseActions) {
-          try {
-            final transcript = msgs
-                .map((m) =>
-                    '${m['sender_name'] ?? 'User'}: ${m['content'] ?? ''}')
-                .where((l) => l.trim().length > 3)
-                .join('\n');
-            final fresh =
-                await svc.ai.summarizeChat(transcript, topN: 5).unwrap();
-            final priorSummary = storedSummary['summary']?.toString().trim();
-            storedSummary = {
-              ...storedSummary,
-              ...fresh,
-              if (priorSummary != null && priorSummary.isNotEmpty)
-                'summary': priorSummary,
-            };
-          } catch (_) {}
-        }
+        storedSummary = await _refreshSummaryIfSparse(
+          svc,
+          msgs,
+          storedSummary,
+        );
       }
 
       if (storedSummary != null) {
@@ -1658,6 +1646,40 @@ class _MeetingSummaryScreenState extends State<MeetingSummaryScreen> {
     }
   }
 
+  String _transcriptPlainText(List<Map<String, dynamic>> msgs) {
+    return msgs
+        .map((m) => '${m['sender_name'] ?? 'User'}: ${m['content'] ?? ''}')
+        .where((l) => l.trim().length > 3)
+        .join('\n');
+  }
+
+  Future<Map<String, dynamic>> _refreshSummaryIfSparse(
+    AppServices svc,
+    List<Map<String, dynamic>> msgs,
+    Map<String, dynamic> existing,
+  ) async {
+    final summaryText = existing['summary']?.toString().trim() ?? '';
+    final kp = filterSummaryBullets(cleanKeyPoints(existing['key_points']));
+    final needsAi = kp.isEmpty &&
+        (summaryText.isEmpty ||
+            summaryText.length < 24 ||
+            isRawSpeechChunk(summaryText));
+
+    if (!needsAi) return existing;
+
+    try {
+      final fresh =
+          await svc.ai.summarizeChat(_transcriptPlainText(msgs), topN: 6).unwrap();
+      return {
+        ...existing,
+        ...fresh,
+        if (summaryText.isNotEmpty) 'summary': summaryText,
+      };
+    } catch (_) {
+      return existing;
+    }
+  }
+
   void _applySummaryPayload(
     Map<String, dynamic> summary,
     List<Map<String, dynamic>> msgs,
@@ -1675,14 +1697,22 @@ class _MeetingSummaryScreenState extends State<MeetingSummaryScreen> {
       _keyPoints = cleanKeyPoints(_extractLocalKeyPoints(normalized));
     }
 
-    _summaryBullets = _keyPoints.isNotEmpty
-        ? List<String>.from(_keyPoints)
-        : _summaryToBullets(_summaryText);
+    _summaryBullets = filterSummaryBullets(
+      _keyPoints.isNotEmpty
+          ? List<String>.from(_keyPoints)
+          : summaryTextToBullets(_summaryText),
+    );
 
-    _decisions = cleanKeyPoints(summary['decisions']);
-    if (_decisions.isEmpty) {
-      _decisions = List<String>.from(_keyPoints);
+    if (_summaryBullets.isEmpty) {
+      _summaryBullets = narrativeBulletsFromMeeting(normalized);
     }
+
+    _transcriptLines = _buildTranscriptLines(normalized);
+    _transcriptEntryCount = normalized
+        .where((m) => (m['content']?.toString().trim() ?? '').isNotEmpty)
+        .length;
+
+    _decisions = cleanKeyPoints(summary['decisions'], maxItems: 6);
     if (_decisions.isEmpty) {
       _decisions = localMeetingDecisions(
         msgs: normalized,
@@ -1697,28 +1727,21 @@ class _MeetingSummaryScreenState extends State<MeetingSummaryScreen> {
     if (_actions.isEmpty) {
       _actions = localMeetingActions(normalized);
     }
+    if (_actions.isEmpty) {
+      _actions = learningActionsFromTranscript(normalized);
+    }
     _actions = _actions
-        .where((a) => !_looksLikeSpeechDump(a['text'] ?? ''))
+        .where((a) => !looksLikeTranscriptDump(a['text'] ?? ''))
         .toList();
   }
 
-  List<String> _summaryToBullets(String text) {
-    return text
-        .split(RegExp(r'(?<=[.!?])\s+'))
-        .map((s) => s.trim())
-        .where((s) => s.length > 12)
-        .take(6)
-        .toList();
-  }
-
-  bool _looksLikeSpeechDump(String text) {
-    final t = text.trim();
-    if (t.length < 120) return false;
-    final actionCue = RegExp(
-      r'\b(will|should|must|need to|todo|task|assign|follow up|deadline)\b',
-      caseSensitive: false,
-    );
-    return !actionCue.hasMatch(t);
+  List<String> _buildTranscriptLines(List<Map<String, dynamic>> msgs) {
+    final speechMsgs =
+        msgs.where((m) => m['source']?.toString() == 'speech').toList();
+    if (speechMsgs.isNotEmpty) {
+      return formatTranscriptDisplayLines(speechMsgs);
+    }
+    return formatTranscriptDisplayLines(msgs);
   }
 
   Map<String, dynamic> _buildLocalSummaryPayload(
@@ -1752,8 +1775,15 @@ class _MeetingSummaryScreenState extends State<MeetingSummaryScreen> {
     final who = msgs.first['sender_name']?.toString() ?? 'Participants';
 
     if (speech.isNotEmpty) {
-      final highlights = speech.take(3).join('. ');
-      return '$who led this session. Main points: $highlights.';
+      final bullets = narrativeBulletsFromMeeting(msgs, maxItems: 3);
+      if (bullets.isNotEmpty) {
+        return '$who discussed: ${bullets.join(' ')}';
+      }
+      final chunks = chunkTextByWords(speech.first, maxChunk: 120);
+      final snippet = chunks.isNotEmpty
+          ? chunks.first
+          : speech.first.substring(0, speech.first.length.clamp(0, 120));
+      return '$who led this session. Topics covered: ${polishBulletLine(snippet)}';
     }
     if (chat.isNotEmpty) {
       return '$who discussed: ${chat.take(5).join('. ')}.';
@@ -1762,11 +1792,7 @@ class _MeetingSummaryScreenState extends State<MeetingSummaryScreen> {
   }
 
   List<String> _extractLocalKeyPoints(List<Map<String, dynamic>> msgs) {
-    return msgs
-        .map((m) => (m['content'] ?? '').toString().trim())
-        .where((s) => s.length >= 8)
-        .take(5)
-        .toList();
+    return narrativeBulletsFromMeeting(msgs, maxItems: 5);
   }
 
   Future<Uint8List> _buildPdfBytes() {
@@ -1910,7 +1936,7 @@ class _MeetingSummaryScreenState extends State<MeetingSummaryScreen> {
                   ),
                 )
               : ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
                   children: [
                     SummaryOverviewCard(
                       title: widget.roomName.isNotEmpty
@@ -1926,24 +1952,23 @@ class _MeetingSummaryScreenState extends State<MeetingSummaryScreen> {
                     if (_summaryBullets.isEmpty)
                       const SummaryEmptyCard(
                         icon: Icons.summarize_outlined,
-                        message: 'No summary points were generated.',
+                        emoji: '✨',
+                        message: 'No summary points were generated for this meeting.',
                       )
                     else
-                      ..._summaryBullets
-                          .map((t) => SummaryBulletCard(text: t)),
-                    const SizedBox(height: 8),
+                      SummaryAiInsightsCard(bullets: _summaryBullets),
                     const SummarySectionHeader(
                       icon: Icons.gavel_rounded,
-                      title: 'Decisions Made',
+                      title: 'Decisions',
                     ),
                     if (_decisions.isEmpty)
                       const SummaryEmptyCard(
                         icon: Icons.rule_folder_outlined,
+                        emoji: '📝',
                         message: 'No decisions identified',
                       )
                     else
                       ..._decisions.map(_decisionCard),
-                    const SizedBox(height: 8),
                     const SummarySectionHeader(
                       icon: Icons.checklist_rounded,
                       title: 'Action Items',
@@ -1951,6 +1976,7 @@ class _MeetingSummaryScreenState extends State<MeetingSummaryScreen> {
                     if (_actions.isEmpty)
                       const SummaryEmptyCard(
                         icon: Icons.task_alt_outlined,
+                        emoji: '☑️',
                         message: 'No action items identified',
                       )
                     else
@@ -1961,7 +1987,18 @@ class _MeetingSummaryScreenState extends State<MeetingSummaryScreen> {
                           due: a['due']!,
                         ),
                       ),
-                    const SizedBox(height: 20),
+                    if (_transcriptLines.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      SummaryCollapsibleTranscript(
+                        lines: _transcriptLines,
+                        entryCount: _transcriptEntryCount,
+                        expanded: _transcriptExpanded,
+                        onToggle: () => setState(
+                          () => _transcriptExpanded = !_transcriptExpanded,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 8),
                     SummaryActionsRow(
                       exportBusy: _exportBusy,
                       canCreateTasks: _canCreateTasks,

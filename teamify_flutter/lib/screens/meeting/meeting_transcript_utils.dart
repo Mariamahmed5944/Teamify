@@ -105,27 +105,15 @@ int countUniqueParticipants(List<Map<String, dynamic>> msgs) {
 }
 
 List<String> speechLinesFromTranscript(List<Map<String, dynamic>> msgs) {
-  return msgs
-      .where((m) => m['source']?.toString() == 'speech')
-      .map((m) {
-        final name = m['sender_name']?.toString().trim() ?? 'Speaker';
-        final text = m['content']?.toString().trim() ?? '';
-        return '$name: $text';
-      })
-      .where((line) => line.length > 4)
-      .toList();
+  return formatTranscriptDisplayLines(
+    msgs.where((m) => m['source']?.toString() == 'speech').toList(),
+  );
 }
 
 List<String> chatLinesFromTranscript(List<Map<String, dynamic>> msgs) {
-  return msgs
-      .where((m) => m['source']?.toString() != 'speech')
-      .map((m) {
-        final name = m['sender_name']?.toString().trim() ?? 'User';
-        final text = m['content']?.toString().trim() ?? '';
-        return '$name: $text';
-      })
-      .where((line) => line.length > 4)
-      .toList();
+  return formatTranscriptDisplayLines(
+    msgs.where((m) => m['source']?.toString() != 'speech').toList(),
+  );
 }
 
 String clampSummaryText(String text, {int maxLen = 480}) {
@@ -139,6 +127,242 @@ String clampSummaryText(String text, {int maxLen = 480}) {
   return '$cut…';
 }
 
+/// Split AI summary prose into readable bullet lines.
+List<String> summaryTextToBullets(String text, {int maxItems = 8}) {
+  final raw = text.trim();
+  if (raw.isEmpty) return [];
+
+  final lines = <String>[];
+  for (final chunk in raw.split(RegExp(r'[\n\r]+'))) {
+    final line = chunk.trim();
+    if (line.isEmpty) continue;
+    if (RegExp(r'^[-•*]\s+').hasMatch(line)) {
+      lines.add(line.replaceFirst(RegExp(r'^[-•*]\s+'), '').trim());
+    } else if (RegExp(r'^\d+[.)]\s+').hasMatch(line)) {
+      lines.add(line.replaceFirst(RegExp(r'^\d+[.)]\s+'), '').trim());
+    } else {
+      lines.add(line);
+    }
+  }
+
+  if (lines.length > 1) {
+    return _dedupeBulletLines(lines, maxItems: maxItems, maxLen: 220);
+  }
+
+  final sentences = raw
+      .split(RegExp(r'(?<=[.!?])\s+'))
+      .map((s) => s.trim().replaceAll(RegExp(r'^[-•*]\s+'), ''))
+      .where((s) => s.length >= 12)
+      .toList();
+
+  if (sentences.isNotEmpty) {
+    return _dedupeBulletLines(sentences, maxItems: maxItems, maxLen: 220);
+  }
+
+  // Raw speech often has no punctuation — chunk by words instead of dropping.
+  return _dedupeBulletLines(
+    chunkTextByWords(raw, maxChunk: 140),
+    maxItems: maxItems,
+    maxLen: 220,
+  );
+}
+
+/// Split long plain text into readable chunks (word boundaries).
+List<String> chunkTextByWords(String text, {int maxChunk = 140}) {
+  final words = text.trim().split(RegExp(r'\s+'));
+  if (words.isEmpty) return [];
+
+  final chunks = <String>[];
+  final buf = StringBuffer();
+  for (final w in words) {
+    final next = buf.isEmpty ? w : '${buf.toString()} $w';
+    if (next.length > maxChunk && buf.isNotEmpty) {
+      chunks.add(buf.toString().trim());
+      buf.clear();
+      buf.write(w);
+    } else {
+      buf.clear();
+      buf.write(next);
+    }
+  }
+  if (buf.isNotEmpty) chunks.add(buf.toString().trim());
+  return chunks;
+}
+
+/// Transcript lines for UI — never one giant wall of text.
+List<String> formatTranscriptDisplayLines(
+  List<Map<String, dynamic>> msgs, {
+  int maxChunk = 200,
+}) {
+  final out = <String>[];
+  for (final m in msgs) {
+    final name = m['sender_name']?.toString().trim() ?? 'Speaker';
+    final text = (m['content'] ?? '').toString().trim();
+    if (text.isEmpty) continue;
+
+    final chunks = chunkTextByWords(text, maxChunk: maxChunk);
+    if (chunks.isEmpty) continue;
+
+    out.add('$name:');
+    for (final c in chunks) {
+      out.add(c);
+    }
+    out.add(''); // spacer between speakers
+  }
+  while (out.isNotEmpty && out.last.isEmpty) {
+    out.removeLast();
+  }
+  return out;
+}
+
+/// True when text looks like raw STT, not a summary bullet.
+bool isRawSpeechChunk(String text) {
+  final t = text.trim();
+  if (t.isEmpty) return true;
+  if (t.length > 150) return true;
+  final caps = RegExp(r'[A-Z]').allMatches(t).length;
+  if (t.length > 35 && caps < 2) return true;
+  if (RegExp(r'^(you|uh|um|okay|ok|so|and)\b', caseSensitive: false).hasMatch(t)) {
+    return true;
+  }
+  return false;
+}
+
+String polishBulletLine(String text) {
+  var t = text.trim().replaceAll(RegExp(r'\s+'), ' ');
+  if (t.isEmpty) return t;
+  t = t[0].toUpperCase() + t.substring(1);
+  if (!RegExp(r'[.!?]$').hasMatch(t)) t = '$t.';
+  return t;
+}
+
+/// Readable summary bullets from speech (not raw transcript dumps).
+List<String> narrativeBulletsFromMeeting(
+  List<Map<String, dynamic>> msgs, {
+  int maxItems = 5,
+}) {
+  final combined = msgs
+      .map((m) => (m['content'] ?? '').toString().trim())
+      .where((s) => s.length >= 12)
+      .join(' ');
+  if (combined.isEmpty) return [];
+
+  final segments = combined
+      .split(RegExp(
+        r'\b(?:so|and|but|because|when|if|then|also|however|today|first)\b',
+        caseSensitive: false,
+      ))
+      .map((s) => s.trim())
+      .where((s) => s.length >= 28 && s.length <= 200)
+      .map(polishBulletLine)
+      .where((s) => !isRawSpeechChunk(s))
+      .toList();
+
+  if (segments.length >= 2) {
+    return _dedupeBulletLines(segments, maxItems: maxItems, maxLen: 200);
+  }
+
+  return chunkTextByWords(combined, maxChunk: 110)
+      .where((s) => s.length >= 20 && !isRawSpeechChunk(s))
+      .map(polishBulletLine)
+      .take(maxItems)
+      .toList();
+}
+
+List<String> filterSummaryBullets(List<String> bullets) {
+  return bullets
+      .map((b) => b.trim())
+      .where((b) => b.length >= 12 && !isRawSpeechChunk(b))
+      .map(polishBulletLine)
+      .toList();
+}
+
+/// Short follow-ups from speech (practice, learn, improve, etc.).
+List<Map<String, String>> learningActionsFromTranscript(
+  List<Map<String, dynamic>> msgs, {
+  int maxItems = 4,
+}) {
+  final text = msgs
+      .map((m) => (m['content'] ?? '').toString())
+      .join(' ')
+      .toLowerCase();
+  if (text.isEmpty) return [];
+
+  final owner =
+      msgs.first['sender_name']?.toString().trim().isNotEmpty == true
+          ? msgs.first['sender_name'].toString().trim()
+          : 'Team';
+
+  final templates = <String, String>{
+    'practice': 'Practice speaking regularly',
+    'communication': 'Focus on communication skills',
+    'grammar': 'Review grammar fundamentals',
+    'pronunciation': 'Work on pronunciation',
+    'read': 'Read English books or articles',
+    'listen': 'Listen to more English content',
+    'write': 'Practice writing in English',
+    'mistake': 'Learn from common mistakes',
+    'fluent': 'Build fluency through daily use',
+  };
+
+  final out = <Map<String, String>>[];
+  for (final entry in templates.entries) {
+    if (text.contains(entry.key)) {
+      out.add({
+        'text': entry.value,
+        'owner': owner,
+        'due': 'TBD',
+      });
+      if (out.length >= maxItems) break;
+    }
+  }
+  return out;
+}
+
+List<String> _dedupeBulletLines(
+  List<String> lines, {
+  required int maxItems,
+  int maxLen = 220,
+}) {
+  final seen = <String>{};
+  final out = <String>[];
+  for (final line in lines) {
+    var s = line.trim().replaceAll(RegExp(r'\s+'), ' ');
+    if (s.length < 8) continue;
+    if (s.length > maxLen) {
+      for (final part in chunkTextByWords(s, maxChunk: maxLen - 10)) {
+        if (part.length < 8) continue;
+        final pk = part.toLowerCase();
+        if (seen.contains(pk)) continue;
+        seen.add(pk);
+        out.add(part);
+        if (out.length >= maxItems) return out;
+      }
+      continue;
+    }
+    final key = s.toLowerCase();
+    if (seen.contains(key)) continue;
+    seen.add(key);
+    out.add(s);
+    if (out.length >= maxItems) break;
+  }
+  return out;
+}
+
+/// True when text looks like pasted transcript, not a task.
+bool looksLikeTranscriptDump(String text) {
+  final t = text.trim();
+  if (t.length < 100) return false;
+  if (RegExp(r'\[Speech\]', caseSensitive: false).hasMatch(t)) return true;
+  final sentences = t.split(RegExp(r'(?<=[.!?])\s+')).where((s) => s.length > 20);
+  if (sentences.length >= 3) return true;
+  final actionCue = RegExp(
+    r'\b(will|should|must|need to|todo|task|assign|follow up|deadline|create|schedule|review)\b',
+    caseSensitive: false,
+  );
+  return !actionCue.hasMatch(t);
+}
+
 List<String> cleanKeyPoints(
   List<dynamic>? raw, {
   int maxItems = 5,
@@ -149,7 +373,18 @@ List<String> cleanKeyPoints(
   final out = <String>[];
   for (final item in raw) {
     var s = item.toString().trim().replaceAll(RegExp(r'\s+'), ' ');
-    if (s.length < minLength || s.length > 220) continue;
+    if (s.length < minLength) continue;
+    if (s.length > 220) {
+      for (final part in chunkTextByWords(s, maxChunk: 200)) {
+        if (part.length < minLength) continue;
+        final pk = part.toLowerCase();
+        if (seen.contains(pk)) continue;
+        seen.add(pk);
+        out.add(part);
+        if (out.length >= maxItems) break;
+      }
+      continue;
+    }
     final key = s.toLowerCase();
     if (seen.contains(key)) continue;
     seen.add(key);
@@ -183,7 +418,8 @@ List<Map<String, String>> cleanActionItems(List<dynamic>? raw) {
       text = item.toString().trim();
       owner = 'Team';
     }
-    if (text.length < 6 || text.length > 200) continue;
+    if (text.length < 6 || text.length > 140) continue;
+    if (looksLikeTranscriptDump(text)) continue;
     if (!structured && !keywords.hasMatch(text)) continue;
     out.add({
       'text': text,
@@ -223,7 +459,8 @@ List<Map<String, String>> relaxedActionItems(List<dynamic>? raw) {
       text = item.toString().trim();
       owner = 'Team';
     }
-    if (text.length < 6 || text.length > 220) continue;
+    if (text.length < 6 || text.length > 140) continue;
+    if (looksLikeTranscriptDump(text)) continue;
     out.add({
       'text': text,
       'owner': owner.isEmpty ? 'Team' : owner,
@@ -253,13 +490,19 @@ List<String> localMeetingDecisions({
     out.add(s);
   }
 
+  final decisionCue = RegExp(
+    r'\b(decided|agreed|approved|chosen|will use|concluded|resolved)\b',
+    caseSensitive: false,
+  );
+
   for (final part in summaryText.split(RegExp(r'(?<=[.!?])\s+'))) {
-    add(part);
+    if (decisionCue.hasMatch(part)) add(part);
     if (out.length >= maxItems) return out;
   }
 
   for (final m in msgs) {
-    add((m['content'] ?? '').toString());
+    final text = (m['content'] ?? '').toString();
+    if (decisionCue.hasMatch(text)) add(text);
     if (out.length >= maxItems) return out;
   }
 
@@ -281,8 +524,9 @@ List<Map<String, String>> localMeetingActions(
   for (final m in msgs) {
     final text = (m['content'] ?? '').toString().trim();
     final owner = (m['sender_name'] ?? m['sender'] ?? 'Team').toString().trim();
-    if (text.length < 8) continue;
-    if (!keywords.hasMatch(text) && text.length < 24) continue;
+    if (text.length < 8 || text.length > 140) continue;
+    if (looksLikeTranscriptDump(text)) continue;
+    if (!keywords.hasMatch(text)) continue;
 
     final key = text.toLowerCase();
     if (seen.contains(key)) continue;

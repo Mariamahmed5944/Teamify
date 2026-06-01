@@ -84,7 +84,8 @@ class MeetingRoomPicker extends StatelessWidget {
       decoration: MeetingUi.cardDecoration(fill: Colors.white),
       padding: const EdgeInsets.fromLTRB(14, 4, 14, 4),
       child: DropdownButtonFormField<String>(
-        value: roomId,
+        key: ValueKey(roomId),
+        initialValue: roomId,
         isExpanded: true,
         decoration: const InputDecoration(
           labelText: 'Chat room',
@@ -881,7 +882,7 @@ class SummaryOverviewCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
-      margin: const EdgeInsets.only(bottom: 20),
+      margin: const EdgeInsets.only(bottom: 14),
       decoration: MeetingUi.cardDecoration(
         fill: AppColors.primaryLight.withValues(alpha: 0.35),
       ),
@@ -938,7 +939,7 @@ class SummarySectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12, top: 4),
+      padding: const EdgeInsets.only(bottom: 6, top: 0),
       child: Row(
         children: [
           Icon(icon, size: 20, color: AppColors.primary),
@@ -962,35 +963,245 @@ class SummaryEmptyCard extends StatelessWidget {
     super.key,
     required this.icon,
     required this.message,
+    this.emoji,
   });
 
   final IconData icon;
   final String message;
+  final String? emoji;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(MeetingUi.radiusMd),
+        border: Border.all(color: AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          if (emoji != null)
+            Text(emoji!, style: const TextStyle(fontSize: 28))
+          else
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: AppColors.primaryLight.withValues(alpha: 0.5),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 22, color: AppColors.primary),
+            ),
+          const SizedBox(height: 12),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              height: 1.4,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Single card with structured AI summary bullets.
+class SummaryAiInsightsCard extends StatelessWidget {
+  const SummaryAiInsightsCard({super.key, required this.bullets});
+
+  final List<String> bullets;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(MeetingUi.radiusMd),
+        border: Border.all(color: AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (var i = 0; i < bullets.length; i++) ...[
+            if (i > 0) const SizedBox(height: 12),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 7),
+                  child: Container(
+                    width: 6,
+                    height: 6,
+                    decoration: const BoxDecoration(
+                      color: AppColors.primary,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    bullets[i],
+                    style: const TextStyle(
+                      fontSize: 14.5,
+                      height: 1.55,
+                      letterSpacing: 0.1,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class SummaryCollapsibleTranscript extends StatelessWidget {
+  const SummaryCollapsibleTranscript({
+    super.key,
+    required this.lines,
+    required this.entryCount,
+    required this.expanded,
+    required this.onToggle,
+  });
+
+  final List<String> lines;
+  final int entryCount;
+  final bool expanded;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: AppColors.white,
         borderRadius: BorderRadius.circular(MeetingUi.radiusMd),
         border: Border.all(color: AppColors.border),
       ),
-      child: Row(
+      child: Column(
         children: [
-          Icon(icon, size: 22, color: AppColors.textHint),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              message,
-              style: const TextStyle(
-                fontSize: 13,
-                color: AppColors.textSecondary,
+          InkWell(
+            onTap: onToggle,
+            borderRadius: BorderRadius.circular(MeetingUi.radiusMd),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.article_outlined,
+                    size: 20,
+                    color: AppColors.primary,
+                  ),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Text(
+                      'Full Transcript',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '$entryCount ${entryCount == 1 ? 'entry' : 'entries'}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(
+                    expanded
+                        ? Icons.keyboard_arrow_up_rounded
+                        : Icons.keyboard_arrow_down_rounded,
+                    color: AppColors.textSecondary,
+                  ),
+                ],
               ),
             ),
           ),
+          if (expanded) ...[
+            const Divider(height: 1, color: AppColors.border),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 360),
+              child: ListView.separated(
+                shrinkWrap: true,
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 16),
+                itemCount: lines.length,
+                separatorBuilder: (_, i) {
+                  if (lines[i].isEmpty) return const SizedBox(height: 12);
+                  return const SizedBox(height: 8);
+                },
+                itemBuilder: (_, i) {
+                  final line = lines[i];
+                  if (line.isEmpty) return const SizedBox.shrink();
+                  final isSpeaker = RegExp(r'^[^:]+:\s*$').hasMatch(line);
+                  if (isSpeaker) {
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        line,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    );
+                  }
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Text(
+                      line,
+                      style: const TextStyle(
+                        fontSize: 13.5,
+                        height: 1.55,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -1054,17 +1265,28 @@ class SummaryActionChecklistCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: MeetingUi.cardDecoration(),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(MeetingUi.radiusMd),
+        border: Border.all(color: AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(
             Icons.check_box_outline_blank_rounded,
-            size: 22,
-            color: AppColors.primary.withValues(alpha: 0.7),
+            size: 24,
+            color: AppColors.primary.withValues(alpha: 0.75),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1073,19 +1295,22 @@ class SummaryActionChecklistCard extends StatelessWidget {
                   text,
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                    height: 1.4,
+                    fontSize: 14.5,
+                    height: 1.45,
                     color: AppColors.textPrimary,
                   ),
                 ),
-                const SizedBox(height: 8),
-                Row(
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
                   children: [
                     _Tag(label: owner, icon: Icons.person_outline),
-                    const SizedBox(width: 8),
                     _Tag(label: due, icon: Icons.event_outlined),
-                    const SizedBox(width: 8),
-                    const _Tag(label: 'Open', icon: Icons.radio_button_unchecked),
+                    const _Tag(
+                      label: 'Open',
+                      icon: Icons.radio_button_unchecked,
+                    ),
                   ],
                 ),
               ],
