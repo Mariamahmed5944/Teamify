@@ -288,29 +288,34 @@ def update_cv(cv_id: int):
             "details": flat,
         }), 400
 
-    # Merge patch: only overwrite fields that were explicitly submitted
-    field_map = {
-        "personal_info": "personal_info",
-        "summary":       "summary",
-        "skills":        "skills",
-        "experience":    "experience",
-        "projects":      "projects",
-        "education":     "education",
-        "certifications":"certifications",
-        "is_public":     "is_public",
-    }
-    for key, col in field_map.items():
-        if key in data:
-            setattr(cv, col, data[key])
+    try:
+        field_map = {
+            "personal_info": "personal_info",
+            "summary":       "summary",
+            "skills":        "skills",
+            "experience":    "experience",
+            "projects":      "projects",
+            "education":     "education",
+            "certifications":"certifications",
+            "is_public":     "is_public",
+        }
+        for key, col in field_map.items():
+            if key in data:
+                setattr(cv, col, data[key])
 
-    # Re-run AI ranking after any structural update
-    if any(k in data for k in ("experience", "projects")):
-        from services.cv_ai_service import rank_by_relevance
-        ranked = rank_by_relevance(cv.to_dict())
-        cv.experience = ranked["experience"]
-        cv.projects   = ranked["projects"]
+        if any(k in data for k in ("experience", "projects")):
+            from services.cv_ai_service import rank_by_relevance
+            ranked = rank_by_relevance(cv.to_dict())
+            cv.experience = ranked["experience"]
+            cv.projects   = ranked["projects"]
 
-    db.session.commit()
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        import logging
+        logging.getLogger(__name__).error("update_cv error: %s", exc, exc_info=True)
+        return jsonify({"error": "Update Failed", "message": str(exc)}), 500
+
     return jsonify({"message": "CV updated.", "cv": cv.to_dict()}), 200
 
 

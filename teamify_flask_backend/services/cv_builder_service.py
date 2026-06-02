@@ -367,29 +367,53 @@ def build_cv_for_user(user_id: int) -> dict:
     _load_pipeline()
 
     # ── Attempt 1: full ai_resume_builder pipeline ────────────────────────────
+    cv: dict | None = None
     if _cv_module is not None:
         try:
             cv = _cv_module.update_cv(user_data)
             cv["source"] = "ai_pipeline"
-            return cv
         except Exception as exc:
             logger.error(
                 "CVBuilder pipeline error for user %s: %s", user_id, exc, exc_info=True
             )
 
     # ── Attempt 2: cv_builder.pkl stub ────────────────────────────────────────
-    if _pkl_model is not None:
+    if cv is None and _pkl_model is not None:
         try:
             cv = _pkl_model.generate_cv_data(user_data)
             cv["source"] = "pkl_stub"
-            return cv
         except Exception as exc:
             logger.error(
                 "CVBuilder pkl stub error for user %s: %s", user_id, exc, exc_info=True
             )
 
     # ── Heuristic fallback ────────────────────────────────────────────────────
-    return _fallback_cv(user_data)
+    if cv is None:
+        cv = _fallback_cv(user_data)
+
+    # ── Always merge user profile skills ─────────────────────────────────────
+    profile_skills: list[str] = list(getattr(user, "skills", None) or [])
+    if profile_skills:
+        existing = cv.get("skills", {})
+        if isinstance(existing, dict):
+            tech: list = list(existing.get("technical") or [])
+            seen = {s.lower() for s in tech}
+            for s in profile_skills:
+                if s and s.lower() not in seen:
+                    tech.append(s)
+                    seen.add(s.lower())
+            cv["skills"] = dict(existing, technical=tech)
+        elif isinstance(existing, list):
+            seen_list = {s.lower() for s in existing}
+            for s in profile_skills:
+                if s and s.lower() not in seen_list:
+                    existing.append(s)
+                    seen_list.add(s.lower())
+            cv["skills"] = existing
+        else:
+            cv["skills"] = {"technical": profile_skills, "soft": []}
+
+    return cv
 
 
 def persist_cv_from_ai_build(user_id: int, ai_result: dict) -> None:
