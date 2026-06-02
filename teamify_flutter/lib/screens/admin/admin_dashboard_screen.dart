@@ -104,7 +104,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 childAspectRatio: 1.5,
                 children: [
                   _metricCard('Total Users', '${cards['total_users'] ?? 0}', Icons.people_outline, AppColors.primary),
-                  _metricCard('Active Users', '${cards['active_users'] ?? 0}', Icons.offline_pin_outlined, AppColors.success),
+                  _metricCard('Active Users (30d)', '${cards['active_users'] ?? 0}', Icons.offline_pin_outlined, AppColors.success),
                   _metricCard('Total Projects', '${cards['total_projects'] ?? 0}', Icons.assignment_outlined, AppColors.accent),
                   _metricCard('Pending Disputes', '${cards['pending_disputes'] ?? 0}', Icons.gavel_outlined, AppColors.error),
                   _metricCard('Open Tasks', '${cards['open_tasks'] ?? 0}', Icons.pending_actions_outlined, AppColors.warning),

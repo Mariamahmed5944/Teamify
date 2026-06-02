@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+
 import '../../core/network/api_client.dart';
 import 'repository_helpers.dart';
 
@@ -315,14 +317,16 @@ class AdminRepository {
     return responseMap(response.data);
   }
 
-  Future<String> exportAnalytics(String type) async {
-    final response = await _client.get<dynamic>(
+  Future<List<int>> exportAnalytics(String type) async {
+    final response = await _client.get<List<int>>(
       '/admin/analytics/export',
       queryParameters: {'type': type, 'format': 'csv'},
+      options: Options(
+        responseType: ResponseType.bytes,
+        headers: const {'Accept': 'text/csv'},
+      ),
     );
-    final data = response.data;
-    if (data is String) return data;
-    return data?.toString() ?? '';
+    return response.data ?? <int>[];
   }
 
   // ── 10. Security Center ─────────────────────────────────────────────────────

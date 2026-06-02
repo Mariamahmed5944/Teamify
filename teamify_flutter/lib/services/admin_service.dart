@@ -330,7 +330,7 @@ class AdminService with ServiceErrorHandler {
   Future<ApiResult<Map<String, dynamic>>> getFeedbackLeaderboard({int page = 1}) =>
       guard(() => _repo.getFeedbackLeaderboard(page: page));
 
-  Future<ApiResult<String>> exportAnalytics(String type) =>
+  Future<ApiResult<List<int>>> exportAnalytics(String type) =>
       guard(() => _repo.exportAnalytics(type));
 
   Future<ApiResult<Map<String, dynamic>>> listAuditLogs({

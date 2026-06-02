@@ -132,6 +132,18 @@ String _formatMsgTimeFromDateTime(DateTime dt) {
   return '$h:$m:$s';
 }
 
+String _mimeForFilename(String? name) {
+  final n = (name ?? '').toLowerCase();
+  if (n.endsWith('.pdf')) return 'application/pdf';
+  if (n.endsWith('.png')) return 'image/png';
+  if (n.endsWith('.jpg') || n.endsWith('.jpeg')) return 'image/jpeg';
+  if (n.endsWith('.gif')) return 'image/gif';
+  if (n.endsWith('.webp')) return 'image/webp';
+  if (n.endsWith('.txt')) return 'text/plain';
+  if (n.endsWith('.csv')) return 'text/csv';
+  return 'application/octet-stream';
+}
+
 ChatMessage _messageFromRow(Map<String, dynamic> m, String? myId) {
   final senderId = m['sender_id']?.toString() ?? '';
   final senderName = m['sender_name']?.toString() ?? 'User';
@@ -1517,6 +1529,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
       await saveDownloadedBytes(
         filename: name,
         bytes: Uint8List.fromList(bytes),
+        mimeType: _mimeForFilename(name),
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1918,11 +1931,22 @@ class _ChatImageViewerDialogState extends State<_ChatImageViewerDialog> {
     final name = widget.title.contains('.')
         ? widget.title
         : '${widget.title}.jpg';
-    await saveDownloadedBytes(filename: name, bytes: _bytes!);
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Saved $name')),
-    );
+    try {
+      await saveDownloadedBytes(
+        filename: name,
+        bytes: _bytes!,
+        mimeType: _mimeForFilename(name),
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Saved $name')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Download failed: $e')),
+      );
+    }
   }
 
   @override
@@ -2523,9 +2547,26 @@ class _FileSharingScreenState extends State<FileSharingScreen> {
     try {
       final bytes =
           await context.read<AppServices>().files.downloadFile(file.id).unwrap();
-      final actions = FileActions();
-      final savedPath = await actions.saveBytes(file.name, bytes);
-      await actions.openPath(savedPath);
+      if (!mounted) return;
+      if (bytes.isEmpty) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Download returned empty file')),
+        );
+        return;
+      }
+      if (kIsWeb) {
+        await saveDownloadedBytes(
+          filename: file.name,
+          bytes: Uint8List.fromList(bytes),
+          mimeType: _mimeForFilename(file.name),
+        );
+      } else {
+        final actions = FileActions();
+        final savedPath = await actions.saveBytes(file.name, bytes);
+        await actions.openPath(savedPath);
+      }
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text('Downloaded ${file.name}')));
     } catch (e) {
       if (!mounted) return;
       messenger.showSnackBar(SnackBar(content: Text('Download failed: $e')));

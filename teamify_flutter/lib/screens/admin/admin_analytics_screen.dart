@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/files/file_downloader.dart';
 import '../../core/theme.dart';
 import '../../core/network/api_result.dart';
 import '../../services/app_services.dart';
 import '../../widgets/widgets.dart';
+import 'dart:typed_data';
 
 class AdminAnalyticsScreen extends StatefulWidget {
   const AdminAnalyticsScreen({super.key});
@@ -48,6 +50,52 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
     }
   }
 
+  Future<void> _exportAnalytics() async {
+    try {
+      final result =
+          await context.read<AppServices>().admin.exportAnalytics('analytics');
+      if (!mounted) return;
+      await result.when(
+        success: (bytes) async {
+          if (bytes.isEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('No analytics data to export yet.'),
+                backgroundColor: AppColors.error,
+              ),
+            );
+            return;
+          }
+          await saveDownloadedBytes(
+            filename: 'analytics.csv',
+            bytes: Uint8List.fromList(bytes),
+            mimeType: 'text/csv',
+          );
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Analytics exported as analytics.csv')),
+          );
+        },
+        failure: (error) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Export failed: $error'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        },
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Export failed: $e'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final users = _overview?['users'] as Map? ?? {};
@@ -57,7 +105,7 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
       appBar: AppBar(
         title: const Text('Platform Analytics', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
-          IconButton(icon: const Icon(Icons.download), onPressed: () => context.read<AppServices>().admin.exportAnalytics('analytics')),
+          IconButton(icon: const Icon(Icons.download), onPressed: _exportAnalytics),
           IconButton(icon: const Icon(Icons.refresh), onPressed: _load),
         ],
       ),

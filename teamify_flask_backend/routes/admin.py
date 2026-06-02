@@ -820,10 +820,20 @@ def reject_user(user_id):
 @admin_bp.route("/analytics/overview", methods=["GET"])
 @admin_required
 def analytics_overview():
-    from datetime import date
+    from datetime import date, timedelta
 
     total_users     = User.query.count()
-    active_users    = User.query.filter_by(account_status="approved").count()
+    thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
+    active_users    = (
+        db.session.query(func.count(func.distinct(LoginLog.user_id)))
+        .filter(
+            LoginLog.status == "success",
+            LoginLog.timestamp >= thirty_days_ago,
+            LoginLog.user_id.isnot(None),
+        )
+        .scalar()
+        or 0
+    )
     total_projects  = Project.query.count()
     active_projects = Project.query.filter_by(status="active").count()
     total_tasks     = Task.query.count()

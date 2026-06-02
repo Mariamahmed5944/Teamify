@@ -21,10 +21,7 @@ logger = logging.getLogger(__name__)
 
 def get_admin_dashboard_stats():
     total_users = User.query.count()
-    active_users = User.query.filter_by(account_status="approved").count()
     total_projects = Project.query.count()
-    
-    from models.dispute import Dispute
     pending_disputes = Dispute.query.filter_by(status="pending").count()
     
     open_tasks = Task.query.filter(Task.status != "done").count()
@@ -56,11 +53,29 @@ def get_admin_dashboard_stats():
             "month": m_start.strftime("%b"),
             "count": cnt
         })
+
+    total_storage_bytes = (
+        db.session.query(func.coalesce(func.sum(FileMetadata.size_bytes), 0)).scalar()
+        or 0
+    )
+    storage_usage_mb = round(float(total_storage_bytes) / (1024 * 1024), 2)
+
+    thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
+    active_users = (
+        db.session.query(func.count(func.distinct(LoginLog.user_id)))
+        .filter(
+            LoginLog.status == "success",
+            LoginLog.timestamp >= thirty_days_ago,
+            LoginLog.user_id.isnot(None),
+        )
+        .scalar()
+        or 0
+    )
         
     return {
         "cards": {
             "system_health": 100,
-            "storage_usage_mb": 12.4,
+            "storage_usage_mb": storage_usage_mb,
             "total_users": total_users,
             "active_users": active_users,
             "total_projects": total_projects,
