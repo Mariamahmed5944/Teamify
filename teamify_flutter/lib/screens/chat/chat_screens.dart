@@ -2,9 +2,11 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/audio/meeting_browser_speech.dart';
 import '../../core/audio/meeting_speech_recorder.dart';
 import '../../core/files/file_downloader.dart';
 import '../../core/files/file_actions.dart';
@@ -395,6 +397,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
   final List<ChatMessage> _messages = [];
   final Set<String> _seenIds = {};
   final MeetingSpeechRecorder _voiceRecorder = MeetingSpeechRecorder();
+  final MeetingBrowserSpeech _voiceSpeech = MeetingBrowserSpeech();
+  String _voiceDraft = '';
   StreamSubscription<SocketPayload>? _socketSub;
   WebSocketManager? _ws;
   bool _loadingHistory = true;
@@ -419,6 +423,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
     final rid = _roomId;
     if (rid != null) {
       _ws?.leaveRoom(rid);
+    }
+    if (_recordingVoice) {
+      unawaited(_voiceSpeech.stop(null));
     }
     _voiceRecorder.dispose();
     _ctrl.dispose();
@@ -933,6 +940,46 @@ class _ConversationScreenState extends State<ConversationScreen> {
     if (rid == null) return;
 
     if (!_recordingVoice) {
+      if (kIsWeb) {
+        final ok = await _voiceSpeech.initialize();
+        if (!ok) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Speech recognition is not available in this browser.',
+              ),
+            ),
+          );
+          return;
+        }
+        _voiceDraft = '';
+        final started = await _voiceSpeech.startListening((text, isFinal) {
+          if (!mounted || text.trim().isEmpty) return;
+          setState(() => _voiceDraft = text.trim());
+        });
+        if (!started) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Could not start speech recognition.'),
+            ),
+          );
+          return;
+        }
+        if (!mounted) return;
+        setState(() => _recordingVoice = true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Listening… Tap mic to send, or ✕ to cancel.',
+            ),
+            duration: Duration(seconds: 3),
+          ),
+        );
+        return;
+      }
+
       final ok = await _voiceRecorder.ensurePermission();
       if (!ok) {
         if (!mounted) return;
@@ -961,6 +1008,33 @@ class _ConversationScreenState extends State<ConversationScreen> {
           duration: Duration(seconds: 3),
         ),
       );
+      return;
+    }
+
+    if (kIsWeb) {
+      setState(() {
+        _recordingVoice = false;
+        _transcribingVoice = true;
+      });
+      await _voiceSpeech.stop((text, isFinal) {
+        if (text.trim().isNotEmpty) {
+          _voiceDraft = text.trim();
+        }
+      });
+      if (!mounted) return;
+      setState(() => _transcribingVoice = false);
+
+      final text = _voiceDraft.trim();
+      if (text.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No speech detected. Try again.')),
+        );
+        return;
+      }
+
+      _ctrl.text = text;
+      _voiceDraft = '';
+      await _send();
       return;
     }
 
@@ -994,7 +1068,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
           content: Text(
             result.error?.contains('502') == true ||
                     result.error?.toLowerCase().contains('stt') == true
-                ? 'Speech service offline. Run: python run.py in ml_models'
+                ? 'Speech service is unavailable right now. Try again later.'
                 : 'Transcription failed: ${result.error ?? 'empty'}',
           ),
         ),
@@ -1008,9 +1082,16 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
   Future<void> _cancelVoiceMessage() async {
     if (!_recordingVoice || _transcribingVoice) return;
-    await _voiceRecorder.cancelVoiceNote();
+    if (kIsWeb) {
+      await _voiceSpeech.stop(null);
+    } else {
+      await _voiceRecorder.cancelVoiceNote();
+    }
     if (!mounted) return;
-    setState(() => _recordingVoice = false);
+    setState(() {
+      _recordingVoice = false;
+      _voiceDraft = '';
+    });
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Voice recording cancelled.'),
@@ -1530,7 +1611,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
                           style: const TextStyle(fontSize: 15),
                           decoration: InputDecoration(
                             hintText: _recordingVoice
-                                ? 'Recording… tap mic to send'
+                                ? (_voiceDraft.isNotEmpty
+                                    ? _voiceDraft
+                                    : 'Listening… tap mic to send')
                                 : _transcribingVoice
                                     ? 'Transcribing…'
                                     : _sendingAttachment
