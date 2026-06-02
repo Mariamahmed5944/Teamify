@@ -1,0 +1,11 @@
+Employee_ID,Department,Experience_Years,Technical_Skill_Score,Communication_Score,Training_Hours,Projects_Completed,Avg_Weekly_Work_Hours,Productivity_Score,Salary_USD
+E001,Data Science,5,92,85,120,18,42,88,85000
+E002,Machine Learning,3,89,78,90,15,45,82,78000
+E003,Data Analysis,2,75,80,70,10,40,76,62000
+E004,Data Engineering,6,95,88,150,22,44,91,92000
+E005,BI & Analytics,4,82,90,110,16,41,85,78000
+E006,Data Science,1,70,75,60,8,38,70,55000
+E007,Machine Learning,7,96,84,160,25,46,93,98000
+E008,Data Engineering,3,85,79,100,14,43,81,76000
+E009,BI & Analytics,5,87,92,130,19,40,88,83000
+E010,Data Science,4,90,86,115,17,42,87,87000
