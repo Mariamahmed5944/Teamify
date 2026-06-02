@@ -941,6 +941,16 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
     if (!_recordingVoice) {
       if (kIsWeb) {
+        final micOk = await _voiceRecorder.ensurePermission();
+        if (!micOk) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Allow microphone access to use voice messages.'),
+            ),
+          );
+          return;
+        }
         final ok = await _voiceSpeech.initialize();
         if (!ok) {
           if (!mounted) return;
