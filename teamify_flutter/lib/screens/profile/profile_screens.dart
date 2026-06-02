@@ -267,14 +267,6 @@ class _ProfileBase extends StatelessWidget {
               _menuTile(context, Icons.gavel_outlined, 'File a Dispute',
                   onTap: () => showFileDisputeSheet(context)),
             ],
-            const SizedBox(height: 8),
-            _menuTile(context, Icons.logout, 'Log Out', onTap: () async {
-              await context.read<AppServices>().auth.logout();
-              if (context.mounted) {
-                Navigator.pushNamedAndRemoveUntil(
-                    context, R.roleSelection, (_) => false);
-              }
-            }, color: Colors.red),
             const SizedBox(height: 20),
           ],
         ),
