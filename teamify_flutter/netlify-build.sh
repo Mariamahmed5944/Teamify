@@ -19,4 +19,6 @@ flutter precache --web
 flutter --version
 
 flutter pub get
-flutter build web --dart-define=API_BASE_URL=https://teamify-backend-5hq0.onrender.com
+flutter build web \
+  --dart-define=API_BASE_URL=https://teamify-backend-5hq0.onrender.com \
+  --dart-define=OAUTH_REDIRECT_URI=https://curious-scone-0d6e70.netlify.app/
