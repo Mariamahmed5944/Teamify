@@ -485,15 +485,30 @@ def start_meeting_session(room_id):
     if room is None:
         return jsonify({"error": "Room not found"}), 404
 
+    from datetime import datetime, timezone as tz
+    now = datetime.now(tz.utc)
+
     active = MeetingSession.query.filter_by(room_id=room_id, is_active=True).first()
     if active:
-        return jsonify({"session": active.to_dict()}), 200
+        stale = (now - active.started_at.replace(tzinfo=tz.utc)).total_seconds() > 300 \
+                if active.started_at else True
+        if stale:
+            active.is_active = False
+            active.ended_at = now
+            if active.started_at:
+                active.duration_seconds = int(
+                    (now - active.started_at.replace(tzinfo=tz.utc)).total_seconds()
+                )
+            db.session.flush()
+        else:
+            return jsonify({"session": active.to_dict()}), 200
 
     session = MeetingSession(
         room_id=room_id,
         project_id=room.project_id,
         started_by=user_id,
         is_active=True,
+        started_at=now,
         transcript=[],
         participant_ids=[user_id],
     )
