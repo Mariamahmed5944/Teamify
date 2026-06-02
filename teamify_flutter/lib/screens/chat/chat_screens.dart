@@ -1486,7 +1486,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                     : AppColors.primary,
                 bgColor: _recordingVoice
                     ? const Color(0xFFFEE2E2)
-                    : AppColors.primaryLight.withValues(alpha: 0.55),
+                    : null,
                 onPressed: _transcribingVoice || _sendingAttachment
                     ? null
                     : _toggleVoiceMessage,

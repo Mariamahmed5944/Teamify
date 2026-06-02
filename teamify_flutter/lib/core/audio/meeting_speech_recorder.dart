@@ -6,6 +6,8 @@ import 'package:record/record.dart';
 
 import 'speech_blob_reader.dart'
     if (dart.library.html) 'speech_blob_reader_web.dart' as blob_reader;
+import 'mic_permission_web.dart'
+    if (dart.library.io) 'mic_permission_stub.dart' as mic_web;
 
 /// Captures short microphone chunks for Whisper transcription during meetings.
 class MeetingSpeechRecorder {
@@ -16,9 +18,13 @@ class MeetingSpeechRecorder {
 
   bool get isEnabled => _enabled;
 
-  /// Requests microphone access. On web this calls [getUserMedia] and shows the
-  /// browser permission prompt when needed.
+  /// Requests microphone access. On web calls [getUserMedia] directly so the
+  /// browser permission prompt is guaranteed to appear (even on mobile Safari /
+  /// Chrome for Android where hasPermission() may silently return false).
   Future<bool> ensurePermission() async {
+    if (kIsWeb) {
+      return mic_web.requestMicPermission();
+    }
     try {
       return await _recorder.hasPermission();
     } catch (_) {
@@ -76,8 +82,14 @@ class MeetingSpeechRecorder {
   /// Start a single voice note (chat). Call [stopVoiceNote] to finish.
   Future<bool> startVoiceNote() async {
     if (_busy || await _recorder.isRecording()) return false;
-    final hasMic = await _recorder.hasPermission();
-    if (!hasMic) return false;
+
+    // On web, permission was already confirmed by ensurePermission(); skip the
+    // hasPermission() call (it may return false on iOS Safari even after the
+    // user granted access during this session).
+    if (!kIsWeb) {
+      final hasMic = await _recorder.hasPermission();
+      if (!hasMic) return false;
+    }
 
     const config = RecordConfig(
       encoder: kIsWeb ? AudioEncoder.opus : AudioEncoder.wav,
@@ -85,13 +97,17 @@ class MeetingSpeechRecorder {
       numChannels: 1,
     );
 
-    if (kIsWeb) {
-      await _recorder.start(config, path: '');
-    } else {
-      final dir = await getTemporaryDirectory();
-      final path =
-          '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.wav';
-      await _recorder.start(config, path: path);
+    try {
+      if (kIsWeb) {
+        await _recorder.start(config, path: '');
+      } else {
+        final dir = await getTemporaryDirectory();
+        final path =
+            '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.wav';
+        await _recorder.start(config, path: path);
+      }
+    } catch (_) {
+      return false;
     }
     return true;
   }
@@ -137,8 +153,10 @@ class MeetingSpeechRecorder {
     if (_busy || await _recorder.isRecording()) return;
     _busy = true;
     try {
-      final hasMic = await _recorder.hasPermission();
-      if (!hasMic) return;
+      if (!kIsWeb) {
+        final hasMic = await _recorder.hasPermission();
+        if (!hasMic) return;
+      }
 
       const config = RecordConfig(
         encoder: kIsWeb ? AudioEncoder.opus : AudioEncoder.wav,
