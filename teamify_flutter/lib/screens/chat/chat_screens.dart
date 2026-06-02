@@ -1554,12 +1554,12 @@ class _ConversationScreenState extends State<ConversationScreen> {
                       )
                     : null,
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: 6),
               _ChatInputIconButton(
                 icon: _transcribingVoice
                     ? Icons.hourglass_top_rounded
                     : _recordingVoice
-                        ? Icons.stop_circle_rounded
+                        ? Icons.stop_rounded
                         : Icons.mic_rounded,
                 tooltip: 'Voice',
                 iconColor: _recordingVoice
@@ -1567,7 +1567,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                     : AppColors.primary,
                 bgColor: _recordingVoice
                     ? const Color(0xFFFEE2E2)
-                    : null,
+                    : AppColors.primaryLight,
                 onPressed: _transcribingVoice || _sendingAttachment
                     ? null
                     : _toggleVoiceMessage,
@@ -1646,27 +1646,15 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 ),
               ),
               const SizedBox(width: 8),
-              Material(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(24),
-                elevation: 0,
-                child: InkWell(
-                  onTap: _transcribingVoice ||
-                          _sendingAttachment ||
-                          _recordingVoice
-                      ? null
-                      : _send,
-                  borderRadius: BorderRadius.circular(24),
-                  child: const SizedBox(
-                    width: 46,
-                    height: 46,
-                    child: Icon(
-                      Icons.send_rounded,
-                      color: Colors.white,
-                      size: 22,
-                    ),
-                  ),
-                ),
+              _ChatInputIconButton(
+                icon: Icons.send_rounded,
+                tooltip: 'Send',
+                filled: true,
+                onPressed: _transcribingVoice ||
+                        _sendingAttachment ||
+                        _recordingVoice
+                    ? null
+                    : _send,
               ),
             ],
           ),
@@ -1675,6 +1663,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
 }
 
 class _ChatInputIconButton extends StatelessWidget {
+  static const double _size = 44;
+  static const double _iconSize = 22;
+
   const _ChatInputIconButton({
     this.icon,
     this.child,
@@ -1682,6 +1673,7 @@ class _ChatInputIconButton extends StatelessWidget {
     required this.onPressed,
     this.iconColor,
     this.bgColor,
+    this.filled = false,
   });
 
   final IconData? icon;
@@ -1690,11 +1682,18 @@ class _ChatInputIconButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final Color? iconColor;
   final Color? bgColor;
+  final bool filled;
 
   @override
   Widget build(BuildContext context) {
+    final disabled = onPressed == null;
+    final background = bgColor ??
+        (filled ? AppColors.primary : AppColors.primaryLight);
+    final foreground = iconColor ??
+        (filled ? Colors.white : AppColors.primary);
+
     return Material(
-      color: bgColor ?? AppColors.background,
+      color: disabled ? background.withValues(alpha: 0.55) : background,
       shape: const CircleBorder(),
       child: InkWell(
         customBorder: const CircleBorder(),
@@ -1702,14 +1701,16 @@ class _ChatInputIconButton extends StatelessWidget {
         child: Tooltip(
           message: tooltip,
           child: SizedBox(
-            width: 42,
-            height: 42,
+            width: _size,
+            height: _size,
             child: Center(
               child: child ??
                   Icon(
                     icon,
-                    size: 22,
-                    color: iconColor ?? AppColors.primary,
+                    size: _iconSize,
+                    color: disabled
+                        ? foreground.withValues(alpha: 0.45)
+                        : foreground,
                   ),
             ),
           ),
