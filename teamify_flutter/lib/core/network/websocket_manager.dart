@@ -31,11 +31,8 @@ class SocketPayload {
 ///
 /// Design decisions
 /// ----------------
-/// * Transport = websocket-only: We skip the polling→websocket upgrade step
-///   entirely.  The backend now runs under gevent which handles raw WebSocket
-///   upgrades at the WSGI layer, so polling is never needed.  Forcing
-///   `websocket` also eliminates the 500-on-upgrade class of errors that the
-///   Werkzeug-threading combo caused.
+/// * Transport: WebSocket preferred; long-polling fallback when the proxy or
+///   worker cannot upgrade (e.g. during a misconfigured gunicorn deploy).
 ///
 /// * No manual ping/pong: Socket.IO's engine.io layer already does heartbeats
 ///   (ping_interval=25s, ping_timeout=60s on the server).  Sending a custom
@@ -122,9 +119,7 @@ class WebSocketManager {
       _socket = io.io(
         AppConfig.apiBaseUrl,
         io.OptionBuilder()
-            // Force WebSocket transport — skip the polling→upgrade dance.
-            // The gevent backend handles raw WS upgrades natively.
-            .setTransports(['websocket'])
+            .setTransports(['websocket', 'polling'])
             // Pass JWT in both the auth dict (preferred by Socket.IO v4)
             // and extra headers (fallback for some proxy configurations).
             .setAuth({'token': token})
