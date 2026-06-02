@@ -4,6 +4,14 @@ from datetime import datetime, timezone
 from models import db
 
 
+def _utc_iso(dt):
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.isoformat()
+
+
 class MeetingSession(db.Model):
     """A live meeting tied to a chat room; transcript is chat messages during the session."""
 
@@ -47,8 +55,8 @@ class MeetingSession(db.Model):
             "room_id": self.room_id,
             "project_id": self.project_id,
             "started_by": self.started_by,
-            "started_at": self.started_at.isoformat() if self.started_at else None,
-            "ended_at": self.ended_at.isoformat() if self.ended_at else None,
+            "started_at": _utc_iso(self.started_at),
+            "ended_at": _utc_iso(self.ended_at),
             "is_active": self.is_active,
             "transcript": self.transcript or [],
             "participant_ids": self.participant_ids or [],

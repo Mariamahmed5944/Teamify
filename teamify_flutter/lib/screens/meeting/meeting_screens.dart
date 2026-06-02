@@ -421,8 +421,7 @@ class _MeetingScreenState extends State<MeetingScreen> {
       final session = await chat.startMeetingSession(rid).unwrap();
       if (!mounted) return;
 
-      final startedRaw = session['started_at']?.toString();
-      final startedAt = DateTime.tryParse(startedRaw ?? '') ?? DateTime.now();
+      final startedAt = DateTime.now();
       final myId = context.read<SessionController>().currentUser?.id ?? '';
 
       setState(() {
