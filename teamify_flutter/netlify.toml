@@ -6,6 +6,7 @@
 
 [build.environment]
   FLUTTER_VERSION = "3.41.7"
+  GIT_SUBMODULE_STRATEGY = "none"
 
 [[redirects]]
   from = "/*"
