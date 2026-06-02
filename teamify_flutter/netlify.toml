@@ -1,0 +1,13 @@
+[build]
+  # Replace YOUR-BACKEND.onrender.com with your actual Render service URL
+  # after deploying the Flask backend.
+  command = "flutter build web --dart-define=API_BASE_URL=https://YOUR-BACKEND.onrender.com"
+  publish = "build/web"
+
+[build.environment]
+  FLUTTER_VERSION = "3.41.7"
+
+[[redirects]]
+  from = "/*"
+  to   = "/index.html"
+  status = 200
