@@ -52,6 +52,9 @@ marshmallow>=3.21.0
 # Scheduling
 APScheduler>=3.10.0
 
+# PDF export for CV Builder
+reportlab>=4.0.0
+
 # NOTE: torch and transformers are intentionally excluded.
 # The DistilBERT task-category model falls back to keyword matching
 # when AI_ENABLE_LOCAL_MODELS=false or when the weights are absent.
