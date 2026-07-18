@@ -1,3 +1,4 @@
+from typing import Any
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import get_jwt_identity
 from middleware.auth import auth_required, get_project_role, _READ_ROLES, _WRITE_ROLES
@@ -273,7 +274,7 @@ def create_project():
 
     db.session.commit()
 
-    response_data = {
+    response_data: dict[str, Any] = {
         "message": "Project created successfully",
         "project": project.to_dict(),
         "invited_member_ids": invited_member_ids,

@@ -439,15 +439,15 @@ def create_task():
         _defer_task_ai_classify(flask_app, task_id_for_ai, task_text_for_ai)
         return response
 
-    response = {
+    response_data: dict[str, Any] = {
         "message": "Task created successfully",
         "task": _task_to_enriched_dict(task),
     }
     if auto_assigned:
-        response["auto_assigned"] = True
-        response["auto_assign_reason"] = auto_assign_reason
+        response_data["auto_assigned"] = True
+        response_data["auto_assign_reason"] = auto_assign_reason
 
-    return jsonify(response), 201
+    return jsonify(response_data), 201
 
 
 # ─── GET /api/tasks/accessible ────────────────────────────────────────────────
