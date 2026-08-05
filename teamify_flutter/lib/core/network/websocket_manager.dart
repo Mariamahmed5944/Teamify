@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 
-import '../config/app_config.dart';
+import '../../config/app_config.dart';
 import '../storage/token_storage.dart';
 import '../observability/app_logger.dart';
 
@@ -92,6 +92,10 @@ class WebSocketManager {
     Duration timeout = const Duration(seconds: 8),
   }) async {
     if (_disposed) return false;
+    if (AppConfig.isDemoMode) {
+      debugPrint('[WS] Demo mode active — aborting connect');
+      return false;
+    }
     if (isConnected) return true;
     if (_isConnecting && _connectCompleter != null) {
       try {
@@ -116,8 +120,15 @@ class WebSocketManager {
       // Dispose stale socket before creating a new one.
       _destroySocket();
 
+      var wsUrl = AppConfig.apiBaseUrl;
+      if (wsUrl.startsWith('https://')) {
+        wsUrl = wsUrl.replaceFirst('https://', 'wss://');
+      } else if (wsUrl.startsWith('http://')) {
+        wsUrl = wsUrl.replaceFirst('http://', 'ws://');
+      }
+
       _socket = io.io(
-        AppConfig.apiBaseUrl,
+        wsUrl,
         io.OptionBuilder()
             .setTransports(['websocket', 'polling'])
             // Pass JWT in both the auth dict (preferred by Socket.IO v4)
@@ -326,14 +337,17 @@ class WebSocketManager {
   void _scheduleReconnect() {
     if (_disposed) return;
     if (_reconnectAttempts >= _maxReconnects) {
-      debugPrint('[WS] Max reconnect attempts ($_maxReconnects) reached — giving up');
-      AppLogger.log('[WebSocket] Reconnect loop terminated after $_maxReconnects attempts');
+      debugPrint(
+          '[WS] Max reconnect attempts ($_maxReconnects) reached — giving up');
+      AppLogger.log(
+          '[WebSocket] Reconnect loop terminated after $_maxReconnects attempts');
       _emit(SocketEvent.disconnected, {'reason': 'reconnect_exhausted'});
       return;
     }
 
     // Exponential backoff capped at 30 s
-    final delayMs = (_baseDelay.inMilliseconds * (1 << _reconnectAttempts)).clamp(
+    final delayMs =
+        (_baseDelay.inMilliseconds * (1 << _reconnectAttempts)).clamp(
       _baseDelay.inMilliseconds,
       30000,
     );

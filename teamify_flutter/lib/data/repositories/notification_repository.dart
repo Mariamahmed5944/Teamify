@@ -1,4 +1,5 @@
 import '../../core/network/api_client.dart';
+import '../../config/app_config.dart';
 import '../models/models.dart';
 import 'repository_helpers.dart';
 
@@ -17,6 +18,7 @@ class NotificationRepository {
 
   // GET /api/notifications/unread-count
   Future<int> getUnreadCount() async {
+    if (AppConfig.isDemoMode) return 0;
     final response = await _client
         .get<Map<String, dynamic>>('/api/notifications/unread-count');
     final data = responseMap(response.data);

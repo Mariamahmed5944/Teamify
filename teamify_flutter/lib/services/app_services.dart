@@ -118,7 +118,8 @@ class AppServices {
 
     // ── Communication ─────────────────────────────────────────────────────
     chat = ChatService(repos.chat, offlineManager, cache);
-    notifications = NotificationService(repos.notifications, cache, ws: ws, offline: offlineManager);
+    notifications = NotificationService(repos.notifications, cache,
+        ws: ws, offline: offlineManager);
 
     // ── Search & Home ─────────────────────────────────────────────────────
     search = SearchService(repos.search);

@@ -27,8 +27,8 @@ class NotificationService with ServiceErrorHandler {
     this._cache, {
     WebSocketManager? ws,
     required OfflineManager offline,
-  }) : _ws = ws,
-       _offline = offline {
+  })  : _ws = ws,
+        _offline = offline {
     _swr = SwrHelper(_cache);
     _subscribeToWebSocket();
   }
@@ -80,30 +80,31 @@ class NotificationService with ServiceErrorHandler {
     bool forceRefresh = false,
     void Function(List<ApiNotification>)? onRefreshed,
   }) =>
-      _dedup.deduplicate('list_notifications', () => guard(() async {
-            if (forceRefresh) {
-              final list = await _repo.listNotifications();
-              await _cache.putList(
-                  _box, 'all', list.map((n) => n.toJson()).toList());
-              return list;
-            }
-
-            return _swr
-                .withSwrList<ApiNotification>(
-                  boxName: _box,
-                  key: 'all',
-                  fetcher: () => _repo.listNotifications(),
-                  fromJson: ApiNotification.fromJson,
-                  toJson: (n) => n.toJson(),
-                  onRefreshed: onRefreshed,
-                )
-                .then((res) =>
-                    res.isSuccess ? res.data! : throw Exception(res.error));
-          }));
-
-  Future<ApiResult<int>> getUnreadCount() =>
       _dedup.deduplicate(
-          'notif_unread', () => guard(() => _repo.getUnreadCount()));
+          'list_notifications',
+          () => guard(() async {
+                if (forceRefresh) {
+                  final list = await _repo.listNotifications();
+                  await _cache.putList(
+                      _box, 'all', list.map((n) => n.toJson()).toList());
+                  return list;
+                }
+
+                return _swr
+                    .withSwrList<ApiNotification>(
+                      boxName: _box,
+                      key: 'all',
+                      fetcher: () => _repo.listNotifications(),
+                      fromJson: ApiNotification.fromJson,
+                      toJson: (n) => n.toJson(),
+                      onRefreshed: onRefreshed,
+                    )
+                    .then((res) =>
+                        res.isSuccess ? res.data! : throw Exception(res.error));
+              }));
+
+  Future<ApiResult<int>> getUnreadCount() => _dedup.deduplicate(
+      'notif_unread', () => guard(() => _repo.getUnreadCount()));
 
   Future<ApiResult<void>> markRead(String id) => guardWithOffline(
         () async {
